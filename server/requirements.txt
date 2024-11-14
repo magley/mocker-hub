@@ -1,0 +1,9 @@
+fastapi[standard]
+requests
+
+sqlmodel
+psycopg2-binary
+
+bcrypt
+pyjwt
+cryptography
