@@ -1,9 +1,9 @@
 from fastapi import Depends
 from sqlmodel import Session
-from server.api.config.database import get_database
-from server.api.user.user_dto import UserDTO
-from server.api.user.user_model import User
-from server.api.user.user_repo import UserRepo
+from app.api.config.database import get_database
+from app.api.user.user_dto import UserDTO
+from app.api.user.user_model import User
+from app.api.user.user_repo import UserRepo
 
  
 class UserService:

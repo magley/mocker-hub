@@ -1,5 +1,5 @@
 from sqlmodel import Session
-from server.api.user.user_model import User
+from app.api.user.user_model import User
 
 class UserRepo:
     def __init__(self, session: Session):

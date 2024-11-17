@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends
 
-from server.api.user.user_dto import UserDTO
-from server.api.user.user_service import UserService, get_user_service
+from app.api.user.user_dto import UserDTO
+from app.api.user.user_service import UserService, get_user_service
 
 router = APIRouter(prefix="/users", tags=["users"])
 
