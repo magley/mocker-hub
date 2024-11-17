@@ -9,6 +9,9 @@ services:
       - db
     environment:
       PYTHONUNBUFFERED: 1
+      POSTGRES_USER: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_PASSWORD: admin
     restart: always
     
     develop:
@@ -16,3 +19,28 @@ services:
         - action: sync
           path: ./
           target: /code
+
+  db:
+    image: postgres:15.9-alpine3.20
+    restart: always
+    shm_size: 128mb
+    ports:
+      - "8001:5432"
+    environment:
+      # POSTGRES_USER: postgres
+      # POSTGRES_DATABASE: postgres
+      POSTGRES_PASSWORD: admin
+
+  db_adminer:
+    # Login form data:
+    # --------------------------------
+    # Database:     PostgreSQL
+    # Server:       db
+    # Username:     POSTGRES_USER
+    # Password:     POSTGRES_PASSWORD
+    # Database:     POSTGRES_DATABASE
+    #
+    image: adminer:4.8.0-standalone
+    restart: always
+    ports:
+      - "8002:8080"

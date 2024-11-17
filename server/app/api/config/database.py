@@ -1,11 +1,21 @@
+import os
 from sqlalchemy import create_engine
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
 from sqlmodel import Session
 
+
+# database_url = "sqlite:///database.db"
+
+postgre_hostname = "db"
+postgre_db = os.environ['POSTGRES_DATABASE']
+postgre_user = os.environ['POSTGRES_USER']
+postgre_password = os.environ['POSTGRES_PASSWORD']
+database_url = f"postgresql://{postgre_user}:{postgre_password}@{postgre_hostname}/{postgre_db}"
+
 engine = create_engine(
-    "sqlite:///database.db",
-    connect_args={"check_same_thread": False}
+    database_url,
+#    connect_args={"check_same_thread": False}
 )
 
 SessionLocal = sessionmaker(
