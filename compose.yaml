@@ -44,3 +44,10 @@ services:
     restart: always
     ports:
       - "8002:8080"
+
+  nginx:
+    build: ./nginx/
+    ports:
+      - "80:80"
+    depends_on:
+      - backend

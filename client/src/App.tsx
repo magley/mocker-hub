@@ -11,7 +11,11 @@ function App() {
     const [data, setData] = useState([]);
 
     const testRequest = () => {
-        axios.get("http://127.0.0.1:8000/api/v1/users/test").then((res) => {
+        // Send request directly:
+        //axios.get("http://127.0.0.1:8000/api/v1/users/test").then((res) => {
+
+        // Send request through nginx:
+        axios.get("http://127.0.0.1/api/users/test").then((res) => {
             console.log(res);
             setData(res.data);
         }).catch(err => {
