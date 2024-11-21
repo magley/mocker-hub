@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.user.user_dto import UserDTO
 from app.api.user.user_service import UserService, get_user_service
+from fastapi_cache.decorator import cache
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -11,6 +12,7 @@ def user_register(dto: UserDTO, user_service: UserService = Depends(get_user_ser
     return user
 
 @router.get("/test")
+@cache(expire=10)
 def test():
     return [
         { "id": 0, "name": "Aza" },

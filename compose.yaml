@@ -7,11 +7,14 @@ services:
       - "8000"
     depends_on:
       - db
+      - cache
     environment:
       PYTHONUNBUFFERED: 1
       POSTGRES_USER: postgres
       POSTGRES_DATABASE: postgres
       POSTGRES_PASSWORD: admin
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
     restart: always
     
     develop:
@@ -51,3 +54,11 @@ services:
       - "80:80"
     depends_on:
       - backend
+
+  cache:
+    image: redis:alpine3.20
+    restart: always
+    ports:
+      - '6888:6379'
+    # volumes: 
+      # - cache:/data
