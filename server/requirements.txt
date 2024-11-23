@@ -1,0 +1,11 @@
+fastapi[standard]
+requests
+
+sqlmodel
+psycopg2-binary
+
+bcrypt
+pyjwt
+cryptography
+
+fastapi-cache2[redis]
