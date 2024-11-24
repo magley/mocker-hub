@@ -1,7 +1,8 @@
 import { useState } from 'react';
 import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
-import './UserRegistration.css'; // Import the CSS file for custom styles
-import axios, { AxiosError } from 'axios';
+import './UserRegistration.css';
+import { UserDTO, UserRegisterDTO, UserService } from '../api/user.api';
+import { AxiosError } from 'axios';
 
 export const UserRegistration = () => {
     const [formData, setFormData] = useState({
@@ -32,13 +33,14 @@ export const UserRegistration = () => {
         }
         setError('');
 
-        let dto = {
+        let dto: UserRegisterDTO = {
             email: formData.email,
             username: formData.username,
             password: formData.password,
         };
-        axios.post("http://127.0.0.1/api/users/", dto).then((res) => {
-            console.log(res);
+        UserService.RegisterRegularUser(dto).then((res) => {
+            let user: UserDTO = res.data;
+            console.log(user);
         }).catch((err: AxiosError) => {
             setError((err.response?.data as any)["detail"]["message"]);
         });
