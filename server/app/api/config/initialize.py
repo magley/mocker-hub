@@ -26,6 +26,7 @@ def configure_cors(app: FastAPI):
 def init_superadmin():
     session = next(get_database())
     service = UserService(session)
+    config_file = "./cfg/superadmin_password.txt"
     
     print("Checking for superadmin...")
     existing_superadmin = session.exec(select(User).where(User.role == UserRole.superadmin)).first()
@@ -34,10 +35,10 @@ def init_superadmin():
         print("Adding superadmin...")
         password = os.getenv("SUPERADMIN_PASSWORD", "admin123")
         dto = UserRegisterDTO(email="admin@gmail.com", username="admin", password=password)
-        config_file = "./superadmin_password.txt"
-
+        
         with open(config_file, "w") as f:
             f.write(password)
+            print(f"Written initial password to {os.path.abspath(config_file)}")
         
         service.add_superadmin(dto)
 

@@ -23,6 +23,9 @@ services:
         - action: sync
           path: ./
           target: /code
+    
+    volumes:
+      - backend_cfg:/code/cfg/
 
   db:
     image: postgres:15.9-alpine3.20
@@ -63,3 +66,12 @@ services:
       - '6888:6379'
     # volumes: 
       # - cache:/data
+
+
+volumes:
+  backend_cfg:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volume-server-cfg
+      o: bind
