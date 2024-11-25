@@ -4,7 +4,7 @@ from app.api.config.exception_handler import FieldTakenException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.user.user_dto import UserDTO, UserRegisterDTO
-from app.api.user.user_model import User
+from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
  
 class UserService:
@@ -24,6 +24,11 @@ class UserService:
         })
 
         return self.user_repo.add(new_user)
+    
+    def add_superadmin(self, dto: UserRegisterDTO) -> User:
+        user = self.add(dto)
+        return self.user_repo.set_role(user, UserRole.superadmin)
+
         
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:

@@ -15,6 +15,7 @@ services:
       POSTGRES_PASSWORD: admin
       REDIS_HOST: cache
       REDIS_PORT: 6379
+      SUPERADMIN_PASSWORD: admin123
     restart: always
     
     develop:
