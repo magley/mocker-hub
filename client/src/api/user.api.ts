@@ -21,8 +21,18 @@ export interface UserDTO {
     join_date: Date
 }
 
+export interface UserPasswordChangeDTO {
+    id: number,
+    old_password: string,
+    new_password: string,
+}
+
 export class UserService {
     static async RegisterRegularUser(dto: UserRegisterDTO): Promise<AxiosResponse<UserDTO>> {
         return await axiosInstance.post(`/users`, dto);
+    }
+
+    static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<UserDTO>> {
+        return await axiosInstance.post(`/users/password`, dto);
     }
 }
