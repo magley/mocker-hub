@@ -3,8 +3,10 @@ import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
 import './UserRegistration.css';
 import { UserDTO, UserRegisterDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
+import { useNavigate } from 'react-router-dom';
 
 export const UserRegistration = () => {
+    let navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
         email: '',
@@ -41,6 +43,7 @@ export const UserRegistration = () => {
         UserService.RegisterRegularUser(dto).then((res) => {
             let user: UserDTO = res.data;
             console.log(user);
+            navigate("/login");
         }).catch((err: AxiosError) => {
             setError((err.response?.data as any)["detail"]["message"]);
         });
