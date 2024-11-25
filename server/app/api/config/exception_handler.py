@@ -8,7 +8,14 @@ class UserException(Exception):
 
 class FieldTakenException(UserException):
     def __init__(self, field: str):
-            self.message = f"{field} already taken"
+        self.message = f"{field} already taken"
+
+    def __str__(self):
+        return self.message
+    
+class NotFoundException(UserException):
+    def __init__(self, entity_type, identifier):
+          self.message = f"Could not find {entity_type} with identifier {identifier}"
 
     def __str__(self):
         return self.message

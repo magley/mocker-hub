@@ -13,3 +13,8 @@ class UserRegisterDTO(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+class UserPasswordChangeDTO(BaseModel):
+    id: int
+    old_password: str
+    new_password: str
