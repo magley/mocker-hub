@@ -3,7 +3,22 @@ from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 import sqlalchemy.exc
 
+class UserException(Exception):
+     ...
+
+class FieldTakenException(UserException):
+    def __init__(self, field: str):
+            self.message = f"{field} already taken"
+
+    def __str__(self):
+        return self.message
+
+
 def register_exception_handler(app: FastAPI):
+    @app.exception_handler(UserException)
+    def _UserException(r: Request, e: UserException):
+        raise HTTPException(400, detail={"message": str(e)}) 
+    
     @app.exception_handler(ValidationError)
     def _ValidationError(r: Request, e: ValidationError):
         raise HTTPException(400, detail={"message": e.errors()}) 
