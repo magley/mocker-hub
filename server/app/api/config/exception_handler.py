@@ -1,4 +1,5 @@
 from fastapi import FastAPI, HTTPException, Request
+from fastapi.exceptions import RequestValidationError
 from fastapi.responses import JSONResponse
 from pydantic import ValidationError
 import sqlalchemy.exc
@@ -26,9 +27,9 @@ def register_exception_handler(app: FastAPI):
     def _UserException(r: Request, e: UserException):
         raise HTTPException(400, detail={"message": str(e)}) 
     
-    @app.exception_handler(ValidationError)
-    def _ValidationError(r: Request, e: ValidationError):
-        raise HTTPException(400, detail={"message": e.errors()}) 
+    @app.exception_handler(RequestValidationError)
+    def _ValidationError(r: Request, e: RequestValidationError):
+        raise HTTPException(400, detail={"message": str(e.errors())})
     
     @app.exception_handler(sqlalchemy.exc.IntegrityError)
     def _IntegrityError(r: Request, e: sqlalchemy.exc.IntegrityError):
