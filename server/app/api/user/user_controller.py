@@ -12,7 +12,7 @@ def register_user(dto: UserRegisterDTO, user_service: UserService = Depends(get_
     return user
 
 @router.post("/password", response_model=UserDTO, status_code=200, summary="Change the user's password")
-def register_user(dto: UserPasswordChangeDTO, user_service: UserService = Depends(get_user_service)):
+def change_user_password(dto: UserPasswordChangeDTO, user_service: UserService = Depends(get_user_service)):
     # TODO: Later on, we could extract user.id from the JWT.
     # Or, we keep the DTO but do a permission check.
     user = user_service.change_password(dto)
