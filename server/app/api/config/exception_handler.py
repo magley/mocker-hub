@@ -16,6 +16,8 @@ class FieldTakenException(UserException):
     
 class NotFoundException(UserException):
     def __init__(self, entity_type, identifier):
+          self.entity_type = entity_type
+          self.identifier = identifier
           self.message = f"Could not find {entity_type} with identifier {identifier}"
 
     def __str__(self):

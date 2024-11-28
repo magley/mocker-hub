@@ -9,3 +9,5 @@ pyjwt
 cryptography
 
 fastapi-cache2[redis]
+
+pytest
