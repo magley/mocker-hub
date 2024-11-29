@@ -17,3 +17,9 @@ docker compose up --watch
 You can access the server through at [localhost:8000](http://localhost:8000/docs).
 
 You can access the database manager at [localhost:8002](http://localhost:8002). Check `compose.yaml` for the login credentials.
+
+The superadmin password is mounted to `./volume-server-cfg/` in `superadmin_password.txt`. 
+
+---
+
+TODO: Explain variables in compose.yaml.

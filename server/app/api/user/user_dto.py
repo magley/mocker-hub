@@ -1,5 +1,5 @@
 import datetime
-from pydantic import BaseModel, EmailStr
+from pydantic import BaseModel, EmailStr, Field
 from app.api.user.user_model import UserRole
 
 class UserDTO(BaseModel):
@@ -13,3 +13,8 @@ class UserRegisterDTO(BaseModel):
     username: str
     email: EmailStr
     password: str
+
+class UserPasswordChangeDTO(BaseModel):
+    id: int
+    old_password: str
+    new_password: str = Field(min_length=8)

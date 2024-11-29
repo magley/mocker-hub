@@ -1,49 +1,50 @@
-html,
-body {
-  height: 100%;
-  margin: 0;
-}
-
 .registration-container {
+
+  html,
+  body {
+    height: 100%;
+    margin: 0;
+  }
+
   background-color: var(--bs-blue);
   padding: 20px;
   border-radius: 10px;
   box-shadow: 0 0 10px rgba(0, 0, 0, 0.1);
   color: white;
   height: 100vh;
-}
 
-h2 {
-  text-align: center;
-  color: white;
-  font-size: 3em;
-  margin-bottom: 2em;
-}
+  h2 {
+    text-align: center;
+    color: white;
+    font-size: 3em;
+    margin-bottom: 2em;
+  }
 
-.form-label {
-  text-align: right;
-  color: white;
-}
+  .form-label {
+    text-align: right;
+    color: white;
+  }
 
-.mt-3 {
-  margin-top: 1rem !important;
-}
+  .mt-3 {
+    margin-top: 1rem !important;
+  }
 
-.btn-primary {
-  background-color: #0056b3;
-  border-color: #0056b3;
-  width: 100%;
-}
+  .btn-primary {
+    background-color: #0056b3;
+    border-color: #0056b3;
+    width: 100%;
+  }
 
-.btn-primary:hover {
-  background-color: #004494;
-  border-color: #004494;
-}
+  .btn-primary:hover {
+    background-color: #004494;
+    border-color: #004494;
+  }
 
-.form-control {
-  border-radius: 5px;
-}
+  .form-control {
+    border-radius: 5px;
+  }
 
-.form-group {
-  margin-bottom: 1rem;
+  .form-group {
+    margin-bottom: 1rem;
+  }
 }
