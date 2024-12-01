@@ -1,6 +1,8 @@
 import { useEffect, useState } from 'react';
 import { Form, Button, DropdownButton, Dropdown, Col, Row, Alert } from 'react-bootstrap';
 import './RepoCreate.css';
+import { RepoCreateDTO, RepoDTO, RepositoryService } from '../api/repo.api';
+import { AxiosError } from 'axios';
 
 interface Owner {
     name: string;
@@ -17,17 +19,29 @@ export const RepoCreate = () => {
     const [error, setError] = useState('');
 
     useEffect(() => {
-        // Load possible owners and organizations.
+        // Fetch all organizations this user can create repositories in.
 
-        setOwners([
-            { name: "user 1", user_id: 1, organization_id: null },
+        // TODO: Axios fetch organizations for the user.
+        const organizations_i_can_make_repos_in: Owner[] = [
             { name: "org 1", user_id: null, organization_id: 1 },
             { name: "org 2", user_id: null, organization_id: 2 },
-        ]);
+        ];
 
-        // Set initial owner as the user who's currently logged in.
+        const all_possible_owners = [
+            { name: "user 1", user_id: 1, organization_id: null },
+            ...organizations_i_can_make_repos_in
+        ]
 
-        setOwner(owners[0]);
+        // Create list of "owners" (the user himself + all the organizations above).
+
+        setOwners(all_possible_owners);
+
+        // The inital value of the dropdown list is the user.
+
+        // NOTE: I use `all_possible_owners[0]` instead of `owners[0]` because `owners`
+        // may have not updated yet. This is because state is async and `owners` will update
+        // on the next render, so this will fail. 
+        setOwner(all_possible_owners[0]);
     }, []);
 
     const userOrOrgToStr = (owner: Owner) => {
@@ -38,6 +52,7 @@ export const RepoCreate = () => {
             return `Organization ${owner.organization_id}`;
         }
         console.error(`Bad owner object: ${owner}`);
+        return "";
     }
 
     const handleSubmit = (event: React.FormEvent) => {
@@ -49,14 +64,39 @@ export const RepoCreate = () => {
             isPublic,
         };
 
-        if (!data.name.trim()) {
-            setError("You must enter the name of the repository.");
+        if (!owner) {
+            setError("Please select the owner of this repository.");
             return;
         }
 
-        setError('');
+        if (!data.name.trim()) {
+            setError("Please enter the name of the repository.");
+            return;
+        }
 
-        //console.log('Repository:', repository);
+        if (!owners[0].user_id) {
+            setError("First owner in owners does not have user_id set. Check the console.");
+            console.error("The first element of owners should represent the currently signed in user. Its user_id should match the one from the JWT.");
+            console.error(owners);
+            return;
+        }
+
+        let dto: RepoCreateDTO = {
+            desc: data.description,
+            name: data.name,
+            public: data.isPublic,
+            organization_id: owner!.organization_id,
+
+            owner_id: owners[0].user_id!,
+        };
+
+        setError('');
+        RepositoryService.CreateRepository(dto).then((res) => {
+            let repo: RepoDTO = res.data;
+            console.log(repo);
+        }).catch((err: AxiosError) => {
+            setError((err.response?.data as any)["detail"]["message"]);
+        });
     };
 
     return (
@@ -76,8 +116,8 @@ export const RepoCreate = () => {
                             }}
                         >
                             {owners.map((o) => (
-                                <Dropdown.Item key={o.user_id} eventKey={o.name}>
-                                    {o.user_id} / {o.organization_id}
+                                <Dropdown.Item key={o.name} eventKey={o.name}>
+                                    {userOrOrgToStr(o)}
                                 </Dropdown.Item>
                             ))}
                         </DropdownButton>
@@ -95,33 +135,6 @@ export const RepoCreate = () => {
                     </Form.Group>
                 </Col>
             </Row>
-            {/* 
-            <Form.Group controlId="formName">
-                <Form.Label>Owner</Form.Label>
-                <DropdownButton
-                    id="dropdown-owner"
-                    title={owner ? `${userOrOrgToStr(owner)}` : 'Select Owner'}
-                    onSelect={(eventKey) => {
-                        const selectedOwner = owners.find((o) => o.name === eventKey);
-                        setOwner(selectedOwner || null);
-                    }}
-                >
-                    {owners.map((o) => (
-                        <Dropdown.Item key={o.user_id} eventKey={o.name}>
-                            {o.user_id} / {o.organization_id}
-                        </Dropdown.Item>
-                    ))}
-                </DropdownButton>
-
-                <Form.Label>Name</Form.Label>
-                <Form.Control
-                    type="text"
-                    placeholder="Enter repository name"
-                    value={name}
-                    onChange={(e) => setName(e.target.value)}
-                />
-
-            </Form.Group> */}
 
             <Form.Group controlId="formDescription" className='desc-formgroup'>
                 <Form.Label>Description (Optional)</Form.Label>
