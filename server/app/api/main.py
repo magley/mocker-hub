@@ -5,10 +5,12 @@ from pydantic import ValidationError
 from app.api.config.initialize import init_create_tables, configure_cors, init_superadmin
 from app.api.config.exception_handler import register_exception_handler
 import app.api.user.user_controller
+import app.api.repo.repo_controller
 from app.api.config.cache import init_cache
 
 the_router = APIRouter()
 the_router.include_router(app.api.user.user_controller.router)
+the_router.include_router(app.api.repo.repo_controller.router)
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
