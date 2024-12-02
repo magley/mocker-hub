@@ -1,14 +1,21 @@
 from fastapi import APIRouter, Depends
 
-from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO
+from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO
 from app.api.user.user_service import UserService, get_user_service
 from fastapi_cache.decorator import cache
+from typing import Dict
+from app.api.config.auth_bearer import JWTBearer
 
 router = APIRouter(prefix="/users", tags=["users"])
 
 @router.post("/", response_model=UserDTO, status_code=200, summary="Register a new regular user")
 def register_user(dto: UserRegisterDTO, user_service: UserService = Depends(get_user_service)):
     user = user_service.add(dto)
+    return user
+
+@router.post("/login", response_model=Dict[str, str], status_code=200, summary="Log in to your profile")
+def login_user(dto: UserLoginDTO, user_service: UserService = Depends(get_user_service)):
+    user = user_service.login(dto)
     return user
 
 @router.post("/password", response_model=UserDTO, status_code=200, summary="Change the user's password")
@@ -18,7 +25,7 @@ def change_user_password(dto: UserPasswordChangeDTO, user_service: UserService =
     user = user_service.change_password(dto)
     return user
 
-@router.get("/test")
+@router.get("/test", dependencies=[Depends(JWTBearer())])
 @cache(expire=10)
 def test():
     return [

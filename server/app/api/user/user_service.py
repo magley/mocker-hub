@@ -3,10 +3,12 @@ from app.api.config.security import hash_password, verify_password
 from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO
+from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
- 
+from app.api.config.auth_handler import sign_jwt
+from typing import Dict
+
 class UserService:
     def __init__(self, session: Session):
         self.session = session
@@ -44,6 +46,16 @@ class UserService:
         hashed_password = hash_password(dto.new_password)
         return self.user_repo.change_password(user, hashed_password)
 
+    # TODO: Check if a dictionary is appropriate as the return type
+    def login(self, dto: UserLoginDTO) -> Dict[str, str]:
+        user = self.user_repo.find_by_username(dto.username)
+        
+        if user is None:
+            raise NotFoundException(User, dto.username)
+        if not verify_password(dto.password, user.hashed_password):
+            raise UserException("Password is incorrect")
+
+        return sign_jwt(user)
         
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:

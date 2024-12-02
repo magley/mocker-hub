@@ -16,6 +16,8 @@ services:
       REDIS_HOST: cache
       REDIS_PORT: 6379
       SUPERADMIN_PASSWORD: admin123
+      JWT_SECRET: secret
+      JWT_ALGORITHM: HS256
     restart: always
     
     develop:
