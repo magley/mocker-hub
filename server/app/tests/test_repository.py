@@ -152,3 +152,9 @@ def test_add___integration():
 
         response = client.post("/api/v1/users/", json=data)
         print(response.json())
+
+        response = client.get("/api/v1/users/test")
+        print(response.json())
+
+        response = client.get("/api/v1/users/test")
+        print(response.json())

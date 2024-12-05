@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO
 from app.api.user.user_service import UserService, get_user_service
-from fastapi_cache.decorator import cache
+from app.api.config.cache import cache
 
 router = APIRouter(prefix="/users", tags=["users"])
 
