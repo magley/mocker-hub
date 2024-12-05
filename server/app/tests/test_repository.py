@@ -146,15 +146,22 @@ def test_add___integration():
             "email": "u1@gmail.com",
             "password": "1234"
         }
-
         response = client.post("/api/v1/users/", json=data)
-        print(response.json())
+        created_user = response.json()
 
-        response = client.post("/api/v1/users/", json=data)
-        print(response.json())
+        data = {
+            "name": "python",
+            "desc": "",
+            "public": True,
+            "organization_id": None,
+            "owner_id": created_user['id'],
+        }
 
-        response = client.get("/api/v1/users/test")
-        print(response.json())
+        response = client.post("/api/v1/repositories/", json=data)
+        created_repo = response.json()
 
-        response = client.get("/api/v1/users/test")
-        print(response.json())
+        assert created_repo['canonical_name'] == f'u1/python'
+        assert created_repo['official'] == False
+
+        response = client.post("/api/v1/repositories/", json=data)
+        assert response.is_client_error
