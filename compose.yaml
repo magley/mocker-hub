@@ -25,7 +25,7 @@ services:
           target: /code
     
     volumes:
-      - backend_cfg:/code/cfg/
+      - backend_cfg:/code/volume-server-cfg/
 
   db:
     image: postgres:15.9-alpine3.20

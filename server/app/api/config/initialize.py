@@ -26,7 +26,7 @@ def configure_cors(app: FastAPI):
 def init_superadmin():
     session = next(get_database())
     service = UserService(session)
-    config_file = "./cfg/superadmin_password.txt"
+    config_file = "./volume-server-cfg/superadmin_password.txt"
     
     print("Checking for superadmin...")
     existing_superadmin = session.exec(select(User).where(User.role == UserRole.superadmin)).first()

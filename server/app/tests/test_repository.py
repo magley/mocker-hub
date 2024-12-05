@@ -5,7 +5,7 @@ import unittest.mock as mock
 from sqlmodel import Session
 
 from app.api.config.security import hash_password
-from app.api.user.user_dto import UserPasswordChangeDTO
+from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
@@ -44,8 +44,6 @@ def repo_service(mock_session):
 def create_mock_user(id: int, username: str, role: UserRole):
     return User(id=id, email=f"username@email.com", username=username, role=role, hashed_password=hash_password("1234"))
 
-
-client = TestClient(app)
 
 
 def test_add_repo(repo_service):
@@ -140,3 +138,17 @@ def test_add_repo__repo_name(repo_service):
 
     with pytest.raises(FieldTakenException) as e:
         repo_service.add(dto)
+
+def test_add___integration():
+    with TestClient(app) as client:
+        data = {
+            "username": "u1",
+            "email": "u1@gmail.com",
+            "password": "1234"
+        }
+
+        response = client.post("/api/v1/users/", json=data)
+        print(response.json())
+
+        response = client.post("/api/v1/users/", json=data)
+        print(response.json())
