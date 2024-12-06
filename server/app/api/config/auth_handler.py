@@ -1,8 +1,10 @@
 import os
 import time
-from typing import Dict
+from typing import Dict, List
 import jwt
-from app.api.user.user_model import User
+from fastapi import HTTPException
+from app.api.user.user_model import User, UserRole
+
 
 JWT_SECRET = os.environ['JWT_SECRET']
 JWT_ALGORITHM = os.environ['JWT_ALGORITHM']
@@ -29,3 +31,10 @@ def decode_jwt(token: str) -> dict:
         return decoded_token if decoded_token["expires"] >= time.time() else None
     except:
         return {}
+    
+def pre_authorize(token: str, roles:  List[UserRole]):
+    decoded_token = decode_jwt(token)
+    if decoded_token['must_change_password']:
+        raise HTTPException(403, "Password change is required before proceeding")    
+    elif decoded_token['role'] not in [role.value for role in roles]:
+        raise HTTPException(401, "User does not have permission to access this page")
