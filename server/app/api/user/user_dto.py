@@ -9,6 +9,9 @@ class UserDTO(BaseModel):
     role: UserRole
     join_date: datetime.datetime
 
+class UserTokenDTO(BaseModel):
+    token: str
+
 class UserRegisterDTO(BaseModel):
     username: str
     email: EmailStr

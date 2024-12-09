@@ -3,10 +3,10 @@ from app.api.config.security import hash_password, verify_password
 from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO
+from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
-from app.api.config.auth_handler import TokenDTO, sign_jwt
+from app.api.config.auth import sign_jwt
 
 class UserService:
     def __init__(self, session: Session):
@@ -32,7 +32,7 @@ class UserService:
         user = self.user_repo.flag_password_needs_change(user)
         return user
     
-    def change_password(self, id: int, dto: UserPasswordChangeDTO) -> TokenDTO:
+    def change_password(self, id: int, dto: UserPasswordChangeDTO):
         user = self.user_repo.find_by_id(id)
 
         if user is None:
@@ -45,15 +45,17 @@ class UserService:
         hashed_password = hash_password(dto.new_password)
         user = self.user_repo.change_password(user, hashed_password)
 
-        return sign_jwt(user)
+        return
 
-    def login(self, dto: UserLoginDTO) -> TokenDTO:
+    def login(self, dto: UserLoginDTO) -> UserTokenDTO:
         user = self.user_repo.find_by_username(dto.username)
         
         if user is None:
             raise NotFoundException(User, dto.username)
         if not verify_password(dto.password, user.hashed_password):
             raise UserException("Password is incorrect")
+        
+        print(user)
 
         return sign_jwt(user)
 
