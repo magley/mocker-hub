@@ -4,7 +4,8 @@ import './UserLogin.css';
 import { TokenDTO, UserLoginDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { getJwtMustChangePassword, setJWT } from '../util/localstorage';
+import { getJwtMustChangePassword, getJwtRole, setJWT } from '../util/localstorage';
+import { useAuthStore } from '../util/store';
 
 export const UserLogin = () => {
     let navigate = useNavigate();
@@ -13,6 +14,7 @@ export const UserLogin = () => {
         password: '',
     });
     const [error, setError] = useState('');
+    const setRole = useAuthStore((state) => state.setRole);
 
     const handleChange = (e: any) => {
         const { name, value } = e.target;
@@ -39,6 +41,7 @@ export const UserLogin = () => {
         UserService.LoginUser(dto).then((res) => {
             let token: TokenDTO = res.data;
             setJWT(token.token);
+            setRole(getJwtRole());
 
             if (getJwtMustChangePassword()) {
                 navigate("/password-change-required");

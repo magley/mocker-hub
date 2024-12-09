@@ -7,7 +7,6 @@ import { UserLogin } from './pages/UserLogin';
 import { BrowserRouter, Route, Routes } from "react-router";
 import { UserLogout } from './pages/UserLogout';
 
-
 function App() {
     return (
         <>

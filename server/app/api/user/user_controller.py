@@ -27,9 +27,10 @@ def change_user_password(jwt: JWTDep, dto: UserPasswordChangeDTO, user_service: 
     user_service.change_password(user_id, dto)
 
 @router.get("/test")
+@pre_authorize(["superadmin"])
 @cache(expire=10)
-def test(token: JWTDep):
-    pre_authorize(token, [UserRole.user, UserRole.admin])
+def test(jwt: JWTDep):
+    print(get_id_from_jwt(jwt))
     return [
         { "id": 0, "name": "Aza" },
         { "id": 1, "name": "Bub" },
