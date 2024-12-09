@@ -1,9 +1,9 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { Form, Button, Alert } from 'react-bootstrap';
-import { jwtDecode } from 'jwt-decode'; 
-import { UserPasswordChangeDTO, TokenDTO, Token, UserService } from '../api/user.api';
+import { UserPasswordChangeDTO, UserService } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
+import { clearJWT } from '../util/localstorage';
 
 export const UserPasswordChangeRequired = () => {
     let navigate = useNavigate();
@@ -11,23 +11,6 @@ export const UserPasswordChangeRequired = () => {
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [error, setError] = useState('');
-    const [roles, setRoles] = useState<string[]>([]);
-
-    useEffect(() => {
-        const token = localStorage.getItem("token");
-        if (!token) {
-            setError("No token found. Please log in again.");
-            return;
-        }
-    
-        try {
-            const decoded: Token = jwtDecode(token);
-            setRoles(decoded.role);
-        } catch (err) {
-            setError("Invalid token.");
-        }
-    }, []);
-    
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -41,26 +24,14 @@ export const UserPasswordChangeRequired = () => {
             new_password: newPassword
         };
 
-        UserService.ChangePassword(dto).then((res) => {
-            let token: TokenDTO = res.data;
-            console.log(token);
-            if (token.access_token) {
-                localStorage.setItem("token", token.access_token)
-            }
-            navigate("/", { replace: true });
+        UserService.ChangePassword(dto).then(() => {
+            clearJWT();
+            navigate("/login", { replace: true });
         }).catch((err: AxiosError) => {
+            console.error(err);
             setError((err.response?.data as any)["detail"]["message"]);
         });
-
     };
-
-    if (!roles.includes("user") && !roles.includes("admin") && !roles.includes("superadmin")) {
-        return (
-            <div className="container mt-5 d-flex justify-content-center">
-                <Alert variant="danger">You do not have permission to change your password.</Alert>
-            </div>
-        )
-    } 
 
     return (
         <div className="container mt-5 d-flex justify-content-center">
@@ -104,12 +75,10 @@ export const UserPasswordChangeRequired = () => {
                         Change Password
                     </Button>
                 </Form>
-                {/* <p className="text-muted text-center">
+                <p className="text-muted text-center">
                     You will be signed out after this.
-                </p> */}
+                </p>
             </div>
         </div>
     );
-
-
 }

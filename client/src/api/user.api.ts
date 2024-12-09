@@ -1,5 +1,6 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance } from "../util/http";
+import { getJWTStringOrNull } from "../util/localstorage";
 
 export interface UserRegisterDTO {
     email: string,
@@ -32,14 +33,7 @@ export interface UserLoginDTO {
 }
 
 export interface TokenDTO {
-    access_token: string,
-}
-
-export interface Token {
-    id: number,
-    role: string[],
-    must_change_password: boolean,
-    expires: number,
+    token: string,
 }
 
 export class UserService {
@@ -47,14 +41,15 @@ export class UserService {
         return await axiosInstance.post(`/users`, dto);
     }
 
-    static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<TokenDTO>> {
-        const token = localStorage.getItem("token"); 
+    static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<null>> {
+        const token = getJWTStringOrNull();
         if (!token) {
             throw new Error("Token not found. Please log in again.");
         }
+
         return await axiosInstance.post(`/users/password`, dto, {
             headers: { Authorization: `Bearer ${token}` }
-        });    
+        });
     }
 
     static async LoginUser(dto: UserLoginDTO): Promise<AxiosResponse<TokenDTO>> {

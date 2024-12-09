@@ -4,6 +4,7 @@ import './UserLogin.css';
 import { TokenDTO, UserLoginDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { getJwtMustChangePassword, setJWT } from '../util/localstorage';
 
 export const UserLogin = () => {
     let navigate = useNavigate();
@@ -34,14 +35,18 @@ export const UserLogin = () => {
             username: formData.username,
             password: formData.password,
         };
-        
+
         UserService.LoginUser(dto).then((res) => {
             let token: TokenDTO = res.data;
-            if (token.access_token) {
-                localStorage.setItem("token", token.access_token)
+            setJWT(token.token);
+
+            if (getJwtMustChangePassword()) {
+                navigate("/password-change-required");
+            } else {
+                navigate("/");
             }
-            navigate("/");
         }).catch((err: AxiosError) => {
+            console.error(err);
             setError((err.response?.data as any)["detail"]["message"]);
         });
     };

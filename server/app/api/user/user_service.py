@@ -53,7 +53,7 @@ class UserService:
         if user is None:
             raise NotFoundException(User, dto.username)
         if not verify_password(dto.password, user.hashed_password):
-            raise UserException("Password is incorrect")
+            raise UserException("Username or password incorrect")
         
         print(user)
 
