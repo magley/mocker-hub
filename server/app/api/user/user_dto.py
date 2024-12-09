@@ -15,7 +15,6 @@ class UserRegisterDTO(BaseModel):
     password: str
 
 class UserPasswordChangeDTO(BaseModel):
-    id: int
     old_password: str
     new_password: str = Field(min_length=8)
 

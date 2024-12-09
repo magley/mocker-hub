@@ -22,17 +22,42 @@ export interface UserDTO {
 }
 
 export interface UserPasswordChangeDTO {
-    id: number,
     old_password: string,
     new_password: string,
 }
 
+export interface UserLoginDTO {
+    username: string,
+    password: string,
+}
+
+export interface TokenDTO {
+    access_token: string,
+}
+
+export interface Token {
+    id: number,
+    role: string[],
+    must_change_password: boolean,
+    expires: number,
+}
+
 export class UserService {
-    static async RegisterRegularUser(dto: UserRegisterDTO): Promise<AxiosResponse<UserDTO>> {
+    static async RegisterRegularUser(dto: UserRegisterDTO): Promise<void> {
         return await axiosInstance.post(`/users`, dto);
     }
 
-    static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<UserDTO>> {
-        return await axiosInstance.post(`/users/password`, dto);
+    static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<TokenDTO>> {
+        const token = localStorage.getItem("token"); 
+        if (!token) {
+            throw new Error("Token not found. Please log in again.");
+        }
+        return await axiosInstance.post(`/users/password`, dto, {
+            headers: { Authorization: `Bearer ${token}` }
+        });    
+    }
+
+    static async LoginUser(dto: UserLoginDTO): Promise<AxiosResponse<TokenDTO>> {
+        return await axiosInstance.post(`/users/login`, dto);
     }
 }

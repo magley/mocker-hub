@@ -1,16 +1,33 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { Form, Button, Alert } from 'react-bootstrap';
-import { UserPasswordChangeDTO, UserService } from '../api/user.api';
+import { jwtDecode } from 'jwt-decode'; 
+import { UserPasswordChangeDTO, TokenDTO, Token, UserService } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 
 export const UserPasswordChangeRequired = () => {
     let navigate = useNavigate();
-    const [id, setId] = useState(0);
     const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [error, setError] = useState('');
+    const [roles, setRoles] = useState<string[]>([]);
+
+    useEffect(() => {
+        const token = localStorage.getItem("token");
+        if (!token) {
+            setError("No token found. Please log in again.");
+            return;
+        }
+    
+        try {
+            const decoded: Token = jwtDecode(token);
+            setRoles(decoded.role);
+        } catch (err) {
+            setError("Invalid token.");
+        }
+    }, []);
+    
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -20,18 +37,30 @@ export const UserPasswordChangeRequired = () => {
         }
 
         let dto: UserPasswordChangeDTO = {
-            id: id,
             old_password: oldPassword,
             new_password: newPassword
         };
 
-        UserService.ChangePassword(dto).then((_) => {
-            console.log("TODO: Remove JWT from browser storage");
-            navigate("/login", { replace: true });
+        UserService.ChangePassword(dto).then((res) => {
+            let token: TokenDTO = res.data;
+            console.log(token);
+            if (token.access_token) {
+                localStorage.setItem("token", token.access_token)
+            }
+            navigate("/", { replace: true });
         }).catch((err: AxiosError) => {
             setError((err.response?.data as any)["detail"]["message"]);
         });
+
     };
+
+    if (!roles.includes("user") && !roles.includes("admin") && !roles.includes("superadmin")) {
+        return (
+            <div className="container mt-5 d-flex justify-content-center">
+                <Alert variant="danger">You do not have permission to change your password.</Alert>
+            </div>
+        )
+    } 
 
     return (
         <div className="container mt-5 d-flex justify-content-center">
@@ -39,16 +68,6 @@ export const UserPasswordChangeRequired = () => {
                 <h2 className="text-center">Password change required</h2>
                 <p className="text-center">Please change your password before continuing.</p>
                 <Form onSubmit={handleSubmit}>
-                    <Form.Group controlId="oldPassword">
-                        <Form.Label>Id (TODO: Remove this once we have a JWT)</Form.Label>
-                        <Form.Control
-                            type="number"
-                            value={id}
-                            onChange={(e) => setId(+e.target.value)}
-                            required
-                        />
-                    </Form.Group>
-
                     <Form.Group controlId="oldPassword">
                         <Form.Label>Old Password</Form.Label>
                         <Form.Control
@@ -85,9 +104,9 @@ export const UserPasswordChangeRequired = () => {
                         Change Password
                     </Button>
                 </Form>
-                <p className="text-muted text-center">
+                {/* <p className="text-muted text-center">
                     You will be signed out after this.
-                </p>
+                </p> */}
             </div>
         </div>
     );

@@ -1,17 +1,15 @@
 import { useState } from 'react';
 import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
-import './UserRegistration.css';
-import { UserRegisterDTO, UserService } from '../api/user.api';
+import './UserLogin.css';
+import { TokenDTO, UserLoginDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
 
-export const UserRegistration = () => {
+export const UserLogin = () => {
     let navigate = useNavigate();
     const [formData, setFormData] = useState({
         username: '',
-        email: '',
         password: '',
-        confirmPassword: ''
     });
     const [error, setError] = useState('');
 
@@ -25,33 +23,34 @@ export const UserRegistration = () => {
 
     const handleSubmit = (e: any) => {
         e.preventDefault();
-        if (!formData.username || !formData.email || !formData.password || !formData.confirmPassword) {
+        if (!formData.username || !formData.password) {
             setError('All fields are required');
             return;
         }
-        if (formData.password !== formData.confirmPassword) {
-            setError('Passwords do not match');
-            return;
-        }
+
         setError('');
 
-        let dto: UserRegisterDTO = {
-            email: formData.email,
+        let dto: UserLoginDTO = {
             username: formData.username,
             password: formData.password,
         };
-        UserService.RegisterRegularUser(dto).then(() => {
-            navigate("/login");
+        
+        UserService.LoginUser(dto).then((res) => {
+            let token: TokenDTO = res.data;
+            if (token.access_token) {
+                localStorage.setItem("token", token.access_token)
+            }
+            navigate("/");
         }).catch((err: AxiosError) => {
             setError((err.response?.data as any)["detail"]["message"]);
         });
     };
 
     return (
-        <Container className="registration-container">
+        <Container className="login-container">
             <Row className="justify-content-md-center">
                 <Col md={6}>
-                    <h2 className="mt-5">Register</h2>
+                    <h2 className="mt-5">Login</h2>
                     {error && <Alert variant="danger">{error}</Alert>}
                     <Form onSubmit={handleSubmit}>
                         <Form.Group as={Row} controlId="formUsername">
@@ -62,20 +61,6 @@ export const UserRegistration = () => {
                                     name="username"
                                     placeholder="Enter your username"
                                     value={formData.username}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </Col>
-                        </Form.Group>
-
-                        <Form.Group as={Row} controlId="formEmail">
-                            <Form.Label column sm={3}>Email</Form.Label>
-                            <Col sm={9}>
-                                <Form.Control
-                                    type="email"
-                                    name="email"
-                                    placeholder="user@example.org"
-                                    value={formData.email}
                                     onChange={handleChange}
                                     required
                                 />
@@ -96,23 +81,9 @@ export const UserRegistration = () => {
                             </Col>
                         </Form.Group>
 
-                        <Form.Group as={Row} controlId="formConfirmPassword">
-                            <Form.Label column sm={3}>Confirm Password</Form.Label>
-                            <Col sm={9}>
-                                <Form.Control
-                                    type="password"
-                                    name="confirmPassword"
-                                    placeholder="Confirm your password"
-                                    value={formData.confirmPassword}
-                                    onChange={handleChange}
-                                    required
-                                />
-                            </Col>
-                        </Form.Group>
-
                         <div className="d-flex justify-content-center">
                             <Button variant="primary" type="submit" className="mt-3">
-                                Register
+                                Login
                             </Button>
                         </div>
                     </Form>
