@@ -42,14 +42,7 @@ export class UserService {
     }
 
     static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<null>> {
-        const token = getJWTStringOrNull();
-        if (!token) {
-            throw new Error("Token not found. Please log in again.");
-        }
-
-        return await axiosInstance.post(`/users/password`, dto, {
-            headers: { Authorization: `Bearer ${token}` }
-        });
+        return await axiosInstance.post(`/users/password`, dto);
     }
 
     static async LoginUser(dto: UserLoginDTO): Promise<AxiosResponse<TokenDTO>> {
