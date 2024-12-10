@@ -1,5 +1,6 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance } from "../util/http";
+import { getJWTStringOrNull } from "../util/localstorage";
 
 export interface UserRegisterDTO {
     email: string,
@@ -22,17 +23,29 @@ export interface UserDTO {
 }
 
 export interface UserPasswordChangeDTO {
-    id: number,
     old_password: string,
     new_password: string,
 }
 
+export interface UserLoginDTO {
+    username: string,
+    password: string,
+}
+
+export interface TokenDTO {
+    token: string,
+}
+
 export class UserService {
-    static async RegisterRegularUser(dto: UserRegisterDTO): Promise<AxiosResponse<UserDTO>> {
+    static async RegisterRegularUser(dto: UserRegisterDTO): Promise<void> {
         return await axiosInstance.post(`/users`, dto);
     }
 
-    static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<UserDTO>> {
+    static async ChangePassword(dto: UserPasswordChangeDTO): Promise<AxiosResponse<null>> {
         return await axiosInstance.post(`/users/password`, dto);
+    }
+
+    static async LoginUser(dto: UserLoginDTO): Promise<AxiosResponse<TokenDTO>> {
+        return await axiosInstance.post(`/users/login`, dto);
     }
 }

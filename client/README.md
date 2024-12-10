@@ -4,12 +4,13 @@ npm i bootstrap
 npm i @types/bootstrap
 npm i @types/node
 npm i @popperjs/core
-npm i sass
+npm i sass@1.77.6 --save-exact # https://github.com/twbs/bootstrap/issues/40621
 npm i react-bootstrap
 npm i zustand
 npm i axios
 npm i react-router-dom
-npm i bootstrap-icons
+npm i jwt-decode
+npm i buffer
 npm run dev
 ```
 

@@ -3,10 +3,10 @@ import { Form, Button, Alert } from 'react-bootstrap';
 import { UserPasswordChangeDTO, UserService } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
+import { clearJWT } from '../util/localstorage';
 
 export const UserPasswordChangeRequired = () => {
     let navigate = useNavigate();
-    const [id, setId] = useState(0);
     const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
@@ -20,15 +20,15 @@ export const UserPasswordChangeRequired = () => {
         }
 
         let dto: UserPasswordChangeDTO = {
-            id: id,
             old_password: oldPassword,
             new_password: newPassword
         };
 
-        UserService.ChangePassword(dto).then((_) => {
-            console.log("TODO: Remove JWT from browser storage");
+        UserService.ChangePassword(dto).then(() => {
+            clearJWT();
             navigate("/login", { replace: true });
         }).catch((err: AxiosError) => {
+            console.error(err);
             setError((err.response?.data as any)["detail"]["message"]);
         });
     };
@@ -39,16 +39,6 @@ export const UserPasswordChangeRequired = () => {
                 <h2 className="text-center">Password change required</h2>
                 <p className="text-center">Please change your password before continuing.</p>
                 <Form onSubmit={handleSubmit}>
-                    <Form.Group controlId="oldPassword">
-                        <Form.Label>Id (TODO: Remove this once we have a JWT)</Form.Label>
-                        <Form.Control
-                            type="number"
-                            value={id}
-                            onChange={(e) => setId(+e.target.value)}
-                            required
-                        />
-                    </Form.Group>
-
                     <Form.Group controlId="oldPassword">
                         <Form.Label>Old Password</Form.Label>
                         <Form.Control
@@ -91,6 +81,4 @@ export const UserPasswordChangeRequired = () => {
             </div>
         </div>
     );
-
-
 }
