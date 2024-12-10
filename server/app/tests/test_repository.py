@@ -56,11 +56,10 @@ def test_add_repo(repo_service):
         name="Some repo",
         desc="",
         public=True,
-        organization_id=None,
-        owner_id=user1.id
+        organization_id=None
     )
 
-    repo_result = repo_service.add(dto)
+    repo_result = repo_service.add(user1.id, dto)
 
     assert repo_result.id is not None
 
@@ -70,12 +69,11 @@ def test_add_repo__no_user(repo_service):
         name="Some repo",
         desc="",
         public=True,
-        organization_id=None,
-        owner_id=1
+        organization_id=None
     )
 
     with pytest.raises(NotFoundException) as e:
-        repo_service.add(dto)
+        repo_service.add(1, dto)
     
     assert e.value.entity_type == User
     assert e.value.identifier == 1
@@ -104,12 +102,11 @@ def test_add_repo__repo_name(repo_service):
         name="python",
         desc="",
         public=True,
-        organization_id=None,
-        owner_id=1
+        organization_id=None
     )
 
     with pytest.raises(FieldTakenException) as e:
-        repo_service.add(dto)
+        repo_service.add(1, dto)
 
     # [2] Trying to create "user2/python".
 
@@ -117,11 +114,10 @@ def test_add_repo__repo_name(repo_service):
         name="python",
         desc="",
         public=True,
-        organization_id=None,
-        owner_id=2
+        organization_id=None
     )
 
-    repo_res = repo_service.add(dto)
+    repo_res = repo_service.add(2, dto)
 
     assert repo_res is not None
 
@@ -132,12 +128,11 @@ def test_add_repo__repo_name(repo_service):
         name="python",
         desc="",
         public=True,
-        organization_id=None,
-        owner_id=3
+        organization_id=None
     )
 
     with pytest.raises(FieldTakenException) as e:
-        repo_service.add(dto)
+        repo_service.add(3, dto)
 
 def test_add___integration():
     with TestClient(app) as client:
@@ -150,14 +145,24 @@ def test_add___integration():
         created_user = response.json()
 
         data = {
+            "username": "u1",
+            "password": "1234"
+        }
+        response = client.post("/api/v1/users/login", json=data)
+        jwt = response.json()["token"]
+
+        header = {
+            "Authorization": f"Bearer {jwt}"
+        }
+
+        data = {
             "name": "python",
             "desc": "",
             "public": True,
             "organization_id": None,
-            "owner_id": created_user['id'],
         }
 
-        response = client.post("/api/v1/repositories/", json=data)
+        response = client.post("/api/v1/repositories/", json=data, headers=header)
         created_repo = response.json()
 
         assert created_repo['canonical_name'] == f'u1/python'
