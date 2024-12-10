@@ -9,6 +9,8 @@ npm i react-bootstrap
 npm i zustand
 npm i axios
 npm i react-router-dom
+npm i jwt-decode
+npm i buffer
 npm run dev
 ```
 

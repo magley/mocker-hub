@@ -9,12 +9,18 @@ class UserDTO(BaseModel):
     role: UserRole
     join_date: datetime.datetime
 
+class UserTokenDTO(BaseModel):
+    token: str
+
 class UserRegisterDTO(BaseModel):
     username: str
     email: EmailStr
     password: str
 
 class UserPasswordChangeDTO(BaseModel):
-    id: int
     old_password: str
     new_password: str = Field(min_length=8)
+
+class UserLoginDTO(BaseModel):
+    username: str
+    password: str
