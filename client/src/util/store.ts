@@ -3,10 +3,13 @@ import { getJwtRole } from "./localstorage";
 
 interface AuthState {
     role: string;
-    setRole: (role: string) => void;
+    setRole: (role: string, callback?: () => void) => void;
 }
 
 export const useAuthStore = create<AuthState>((set) => ({
     role: getJwtRole(),
-    setRole: (val: string) => set({ role: val }),
+    setRole: (role, callback) => {
+        set({ role }, false);
+        if (callback) callback();
+    },
 }));

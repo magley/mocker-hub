@@ -19,13 +19,13 @@ export function Navbar() {
             {
                 role === 'user' &&
                 <>
-                    <NavLink className={"navlink"} to="/new" end>[ + ]</NavLink>
+                    <NavLink className={"navlink"} to="/new" end>New repo</NavLink>
                 </>
             }
             {
                 role === 'admin' &&
                 <>
-                    <NavLink className={"navlink"} to="/new" end>[ + ]</NavLink>
+                    <NavLink className={"navlink"} to="/new" end>New repo</NavLink>
                 </>
             }
             {
