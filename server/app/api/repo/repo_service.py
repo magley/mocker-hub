@@ -14,12 +14,12 @@ class RepositoryService:
         self.repo_repo = RepositoryRepo(session)
         self.user_repo = UserRepo(session)
 
-    def add(self, dto: RepositoryCreateDTO) -> Repository:
+    def add(self, user_id: int, dto: RepositoryCreateDTO) -> Repository:
         # Find the User who's creating the repository.
 
-        owner = self.user_repo.find_by_id(dto.owner_id)
+        owner = self.user_repo.find_by_id(user_id)
         if owner is None:
-            raise NotFoundException(User, dto.owner_id)
+            raise NotFoundException(User, user_id)
         repo_is_official = owner.role == UserRole.admin 
 
         # TODO: Find the organization this repository is created for (if any).
@@ -27,6 +27,7 @@ class RepositoryService:
         organization = None # self.organization_repo.find_by_id(dto.organization.id)
         org_name = None
         if organization is not None:
+            print("Warning - organizations are not implemented yet. Ignoring the organization field...")
             org_name = ...
         
         # Compute the canonical name of the repository.

@@ -18,5 +18,3 @@ class RepositoryCreateDTO(BaseModel):
     desc: str
     public: bool
     organization_id: int | None = None
-
-    owner_id: int # TODO: Once we have authorization, we should extract the ID from the JWT instead.
