@@ -3,6 +3,7 @@ import { Form, Button, DropdownButton, Dropdown, Col, Row, Alert } from 'react-b
 import './RepoCreate.css';
 import { RepoCreateDTO, RepoDTO, RepositoryService } from '../api/repo.api';
 import { AxiosError } from 'axios';
+import { getJwtId } from '../util/localstorage';
 
 interface Owner {
     name: string;
@@ -28,7 +29,7 @@ export const RepoCreate = () => {
         ];
 
         const all_possible_owners = [
-            { name: "user 1", user_id: 1, organization_id: null },
+            { name: "user 1", user_id: getJwtId(), organization_id: null },
             ...organizations_i_can_make_repos_in
         ]
 
@@ -46,7 +47,7 @@ export const RepoCreate = () => {
 
     const userOrOrgToStr = (owner: Owner) => {
         if (owner.user_id != null) {
-            return `User ${owner.user_id} (You)`;
+            return `(You)`;
         }
         if (owner.organization_id != null) {
             return `Organization ${owner.organization_id}`;
@@ -86,8 +87,6 @@ export const RepoCreate = () => {
             name: data.name,
             public: data.isPublic,
             organization_id: owner!.organization_id,
-
-            owner_id: owners[0].user_id!,
         };
 
         setError('');

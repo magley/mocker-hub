@@ -6,7 +6,6 @@ export interface RepoCreateDTO {
     desc: string,
     public: boolean,
     organization_id: number | null,
-    owner_id: number, // TODO: Once we have authorization, we should extract the ID from the JWT instead.
 }
 
 export interface RepoDTO {
