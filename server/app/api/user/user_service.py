@@ -54,8 +54,6 @@ class UserService:
             raise NotFoundException(User, dto.username)
         if not verify_password(dto.password, user.hashed_password):
             raise UserException("Username or password incorrect")
-        
-        print(user)
 
         return sign_jwt(user)
 

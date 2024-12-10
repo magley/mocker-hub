@@ -1,7 +1,7 @@
 from typing import Annotated
 from fastapi import APIRouter, Depends
 
-from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO
+from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO
 from app.api.user.user_service import UserService, get_user_service
 from app.api.user.user_model import UserRole
 from fastapi_cache.decorator import cache
@@ -10,9 +10,9 @@ from app.api.config.auth import pre_authorize
 
 router = APIRouter(prefix="/users", tags=["users"])
 
-@router.post("/", status_code=201, summary="Register a new regular user")
+@router.post("/", response_model=UserDTO, summary="Register a new regular user")
 def register_user(dto: UserRegisterDTO, user_service: UserService = Depends(get_user_service)): 
-    user_service.add(dto)
+    return user_service.add(dto)
 
 @router.post("/login", response_model=UserTokenDTO, status_code=200, summary="Log in to your profile")
 def login_user(dto: UserLoginDTO, user_service: UserService = Depends(get_user_service)):
@@ -29,7 +29,6 @@ def change_user_password(jwt: JWTDep, dto: UserPasswordChangeDTO, user_service: 
 @cache(expire=10)
 @pre_authorize(["superadmin"])
 def test(jwt: JWTDep):
-    print(get_id_from_jwt(jwt))
     return [
         { "id": 0, "name": "Aza" },
         { "id": 1, "name": "Bub" },
