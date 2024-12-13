@@ -6,6 +6,10 @@ from app.api.config.database import engine, get_database
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_dto import UserRegisterDTO
 from app.api.user.user_service import UserService
+from app.api.repo.repo_service import RepositoryService
+from app.api.org.org_service import OrganizationService
+from app.api.repo.repo_dto import RepositoryCreateDTO
+from app.api.org.org_dto import OrganizationCreateDTO
 
 def init_create_tables():
     SQLModel.metadata.create_all(engine)
@@ -46,3 +50,34 @@ def init_superadmin():
     else:
         print("Superadmin already exists")
         return
+    
+
+def init_dummy_data():
+    print("Adding dummy data...")
+
+    session = next(get_database())
+    user_service = UserService(session)
+    repo_service = RepositoryService(session)
+    org_service = OrganizationService(session)
+
+    user1 = user_service.add(UserRegisterDTO(username="user1", email="user1@test.com", password="1234"))
+    user2 = user_service.add(UserRegisterDTO(username="user2", email="user2@test.com", password="1234"))
+    user3 = user_service.add(UserRegisterDTO(username="user3", email="user3@test.com", password="1234"))
+    user4 = user_service.add(UserRegisterDTO(username="user4", email="user4@test.com", password="1234"))
+    user5 = user_service.add(UserRegisterDTO(username="user5", email="user5@test.com", password="1234"))
+    user6 = user_service.add(UserRegisterDTO(username="user6", email="user6@test.com", password="1234"))
+
+    org1 = org_service.add(user1.id, OrganizationCreateDTO(name="org1", desc="", image=""))
+    org2 = org_service.add(user2.id, OrganizationCreateDTO(name="org2", desc="", image=""))
+    org3 = org_service.add(user1.id, OrganizationCreateDTO(name="org3", desc="", image=""))
+
+    repo1 = repo_service.add(user1.id, RepositoryCreateDTO(name="python", desc="", public=True, organization_id=None))
+    repo2 = repo_service.add(user1.id, RepositoryCreateDTO(name="node", desc="", public=True, organization_id=None))
+    repo3 = repo_service.add(user1.id, RepositoryCreateDTO(name="dsa", desc="", public=True, organization_id=org1.id))
+    repo4 = repo_service.add(user1.id, RepositoryCreateDTO(name="mio", desc="", public=True, organization_id=org1.id))
+    repo5 = repo_service.add(user2.id, RepositoryCreateDTO(name="dsa-ui", desc="", public=True, organization_id=org1.id))
+    repo6 = repo_service.add(user2.id, RepositoryCreateDTO(name="istrue", desc="", public=True, organization_id=org2.id))
+    repo7 = repo_service.add(user3.id, RepositoryCreateDTO(name="redis", desc="", public=True, organization_id=None))
+    repo8 = repo_service.add(user4.id, RepositoryCreateDTO(name="redis", desc="", public=True, organization_id=None))
+    
+    print("Finished adding dummy data.")
