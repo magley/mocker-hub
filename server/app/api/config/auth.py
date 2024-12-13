@@ -28,7 +28,7 @@ if os.getenv('mocker_hub_TEST_ENV') is not None:
     JWT_SECRET = 'Test1234'
     JWT_ALGORITHM = 'HS256'
 else:
-    JWT_SECRET = os['JWT_SECRET']
+    JWT_SECRET = os.environ['JWT_SECRET']
     JWT_ALGORITHM = os.environ['JWT_ALGORITHM']
 
 
