@@ -8,6 +8,7 @@ import { UserLogin } from './pages/UserLogin';
 import { BrowserRouter, Route, RouteProps, Routes } from "react-router";
 import { UserLogout } from './pages/UserLogout';
 import { ProtectedRoute } from './components/ProtectedRoute';
+import { OrganizationCreate } from './pages/OrgCreate';
 
 // This function converts:
 //
@@ -50,6 +51,7 @@ function App() {
 
                     {/* Protected routes. */}
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}
+                    {authRoute("/org", ['user', 'admin'], OrganizationCreate)}
 
                     {/* "Not found", must be at the end. */}
                     {authRoute("*", [], NotFound)}
