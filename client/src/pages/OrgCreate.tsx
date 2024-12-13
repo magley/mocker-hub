@@ -2,6 +2,8 @@ import React, { useRef, useState } from 'react';
 import { Form, Button, Alert, Row, Col } from 'react-bootstrap';
 import './OrgCreate.css';
 import { fileToBase64 } from '../util/image';
+import { OrganizationCreateDTO, OrganizationService } from '../api/org.api';
+import { AxiosError } from 'axios';
 
 export const OrganizationCreate = () => {
     const [name, setName] = useState('');
@@ -9,6 +11,8 @@ export const OrganizationCreate = () => {
     const [image, setImage] = useState<File | null>(null);
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [errors, setErrors] = useState<{ name?: string; description?: string; image?: string }>({});
+    const [error, setError] = useState('');
+
     const fileInputRef = useRef<HTMLInputElement>(null);
 
     const validateForm = () => {
@@ -30,7 +34,20 @@ export const OrganizationCreate = () => {
             if (image) {
                 base64 = await fileToBase64(image);
             }
-            console.log({ name, description, base64 });
+
+            const dto: OrganizationCreateDTO = {
+                name: name,
+                desc: description,
+                image: base64,
+            };
+
+            setError('');
+            setErrors({});
+            OrganizationService.CreateRepository(dto).then((res) => {
+                console.log(res);
+            }).catch((err: AxiosError) => {
+                setError((err.response?.data as any)["detail"]["message"]);
+            });
         } else {
             setErrors(formErrors);
         }
@@ -112,6 +129,8 @@ export const OrganizationCreate = () => {
                     <img src={imagePreview} alt="Preview" style={{ maxWidth: '100%', height: 'auto' }} />
                 </div>
             )}
+
+            {error && <Alert variant="danger">{error}</Alert>}
 
             <div className="d-flex justify-content-end mt-5">
                 <Button variant="primary" type="submit">
