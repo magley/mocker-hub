@@ -4,7 +4,7 @@ from pydantic import BaseModel
 class OrganizationCreateDTO(BaseModel):
     name: str
     desc: str
-    image: str
+    image: str | None = None
 
 class OrganizationDTOBasic(BaseModel):
     id: int

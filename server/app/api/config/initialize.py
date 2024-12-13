@@ -67,9 +67,9 @@ def init_dummy_data():
     user5 = user_service.add(UserRegisterDTO(username="user5", email="user5@test.com", password="1234"))
     user6 = user_service.add(UserRegisterDTO(username="user6", email="user6@test.com", password="1234"))
 
-    org1 = org_service.add(user1.id, OrganizationCreateDTO(name="org1", desc="", image=""))
-    org2 = org_service.add(user2.id, OrganizationCreateDTO(name="org2", desc="", image=""))
-    org3 = org_service.add(user1.id, OrganizationCreateDTO(name="org3", desc="", image=""))
+    org1 = org_service.add(user1.id, OrganizationCreateDTO(name="org1", desc="", image=None))
+    org2 = org_service.add(user2.id, OrganizationCreateDTO(name="org2", desc="", image=None))
+    org3 = org_service.add(user1.id, OrganizationCreateDTO(name="org3", desc="", image=None))
 
     repo1 = repo_service.add(user1.id, RepositoryCreateDTO(name="python", desc="", public=True, organization_id=None))
     repo2 = repo_service.add(user1.id, RepositoryCreateDTO(name="node", desc="", public=True, organization_id=None))

@@ -5,6 +5,7 @@ from app.api.org.org_dto import OrganizationCreateDTO
 from app.api.org.org_model import Organization
 from app.api.org.org_repo import OrganizationRepo
 from app.api.config.exception_handler import FieldTakenException
+from app.api.config.images import generate_inline_image, save_image
  
 class OrganizationService:
     def __init__(self, session: Session):
@@ -17,6 +18,12 @@ class OrganizationService:
         if self.org_repo.find_by_name(dto.name) is not None:
             raise FieldTakenException("Organization name")
         
+        # Save the image.
+
+        if dto.image is None:
+            dto.image = generate_inline_image(dto.name)
+        save_image(dto.image, f"org-{dto.name}")
+
         # Create the organization.
 
         new_repo = Organization.model_validate(dto, update={
