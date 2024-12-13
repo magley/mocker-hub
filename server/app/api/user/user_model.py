@@ -1,7 +1,9 @@
 import datetime
 import enum
-from sqlmodel import Field, SQLModel
+from sqlmodel import Field, Relationship, SQLModel
 from pydantic import EmailStr
+
+from app.api.repo.repo_model import Repository
 
 class UserRole(str, enum.Enum):
     user = "user"
@@ -17,3 +19,5 @@ class User(SQLModel, table=True):
     
     hashed_password: str
     must_change_password: bool = Field(default=False)
+
+    repositories: list["Repository"] = Relationship(back_populates="owner")

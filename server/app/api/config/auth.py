@@ -23,8 +23,13 @@ from functools import wraps
 from typing import List, Callable
 
 
-JWT_SECRET = os.environ['JWT_SECRET']
-JWT_ALGORITHM = os.environ['JWT_ALGORITHM']
+if os.getenv('mocker_hub_TEST_ENV') is not None:
+    print("[!] Detected environment variable mocker_hub_TEST_ENV -> setting up unsafe JWT envirnoment")
+    JWT_SECRET = 'Test1234'
+    JWT_ALGORITHM = 'HS256'
+else:
+    JWT_SECRET = os['JWT_SECRET']
+    JWT_ALGORITHM = os.environ['JWT_ALGORITHM']
 
 
 class JWTBearer(HTTPBearer):
@@ -59,7 +64,6 @@ def sign_jwt(user: User) -> str:
         "role": user.role.value,
         "must_change_password": user.must_change_password,
     }
-    print(payload)
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
 
 

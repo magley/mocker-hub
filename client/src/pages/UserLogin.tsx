@@ -41,13 +41,13 @@ export const UserLogin = () => {
         UserService.LoginUser(dto).then((res) => {
             let token: TokenDTO = res.data;
             setJWT(token.token);
-            setRole(getJwtRole());
-
-            if (getJwtMustChangePassword()) {
-                navigate("/password-change-required");
-            } else {
-                navigate("/");
-            }
+            setRole(getJwtRole(), () => {
+                if (getJwtMustChangePassword()) {
+                    navigate("/password-change-required");
+                } else {
+                    navigate("/new");
+                }
+            });
         }).catch((err: AxiosError) => {
             console.error(err);
             setError((err.response?.data as any)["detail"]["message"]);
