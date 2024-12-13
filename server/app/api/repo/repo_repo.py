@@ -13,7 +13,7 @@ class RepositoryRepo:
         return repo    
     
     def find_by_id(self, id: int) -> Repository | None:
-        return self.session.get(User, id)
+        return self.session.get(Repository, id)
         
     def find_by_canonical_name(self, canonical_name: str) -> Repository | None:
         return self.session.exec(select(Repository).where(Repository.canonical_name == canonical_name)).first()
