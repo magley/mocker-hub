@@ -48,4 +48,8 @@ export class UserService {
     static async LoginUser(dto: UserLoginDTO): Promise<AxiosResponse<TokenDTO>> {
         return await axiosInstance.post(`/users/login`, dto);
     }
+
+    static async RegisterAdmin(dto: UserRegisterDTO): Promise<void> {
+        return await axiosInstance.post(`/users/register-admin`, dto);
+    }
 }

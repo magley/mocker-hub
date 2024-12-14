@@ -25,6 +25,11 @@ def change_user_password(jwt: JWTDep, dto: UserPasswordChangeDTO, user_service: 
     user_id = get_id_from_jwt(jwt)
     user_service.change_password(user_id, dto)
 
+@router.post("/register-admin", response_model=UserDTO, summary="Register a new admin")
+@pre_authorize([UserRole.superadmin])
+def register_admin(jwt: JWTDep, dto: UserRegisterDTO, user_service: UserService = Depends(get_user_service)):
+    return user_service.add_admin(dto)
+
 @router.get("/test")
 @cache(expire=10)
 @pre_authorize(["superadmin"])
