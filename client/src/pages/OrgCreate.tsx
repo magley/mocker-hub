@@ -43,7 +43,7 @@ export const OrganizationCreate = () => {
 
             setError('');
             setErrors({});
-            OrganizationService.CreateRepository(dto).then((res) => {
+            OrganizationService.CreateOrganization(dto).then((res) => {
                 console.log(res);
             }).catch((err: AxiosError) => {
                 setError((err.response?.data as any)["detail"]["message"]);

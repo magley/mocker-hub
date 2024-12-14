@@ -32,7 +32,11 @@ export interface OrganizationDTO {
 }
 
 export class OrganizationService {
-    static async CreateRepository(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
+    static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.post(`/organizations`, dto);
+    }
+
+    static async GetMyOrganizations(): Promise<AxiosResponse<OrganizationDTOBasic[]>> {
+        return await axiosInstance.get(`/organizations/my`);
     }
 }
