@@ -27,3 +27,10 @@ class OrganizationRepo:
         self.session.commit()
         self.session.refresh(orgmember)
         return orgmember
+
+    def find_orgs_that_user_is_member_of(self, user_id: int) -> List[Organization]:
+        return self.session.exec(
+            select(Organization)
+            .join(OrganizationMembers, Organization.id == OrganizationMembers.organization_id)
+            .where(OrganizationMembers.user_id == user_id)
+        ).all()

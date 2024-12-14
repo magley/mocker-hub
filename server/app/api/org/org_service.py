@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import Depends
 from sqlmodel import Session
 from app.api.config.database import get_database
@@ -38,9 +39,11 @@ class OrganizationService:
 
         return org
     
-
     def add_user_to_org(self, org_id: int, user_id: int) -> OrganizationMembers:
         return self.org_repo.add_user_to_org(org_id, user_id)
+    
+    def find_orgs_that_user_is_member_of(self, user_id: int) -> List[Organization]:
+        return self.org_repo.find_orgs_that_user_is_member_of(user_id)
 
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
