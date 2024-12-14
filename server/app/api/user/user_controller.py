@@ -20,7 +20,7 @@ def login_user(dto: UserLoginDTO, user_service: UserService = Depends(get_user_s
     return UserTokenDTO(token=token)
 
 @router.post("/password", status_code=204, summary="Change the user's password")
-@pre_authorize(["user", "admin", UserRole.superadmin], ignore_password_change_requirement=True)
+@pre_authorize([UserRole.user, UserRole.admin, UserRole.superadmin], ignore_password_change_requirement=True)
 def change_user_password(jwt: JWTDep, dto: UserPasswordChangeDTO, user_service: UserService = Depends(get_user_service)):
     user_id = get_id_from_jwt(jwt)
     user_service.change_password(user_id, dto)
@@ -32,7 +32,7 @@ def register_admin(jwt: JWTDep, dto: UserRegisterDTO, user_service: UserService 
 
 @router.get("/test")
 @cache(expire=10)
-@pre_authorize(["superadmin"])
+@pre_authorize([UserRole.superadmin])
 def test(jwt: JWTDep):
     return [
         { "id": 0, "name": "Aza" },
