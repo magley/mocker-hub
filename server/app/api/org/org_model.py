@@ -6,6 +6,13 @@ if TYPE_CHECKING:
     from app.api.user.user_model import User
 
 
+class OrganizationMembers(SQLModel, table=True):
+    __tablename__ = "organization_members"
+
+    user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    organization_id: int | None = Field(default=None, foreign_key="organization.id", primary_key=True)
+
+
 class Organization(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
 

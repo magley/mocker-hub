@@ -2,7 +2,7 @@ from fastapi import Depends
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.org.org_dto import OrganizationCreateDTO
-from app.api.org.org_model import Organization
+from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.org.org_repo import OrganizationRepo
 from app.api.config.exception_handler import FieldTakenException
 from app.api.config.images import generate_inline_image, save_image
@@ -30,7 +30,17 @@ class OrganizationService:
             "owner_id": user_id,
         })
 
-        return self.org_repo.add(new_repo)
+        org = self.org_repo.add(new_repo)
+
+        # Add user to his own organization.
+
+        self.add_user_to_org(org.id, user_id)
+
+        return org
+    
+
+    def add_user_to_org(self, org_id: int, user_id: int) -> OrganizationMembers:
+        return self.org_repo.add_user_to_org(org_id, user_id)
 
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
