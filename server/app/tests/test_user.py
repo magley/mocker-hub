@@ -4,11 +4,11 @@ import unittest.mock as mock
 from sqlmodel import Session
 
 from app.api.config.security import hash_password
-from app.api.user.user_dto import UserPasswordChangeDTO
+from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
-from app.api.config.exception_handler import NotFoundException, UserException
+from app.api.config.exception_handler import NotFoundException, UserException, FieldTakenException
 
 @pytest.fixture
 def mock_session():
@@ -59,3 +59,43 @@ def test_change_password_new_password_is_same_as_current_password(user_service, 
 
     with pytest.raises(UserException) as e:
         user_service.change_password(1, dto)
+
+def test_add_admin(user_service, mock_user_repo):
+    dto = UserRegisterDTO(username="Username1", email="a@email.com", password="Password1")
+    new_user = User(id=1, username="Username1", email="a@email.com", role=UserRole.user, hashed_password=hash_password("Password1"))
+
+    mock_user_repo.find_by_email.return_value = None
+    mock_user_repo.find_by_username.return_value = None
+    mock_user_repo.add.return_value = new_user
+    mock_user_repo.set_role.return_value = User(
+        id=1, username="Username1", email="a@email.com", role=UserRole.admin, hashed_password=hash_password("Password1")
+    )
+
+    test_result = user_service.add_admin(dto)
+
+    assert test_result.id == 1
+
+def test_add_admin_new_admin_username_already_exists(user_service, mock_user_repo):
+    dto = UserRegisterDTO(username="Username1", email="a@email.com", password="Password1")
+    start_user =  User(id=1, username="Username1", email="b@email.com", role=UserRole.admin, hashed_password=hash_password("Password1"))
+
+    mock_user_repo.find_by_email.return_value = None  
+    mock_user_repo.find_by_username.return_value = start_user
+
+    with pytest.raises(FieldTakenException) as e:
+        user_service.add_admin(dto)
+
+    assert e.value.message == "Username already taken"
+
+def test_add_admin_new_admin_email_already_exists(user_service, mock_user_repo):
+    dto = UserRegisterDTO(username="Username1", email="a@email.com", password="Password1")
+    start_user =  User(id=1, username="Username2", email="a@email.com", role=UserRole.admin, hashed_password=hash_password("Password1"))
+
+    mock_user_repo.find_by_email.return_value = start_user  
+    mock_user_repo.find_by_username.return_value = None
+
+    with pytest.raises(FieldTakenException) as e:
+        user_service.add_admin(dto)
+
+    assert e.value.message == "Email already taken"
+
