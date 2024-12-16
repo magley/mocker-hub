@@ -27,11 +27,11 @@ class OrganizationService:
 
         # Create the organization.
 
-        new_repo = Organization.model_validate(dto, update={
+        new_org = Organization.model_validate(dto, update={
             "owner_id": user_id,
         })
 
-        org = self.org_repo.add(new_repo)
+        org = self.org_repo.add(new_org)
 
         # Add user to his own organization.
 

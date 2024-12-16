@@ -1,4 +1,5 @@
 import base64
+import os
 import random
 from PIL import Image, ImageDraw, ImageFont
 import hashlib
@@ -15,8 +16,10 @@ def save_image(inline_image_base64: str, filename_without_path_or_extension: str
     filename = f"{filename_without_path_or_extension}.{file_format}"
     filepath = f"./images/{filename}"
 
-    with open(filepath, "wb") as f:
-        f.write(image_bytes)
+    if os.getenv('mocker_hub_TEST_ENV') is None:
+        with open(filepath, "wb") as f:
+            f.write(image_bytes)
+
     return filepath
 
 
