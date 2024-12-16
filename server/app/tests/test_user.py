@@ -99,3 +99,34 @@ def test_add_admin_new_admin_email_already_exists(user_service, mock_user_repo):
 
     assert e.value.message == "Email already taken"
 
+def test_add(user_service, mock_user_repo):
+    dto = UserRegisterDTO(username="Username1", email="email1@email.com", password="Password1")
+    mock_user_repo.find_by_email.return_value = None
+    mock_user_repo.find_by_username.return_value = None
+
+    test_result = user_service.add(dto)
+
+    assert test_result.id is not None
+
+def test_add_existing_user(user_service, mock_user_repo):
+    dto = UserRegisterDTO(username="Username1", email="email1@email.com", password="Password1")
+    user = User(username="Username1", email="email1@email.com", role=UserRole.user, hashed_password=hash_password(dto.password))
+    
+    def get_user_by_email_mocked(email: str):
+        return user if user.email == email else None
+    mock_user_repo.find_by_email.side_effect = get_user_by_email_mocked
+
+    def get_user_by_username_mocked(username: str):
+        return user if user.username == username else None
+    mock_user_repo.find_by_username.side_effect = get_user_by_username_mocked
+
+    # [1] Creating a user with a non-unique email
+    with pytest.raises(FieldTakenException) as e:
+        user_service.add(dto)
+    assert e.value.message == "Email already taken"
+
+    # [2] Creating a user with a non-unique username
+    dto.email = "email2@email.com"
+    with pytest.raises(FieldTakenException) as e:
+        user_service.add(dto)
+    assert e.value.message == "Username already taken"
