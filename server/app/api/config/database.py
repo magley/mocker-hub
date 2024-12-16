@@ -27,8 +27,10 @@ SessionLocal = sessionmaker(
     # https://github.com/fastapi/sqlmodel/issues/75#issuecomment-2109911909
     class_ = SQLModelSession,
     
-    autocommit=False, 
-    autoflush=False, 
+    autocommit=False,
+    autoflush=False,
+
+    # expire_on_commit = False,
     bind=engine
 )
 
