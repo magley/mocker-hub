@@ -108,3 +108,70 @@ def test_add_admin(user_service, mock_user_repo):
         result = user_service.add_admin(dto)
         
         assert result.role == UserRole.admin
+
+def test_add_admin___integration():
+
+    with TestClient(app) as client:
+    
+        def get_auth_header(data):
+            response = client.post("/api/v1/users/login", json=data)
+            assert response.status_code == 200
+            
+            ok_request = response.json()
+            jwt = ok_request["token"]
+            header = {
+                "Authorization": f"Bearer {jwt}"
+            }
+
+            return header
+    
+        config_file = "./volume-server-cfg/superadmin_password.txt"
+        data = {
+            "username" : "admin",
+            "password" : ""
+        }
+
+        with open(config_file, "r") as f:
+            data["password"] = old_password = f.readline()
+
+        # [1] Adding an admin before changing the super admin password
+        header = get_auth_header(data)
+
+        data = {
+            "username": "Username1",
+            "email": "email1@email.com",
+            "password": "Password1"
+        }
+        
+        response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+        bad_request = response.json()
+        
+        assert response.status_code == 403
+        assert bad_request["detail"] == "Password change required"
+        
+        # [2] Changing the super admin password
+        data = {
+            "old_password": old_password,
+            "new_password": "Password1" 
+        }
+        response = client.post("/api/v1/users/password", json=data, headers=header)
+        assert response.status_code == 204
+
+        data = {
+            "username" : "admin",
+            "password" : data["new_password"]
+        }
+        header = get_auth_header(data)
+
+        # [3] Adding an admin
+        data = {
+            "username": "Username1",
+            "email": "email1@email.com",
+            "password": "Password1"
+        }
+        response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+        assert response.status_code == 200
+
+        created_admin = response.json()
+        assert created_admin["username"] == data["username"]
+        assert created_admin["role"] == "admin"
