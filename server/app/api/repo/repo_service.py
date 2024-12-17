@@ -7,12 +7,14 @@ from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_model import Repository
 from app.api.repo.repo_dto import RepositoryCreateDTO
+from app.api.org.org_repo import OrganizationRepo
  
 class RepositoryService:
     def __init__(self, session: Session):
         self.session = session
         self.repo_repo = RepositoryRepo(session)
         self.user_repo = UserRepo(session)
+        self.org_repo = OrganizationRepo(session)
 
     def add(self, user_id: int, dto: RepositoryCreateDTO) -> Repository:
         # Find the User who's creating the repository.
@@ -22,13 +24,13 @@ class RepositoryService:
             raise NotFoundException(User, user_id)
         repo_is_official = owner.role == UserRole.admin 
 
-        # TODO: Find the organization this repository is created for (if any).
+        # Find the organization this repository is created for (if any).
 
-        organization = None # self.organization_repo.find_by_id(dto.organization.id)
         org_name = None
-        if organization is not None:
-            print("Warning - organizations are not implemented yet. Ignoring the organization field...")
-            org_name = ...
+        if dto.organization_id is not None:
+            organization = self.org_repo.find_by_id(dto.organization_id)
+            if organization is not None:
+                org_name = organization.name
         
         # Compute the canonical name of the repository.
 

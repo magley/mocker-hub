@@ -28,6 +28,7 @@ services:
     
     volumes:
       - backend_cfg:/code/volume-server-cfg/
+      - ./images:/code/images
 
   db:
     image: postgres:15.9-alpine3.20
@@ -60,6 +61,9 @@ services:
       - "80:80"
     depends_on:
       - backend
+    volumes:
+      - ./images:/usr/share/nginx/html/images
+
 
   cache:
     image: redis:alpine3.20

@@ -2,8 +2,9 @@ import { useEffect, useState } from 'react';
 import { Form, Button, DropdownButton, Dropdown, Col, Row, Alert } from 'react-bootstrap';
 import './RepoCreate.css';
 import { RepoCreateDTO, RepoDTO, RepositoryService } from '../api/repo.api';
-import { AxiosError } from 'axios';
+import { AxiosError, AxiosResponse } from 'axios';
 import { getJwtId } from '../util/localstorage';
+import { OrganizationDTOBasic, OrganizationService } from '../api/org.api';
 
 interface Owner {
     name: string;
@@ -22,27 +23,39 @@ export const RepoCreate = () => {
     useEffect(() => {
         // Fetch all organizations this user can create repositories in.
 
-        // TODO: Axios fetch organizations for the user.
-        const organizations_i_can_make_repos_in: Owner[] = [
-            { name: "org 1", user_id: null, organization_id: 1 },
-            { name: "org 2", user_id: null, organization_id: 2 },
-        ];
+        OrganizationService.GetMyOrganizations().then((res: AxiosResponse<OrganizationDTOBasic[]>) => {
+            const orgs = res.data;
 
-        const all_possible_owners = [
-            { name: "user 1", user_id: getJwtId(), organization_id: null },
-            ...organizations_i_can_make_repos_in
-        ]
+            // TODO: Improve access control. Right now, any member of the organization
+            // can add repositories to that organization. We may want to restrict that.
+            const organizations_i_can_make_repos_in: Owner[] = orgs.map(o => {
+                return {
+                    name: o.name,
+                    user_id: null,
+                    organization_id: o.id
+                };
+            });
 
-        // Create list of "owners" (the user himself + all the organizations above).
+            // Create list of "owners" (the user himself + all the organizations above).
 
-        setOwners(all_possible_owners);
+            const all_possible_owners = [
+                { name: "user 1", user_id: getJwtId(), organization_id: null },
+                ...organizations_i_can_make_repos_in
+            ]
+            setOwners(all_possible_owners);
 
-        // The inital value of the dropdown list is the user.
+            // The inital value of the dropdown list is the user.
+            //
+            // NOTE: I use `all_possible_owners[0]` instead of `owners[0]`
+            // because `owners` may have not been updated by the setOwners
+            // above. This is because state is async, so at this point `owners`
+            // may still not be updated (i.e. it's still empty).
+            setOwner(all_possible_owners[0]);
+        }).catch((err: AxiosError) => {
+            setError("Failed to fetch organizations that I am a member of. Check your console.");
+            console.error(err);
+        });
 
-        // NOTE: I use `all_possible_owners[0]` instead of `owners[0]` because `owners`
-        // may have not updated yet. This is because state is async and `owners` will update
-        // on the next render, so this will fail. 
-        setOwner(all_possible_owners[0]);
     }, []);
 
     const userOrOrgToStr = (owner: Owner) => {

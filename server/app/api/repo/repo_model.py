@@ -1,6 +1,7 @@
 from sqlmodel import Field, Relationship, SQLModel
 
-from typing import TYPE_CHECKING
+from app.api.org.org_model import Organization
+from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from app.api.user.user_model import User
 
@@ -31,11 +32,8 @@ class Repository(SQLModel, table=True):
     owner_id: int = Field(default=None, foreign_key="user.id")
     owner: "User" = Relationship(back_populates="repositories")
 
-    # TODO: Once we have organizations, add them here.
-    # NOTE: A repository's canonical name depends on its owner, (either a User or an Organization).
-    #
-    # organization_id: Optional[int] = ...
-    # organization: "Organization" = ...
+    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
+    organization: Organization = Relationship(back_populates="repositories")
 
     @staticmethod
     def compute_canonical_name(name: str, user: str, official: bool, org: str | None) -> str:
@@ -47,6 +45,6 @@ class Repository(SQLModel, table=True):
             else:
                 return f'{user}/{name}'
     
-    def compute_canonical_name_of(this) -> str:
-        # TODO: Include organization.
-        return Repository.compute_canonical_name(this.name, this.owner.username, this.official, None)
+    def compute_canonical_name_of(self) -> str:
+        org_name = None if self.organization is None else self.organization.name
+        return Repository.compute_canonical_name(self.name, self.owner.username, self.official, org_name)
