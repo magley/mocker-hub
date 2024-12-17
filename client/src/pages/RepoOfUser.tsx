@@ -1,13 +1,15 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useParams } from 'react-router-dom';
 import { Card, Row, Col, Spinner } from 'react-bootstrap';
-import { RepoDTO, RepositoryService } from '../api/repo.api';
+import { RepoDTO, RepositoryService, ReposOfUserDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import './RepoOfUser.css';
 import { getJwtId } from '../util/localstorage';
 
 export const RepositoriesOfUser: React.FC = () => {
+    const [fullResult, setFullResult] = useState<ReposOfUserDTO>();
     const [repositories, setRepositories] = useState<RepoDTO[]>([]);
+    const [orgNames, setOrgNames] = useState<Map<number, string>>();
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
     const { userid } = useParams<{ userid: string }>();
@@ -20,9 +22,17 @@ export const RepositoriesOfUser: React.FC = () => {
     }, []);
 
     const fetchRepos = () => {
-        RepositoryService.GetRepositoriesOfUser(Number.parseInt(userid!)).then((res: AxiosResponse<RepoDTO[]>) => {
+        RepositoryService.GetRepositoriesOfUser(Number.parseInt(userid!)).then((res: AxiosResponse<ReposOfUserDTO>) => {
             setLoading(false);
-            setRepositories(res.data);
+            setFullResult(res.data);
+            setRepositories(res.data.repos);
+
+            const orgNamesMap = new Map(Object.entries(res.data.organization_names).map(([key, value]) => [Number(key), value]));
+            setOrgNames(orgNamesMap);
+
+            console.log(orgNames);
+            console.log(res.data.organization_names);
+            console.log(typeof (res.data.organization_names));
 
             console.log(res.data);
         }).catch((err: AxiosError) => {
@@ -46,7 +56,7 @@ export const RepositoriesOfUser: React.FC = () => {
 
     return (
         <Row className="g-4 repo-of-user">
-            {userid == myId ? (<h1>Your repositories</h1>) : (<h1>{userid}'s repositories</h1>)}
+            {userid == myId ? (<h1>Your repositories</h1>) : (<h1>{fullResult!.user_name}'s repositories</h1>)}
 
             {repositories.map((repo) => (
                 <Col key={repo.id} xs={12}>
@@ -68,7 +78,7 @@ export const RepositoriesOfUser: React.FC = () => {
                             {/* Organization Name (if exists) */}
                             {repo.organization_id && (
                                 <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
-                                    Part of organization {repo.organization_id}
+                                    Part of organization {orgNames?.get(repo.organization_id)}
                                 </Card.Subtitle>
                             )}
 

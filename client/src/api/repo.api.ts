@@ -19,12 +19,19 @@ export interface RepoDTO {
     organization_id: number | null,
 }
 
+export interface ReposOfUserDTO {
+    user_id: number,
+    user_name: string,
+    repos: RepoDTO[],
+    organization_names: { [key: number]: string };
+}
+
 export class RepositoryService {
     static async CreateRepository(dto: RepoCreateDTO): Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.post(`/repositories`, dto);
     }
 
-    static async GetRepositoriesOfUser(user_id: number): Promise<AxiosResponse<RepoDTO[]>> {
+    static async GetRepositoriesOfUser(user_id: number): Promise<AxiosResponse<ReposOfUserDTO>> {
         return await axiosInstance.get(`/repositories/u/${user_id}`);
     }
 }
