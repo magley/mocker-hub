@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from sqlmodel import Session, select
 from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.repo.repo_model import Repository
@@ -42,3 +42,8 @@ class OrganizationRepo:
             .join(OrganizationMembers, Organization.id == OrganizationMembers.organization_id)
             .where(OrganizationMembers.user_id == user_id)
         ).all()
+    
+    def find_orgs_by_ids(self, ids: list[int]) -> Dict[int, str]:
+        query = select(Organization.id, Organization.name).where(Organization.id.in_(ids))
+        result = self.session.exec(query).all()
+        return {org.id: org.name for org in result}

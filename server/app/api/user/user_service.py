@@ -56,6 +56,13 @@ class UserService:
             raise UserException("Username or password incorrect")
 
         return sign_jwt(user)
+    
+    def find_by_id(self, id: int) -> User:
+        user = self.user_repo.find_by_id(id)
+        if user is None:
+            raise NotFoundException(User, id)
+        return user
+      
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:
     return UserService(session)
