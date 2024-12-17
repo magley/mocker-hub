@@ -27,6 +27,14 @@ class OrganizationRepo:
         self.session.commit()
         self.session.refresh(orgmember)
         return orgmember
+    
+    def user_is_in_org(self, user_id: int, org_id: int) -> bool:
+        query = (
+            select(OrganizationMembers)
+            .where(OrganizationMembers.user_id == user_id)
+            .where(OrganizationMembers.organization_id == org_id)
+        )
+        return self.session.exec(query).first() is not None
 
     def find_orgs_that_user_is_member_of(self, user_id: int) -> List[Organization]:
         return self.session.exec(

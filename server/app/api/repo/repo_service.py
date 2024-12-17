@@ -1,5 +1,6 @@
+from typing import List
 from fastapi import Depends
-from app.api.config.exception_handler import FieldTakenException, NotFoundException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.user.user_model import User, UserRole
@@ -31,6 +32,12 @@ class RepositoryService:
             organization = self.org_repo.find_by_id(dto.organization_id)
             if organization is not None:
                 org_name = organization.name
+
+        # Check if user can add repo to this org (if any).
+
+        if org_name is not None:
+            if not self.org_repo.user_is_in_org(user_id, dto.organization_id):
+                raise AccessDeniedException(f"User {user_id} cannot create repositories in organization {dto.organization_id}")
         
         # Compute the canonical name of the repository.
 
@@ -47,7 +54,6 @@ class RepositoryService:
         })
 
         return self.repo_repo.add(new_repo)
-
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)
