@@ -34,4 +34,8 @@ export class RepositoryService {
     static async GetRepositoriesOfUser(user_id: number): Promise<AxiosResponse<ReposOfUserDTO>> {
         return await axiosInstance.get(`/repositories/u/${user_id}`);
     }
+
+    static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.get(`/repositories/${name}`);
+    }
 }
