@@ -170,7 +170,7 @@ export const RepositoriesOfUser: React.FC = () => {
                         <Card.Body>
                             {/* Repository Title with React Router Link */}
                             <Card.Title>
-                                <Link to={`/repo/${repo.canonical_name}`} className="text-primary">
+                                <Link to={`/r/${repo.canonical_name}`} className="text-primary">
                                     <span>{repo.name}</span>
                                 </Link>
                                 {!repo.public && (

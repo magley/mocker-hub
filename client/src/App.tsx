@@ -49,7 +49,7 @@ function App() {
                     {authRoute("/logout", [], UserLogout)}
 
                     {authRoute("/:userid/repo", [], RepositoriesOfUser)}
-                    {authRoute("/repo/*", [], RepositoryPage)}
+                    {authRoute("/r/*", [], RepositoryPage)}
 
                     {/* Any role. */}
                     {authRoute("/password-change-required", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}

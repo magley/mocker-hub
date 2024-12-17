@@ -26,6 +26,11 @@ export interface ReposOfUserDTO {
     organization_names: { [key: number]: string };
 }
 
+export interface RepoExtDTO extends RepoDTO {
+    owner_name: string,
+    org_name: string | null,
+}
+
 export class RepositoryService {
     static async CreateRepository(dto: RepoCreateDTO): Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.post(`/repositories`, dto);
@@ -35,7 +40,7 @@ export class RepositoryService {
         return await axiosInstance.get(`/repositories/u/${user_id}`);
     }
 
-    static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoDTO>> {
+    static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoExtDTO>> {
         return await axiosInstance.get(`/repositories/${name}`);
     }
 }
