@@ -105,6 +105,18 @@ def get_role_from_jwt(jwt: JWTDep):
 def get_id_from_jwt(jwt: JWTDep):
     return decode_jwt(jwt)["id"]
 
+
+def get_id_from_jwt_optional(jwt: JWTDepOptional) -> int | None:
+    """
+    Returns the user ID from the JWT or None if there is no JWT.
+    Use this only when the JWT is optional. Otherwise, use `get_id_from_jwt`. 
+    """
+    try:
+        return get_id_from_jwt(jwt)
+    except:
+        return None
+
+
 def validate_jwt_or_raise_exceptions(jwt: JWTDep, expected_roles: List[str] | List[UserRole] | None, ignore_password_change_requirement: bool):
     token = decode_jwt(jwt)
 

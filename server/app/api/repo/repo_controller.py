@@ -1,9 +1,9 @@
 from typing import List
 from fastapi import APIRouter, Depends
 
-from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO
+from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
-from app.api.config.auth import get_id_from_jwt, pre_authorize
+from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTBearer, JWTDep, JWTDepOptional
 from app.api.user.user_service import UserService, get_user_service
@@ -28,10 +28,7 @@ def get_repositories_of_user(
     user_service: UserService = Depends(get_user_service),
     org_service: OrganizationService = Depends(get_org_service)
 ):
-    me_id = None
-    try: 
-        me_id = get_id_from_jwt(jwt)
-    except: ...
+    me_id = get_id_from_jwt_optional(jwt)
 
     # NOTE: I had to convert Repository -> RepositoryDTO manually here,
     # because FastAPI does automatic conversion ONLY if the DTO is the
@@ -46,16 +43,17 @@ def get_repositories_of_user(
     return ReposOfUserDTO(user_id=user_id, user_name=user.username, repos=repos, organization_names=org_names)
 
 
-@router.get("/{repo_canonical_name:path}", response_model=RepositoryDTO, status_code=200, summary="Find repository by its full name")
+@router.get("/{repo_canonical_name:path}", response_model=RepositoryExtDTO, status_code=200, summary="Find repository by its full name")
 def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, repo_service: RepositoryService = Depends(get_repo_service)):
-    user_id = None
-    try: 
-        user_id = get_id_from_jwt(jwt)
-    except: ...
-
+    user_id = get_id_from_jwt_optional(jwt)
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
 
     if not repo_service.user_has_read_access_to_repo(repo, user_id):
         raise NotFoundException(Repository, repo_canonical_name)
+    
+    result = repo.model_dump()
+    result["owner_name"] = repo.owner.username
+    result["org_name"] = None if (repo.organization is None) else repo.organization.name
+    result = RepositoryExtDTO.model_validate(result)
 
-    return repo
+    return result
