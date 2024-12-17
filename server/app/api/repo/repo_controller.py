@@ -50,10 +50,11 @@ def get_repositories_of_user(
 def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, repo_service: RepositoryService = Depends(get_repo_service)):
     user_id = None
     try: 
-        me_id = get_id_from_jwt(jwt)
+        user_id = get_id_from_jwt(jwt)
     except: ...
 
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
+
     if not repo_service.user_has_read_access_to_repo(repo, user_id):
         raise NotFoundException(Repository, repo_canonical_name)
 
