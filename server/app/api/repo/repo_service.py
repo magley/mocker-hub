@@ -54,6 +54,39 @@ class RepositoryService:
         })
 
         return self.repo_repo.add(new_repo)
+    
+    def get_repositories_of_user(self, user_id: int, whos_asking_user_id: int | None) -> List[Repository]:
+        user_repos = self.repo_repo.get_repositories_for_user(user_id)
+
+        # Filter out repositories which `whos_asking_user_id` cannot see.
+        result = []
+        for repo in user_repos:
+            if self._user_has_read_access_to_repo(repo, whos_asking_user_id):
+                result.append(repo)
+
+        return result
+    
+    def _user_has_read_access_to_repo(self, repo: Repository, user_id: int):
+        if repo.public:
+            return True
+        
+        repo_is_personal = repo.organization_id is None
+        if repo_is_personal:
+            # For personal repositories, you must be the owner of the repo.
+
+            if not repo.owner_id == user_id:
+                return False
+        else:
+            # For organization repositories, you must be a member of the same org.
+
+            user_is_in_org = self.org_repo.user_is_in_org(user_id, repo.organization_id)
+            if not user_is_in_org:
+                return False
+            
+            # TODO: Teams...
+
+        return True # Just in case :)
+        
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)

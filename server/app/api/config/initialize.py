@@ -74,9 +74,9 @@ def init_dummy_data():
     org_service.add_user_to_org(org_id=org1.id, user_id=user2.id)
 
     repo1 = repo_service.add(user1.id, RepositoryCreateDTO(name="python", desc="", public=True, organization_id=None))
-    repo2 = repo_service.add(user1.id, RepositoryCreateDTO(name="node", desc="", public=True, organization_id=None))
+    repo2 = repo_service.add(user1.id, RepositoryCreateDTO(name="node", desc="", public=False, organization_id=None))
     repo3 = repo_service.add(user1.id, RepositoryCreateDTO(name="dsa", desc="", public=True, organization_id=org1.id))
-    repo4 = repo_service.add(user1.id, RepositoryCreateDTO(name="mio", desc="", public=True, organization_id=org1.id))
+    repo4 = repo_service.add(user1.id, RepositoryCreateDTO(name="mio", desc="", public=False, organization_id=org1.id))
     repo5 = repo_service.add(user2.id, RepositoryCreateDTO(name="dsa-ui", desc="", public=True, organization_id=org1.id))
     repo6 = repo_service.add(user2.id, RepositoryCreateDTO(name="istrue", desc="", public=True, organization_id=org2.id))
     repo7 = repo_service.add(user3.id, RepositoryCreateDTO(name="redis", desc="", public=True, organization_id=None))
