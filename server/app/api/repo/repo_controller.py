@@ -8,6 +8,8 @@ from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTBearer, JWTDep, JWTDepOptional
 from app.api.user.user_service import UserService, get_user_service
 from app.api.org.org_service import OrganizationService, get_org_service
+from app.api.config.exception_handler import NotFoundException
+from app.api.repo.repo_model import Repository
 
 router = APIRouter(prefix="/repositories", tags=["repositories"])
 
@@ -42,3 +44,17 @@ def get_repositories_of_user(
     org_names = org_service.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
 
     return ReposOfUserDTO(user_id=user_id, user_name=user.username, repos=repos, organization_names=org_names)
+
+
+@router.get("/{repo_canonical_name:path}", response_model=RepositoryDTO, status_code=200, summary="Find repository by its full name")
+def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, repo_service: RepositoryService = Depends(get_repo_service)):
+    user_id = None
+    try: 
+        me_id = get_id_from_jwt(jwt)
+    except: ...
+
+    repo = repo_service.find_by_canonical_name(repo_canonical_name)
+    if not repo_service.user_has_read_access_to_repo(repo, user_id):
+        raise NotFoundException(Repository, repo_canonical_name)
+
+    return repo

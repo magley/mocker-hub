@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Optional
 from fastapi import Depends
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from sqlmodel import Session
@@ -16,6 +16,12 @@ class RepositoryService:
         self.repo_repo = RepositoryRepo(session)
         self.user_repo = UserRepo(session)
         self.org_repo = OrganizationRepo(session)
+
+    def find_by_canonical_name(self, canonical_name: str) -> Repository:
+        repo = self.repo_repo.find_by_canonical_name(canonical_name)
+        if repo is None:
+            raise NotFoundException(Repository, canonical_name)
+        return repo 
 
     def add(self, user_id: int, dto: RepositoryCreateDTO) -> Repository:
         # Find the User who's creating the repository.
@@ -61,14 +67,18 @@ class RepositoryService:
         # Filter out repositories which `whos_asking_user_id` cannot see.
         result = []
         for repo in user_repos:
-            if self._user_has_read_access_to_repo(repo, whos_asking_user_id):
+            if self.user_has_read_access_to_repo(repo, whos_asking_user_id):
                 result.append(repo)
 
         return result
     
-    def _user_has_read_access_to_repo(self, repo: Repository, user_id: int):
+    def user_has_read_access_to_repo(self, repo: Repository, user_id: int | None):
         if repo.public:
             return True
+        
+        # Private repo - signed out users certainly cannot see them.
+        if user_id is None:
+            return False
         
         repo_is_personal = repo.organization_id is None
         if repo_is_personal:

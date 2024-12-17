@@ -33,6 +33,10 @@ class AccessDeniedException(UserException):
 
 
 def register_exception_handler(app: FastAPI):
+    @app.exception_handler(NotFoundException)
+    def _NotFoundException(r: Request, e: NotFoundException):
+        raise HTTPException(404, detail={"message": str(e)}) 
+    
     @app.exception_handler(UserException)
     def _UserException(r: Request, e: UserException):
         raise HTTPException(400, detail={"message": str(e)}) 
