@@ -53,9 +53,36 @@ class JWTBearer(HTTPBearer):
         except Exception:
             return False
         return True
+    
+class JWTBearerOptional(HTTPBearer):
+    def __init__(self, auto_error: bool = False):
+        super(JWTBearerOptional, self).__init__(auto_error=auto_error)
+
+    async def __call__(self, request: Request):
+        credentials: HTTPAuthorizationCredentials = await super(JWTBearerOptional, self).__call__(request)
+        if credentials is None:
+            return None
+        
+        if credentials:
+            if credentials.scheme != "Bearer":
+                raise HTTPException(status_code=403, detail="Invalid authentication scheme.")
+            if not self.verify_jwt(credentials.credentials):
+                raise HTTPException(status_code=403, detail="Invalid token or expired token.")
+            return credentials.credentials
+
+        return None
+
+    def verify_jwt(self, jwtoken: str) -> bool:
+        try:
+            decode_jwt(jwtoken)
+        except Exception:
+            return False
+        return True
+
  
 
 JWTDep = Annotated[str, Depends(JWTBearer())]
+JWTDepOptional = Annotated[str, Depends(JWTBearerOptional())]
 
 
 def sign_jwt(user: User) -> str:
@@ -114,7 +141,7 @@ def pre_authorize(roles: List[str] | List[UserRole] | None, ignore_password_chan
     ## Usage
 
     - `@pre_authorize` must go after `@router.foo`.
-    - The endpoint function you're wrapping must have a parameter `jwt: JWTDep`. It must be called `jwt`.
+    - The endpoint function you're wrapping must have a parameter `jwt: JWTDep` or `jwt: JWTDepOptional`. It must be called `jwt`.
     """
 
     def decorator(func: Callable):
