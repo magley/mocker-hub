@@ -9,6 +9,7 @@ import { BrowserRouter, Route, RouteProps, Routes } from "react-router";
 import { UserLogout } from './pages/UserLogout';
 import { ProtectedRoute } from './components/ProtectedRoute';
 import { OrganizationCreate } from './pages/OrgCreate';
+import { RepositoriesOfUser } from './pages/RepoOfUser';
 
 // This function converts:
 //
@@ -45,6 +46,8 @@ function App() {
                     {authRoute("/", [], Home)}
                     {authRoute("/login", [], UserLogin)}
                     {authRoute("/logout", [], UserLogout)}
+
+                    {authRoute("/:userid/repo", [], RepositoriesOfUser)}
 
                     {/* Any role. */}
                     {authRoute("/password-change-required", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}

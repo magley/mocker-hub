@@ -4,7 +4,7 @@ import './UserLogin.css';
 import { TokenDTO, UserLoginDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { getJwtMustChangePassword, getJwtRole, setJWT } from '../util/localstorage';
+import { getJwtId, getJwtMustChangePassword, getJwtRole, setJWT } from '../util/localstorage';
 import { useAuthStore } from '../util/store';
 
 export const UserLogin = () => {
@@ -45,7 +45,8 @@ export const UserLogin = () => {
                 if (getJwtMustChangePassword()) {
                     navigate("/password-change-required");
                 } else {
-                    navigate("/new");
+                    const id = getJwtId();
+                    navigate(`/${id}/repo`);
                 }
             });
         }).catch((err: AxiosError) => {

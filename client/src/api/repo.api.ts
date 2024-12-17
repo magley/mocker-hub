@@ -16,12 +16,15 @@ export interface RepoDTO {
     public: boolean,
     official: boolean,
     owner_id: number,
-    organization_id: number,
+    organization_id: number | null,
 }
-
 
 export class RepositoryService {
     static async CreateRepository(dto: RepoCreateDTO): Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.post(`/repositories`, dto);
+    }
+
+    static async GetRepositoriesOfUser(user_id: number): Promise<AxiosResponse<RepoDTO[]>> {
+        return await axiosInstance.get(`/repositories/u/${user_id}`);
     }
 }
