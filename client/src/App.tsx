@@ -48,7 +48,7 @@ function App() {
                     {authRoute("/login", [], UserLogin)}
                     {authRoute("/logout", [], UserLogout)}
 
-                    {authRoute("/:userid/repo", [], RepositoriesOfUser)}
+                    {authRoute("/u/:username/repos", [], RepositoriesOfUser)}
                     {authRoute("/r/*", [], RepositoryPage)}
 
                     {/* Any role. */}

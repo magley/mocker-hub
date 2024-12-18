@@ -38,7 +38,7 @@ export const RepositoryPage: React.FC = () => {
                 id: res.data.organization_id === null ? res.data.owner_id : res.data.organization_id,
                 isUser: res.data.organization_id === null,
                 official: res.data.official,
-                linkURL: res.data.org_name === null ? `/u/${res.data.owner_name}` : `/o/${res.data.org_name}`
+                linkURL: res.data.org_name === null ? `/u/${res.data.owner_name}/repos` : `/o/${res.data.org_name}`
             });
         }).catch((err: AxiosError) => {
             if (err.response?.status == 404) {

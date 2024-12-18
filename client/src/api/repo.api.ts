@@ -36,9 +36,10 @@ export class RepositoryService {
         return await axiosInstance.post(`/repositories`, dto);
     }
 
-    static async GetRepositoriesOfUser(user_id: number): Promise<AxiosResponse<ReposOfUserDTO>> {
-        return await axiosInstance.get(`/repositories/u/${user_id}`);
+    static async GetRepositoriesOfUser(username: string): Promise<AxiosResponse<ReposOfUserDTO>> {
+        return await axiosInstance.get(`/repositories/u/${username}`);
     }
+
 
     static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoExtDTO>> {
         return await axiosInstance.get(`/repositories/${name}`);

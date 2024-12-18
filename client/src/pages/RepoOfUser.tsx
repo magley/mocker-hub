@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useParams } from 'react-router-dom';
+import { Link, useLocation, useNavigate, useNavigation, useParams } from 'react-router-dom';
 import { Card, Row, Col, Spinner, Button } from 'react-bootstrap';
 import { RepoDTO, RepositoryService, ReposOfUserDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
@@ -11,7 +11,7 @@ export const RepositoriesOfUser: React.FC = () => {
     const [orgNames, setOrgNames] = useState<Map<number, string>>();
     const [loading, setLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const { userid } = useParams<{ userid: string }>();
+    const { username } = useParams<{ username: string }>();
     const [myId, setMyId] = useState<number>();
 
     const [repositories, setRepositories] = useState<RepoDTO[]>([]);
@@ -23,6 +23,8 @@ export const RepositoriesOfUser: React.FC = () => {
     const [showPublic, setShowPublic] = useState(true);
     const [showPrivate, setShowPrivate] = useState(true);
 
+    let navigate = useNavigate();
+
     useEffect(() => {
         fetchRepos();
 
@@ -30,7 +32,12 @@ export const RepositoriesOfUser: React.FC = () => {
     }, []);
 
     const fetchRepos = () => {
-        RepositoryService.GetRepositoriesOfUser(Number.parseInt(userid!)).then((res: AxiosResponse<ReposOfUserDTO>) => {
+        if (username === undefined) {
+            navigate(`/`);
+            return;
+        }
+
+        RepositoryService.GetRepositoriesOfUser(username).then((res: AxiosResponse<ReposOfUserDTO>) => {
             setLoading(false);
             setFullResult(res.data);
             setRepositories(res.data.repos);
@@ -98,7 +105,7 @@ export const RepositoriesOfUser: React.FC = () => {
     return (
         <Row className="g-4 repo-of-user">
             {/* Page Title */}
-            {userid == myId ? (<h1>Your repositories</h1>) : (<h1>{fullResult!.user_name}'s repositories</h1>)}
+            {fullResult?.user_id == myId ? (<h1>Your repositories</h1>) : (<h1>{fullResult!.user_name}'s repositories</h1>)}
 
             <div className="d-flex justify-content-between">
                 {/* Search Bar */}
