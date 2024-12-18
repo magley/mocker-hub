@@ -2,7 +2,7 @@ from fastapi.testclient import TestClient
 import pytest
 import unittest.mock as mock
 
-from sqlmodel import Session
+from sqlmodel import SQLModel, Session
 
 from app.api.config.security import hash_password
 from app.api.user.user_model import User, UserRole
@@ -49,6 +49,14 @@ def repo_service(mock_session):
 @pytest.fixture
 def mock_repo():
     return mock.MagicMock(Repository)
+
+
+@pytest.fixture(scope="function", autouse=True)
+def reset_db():
+    from app.api.config.database import engine
+    SQLModel.metadata.drop_all(bind=engine)
+    SQLModel.metadata.create_all(bind=engine)
+    
 
 def create_mock_user(id: int, username: str, role: UserRole):
     return User(id=id, email=f"username@email.com", username=username, role=role, hashed_password=hash_password("1234"))
@@ -324,3 +332,171 @@ def test_get_repositories_of_user_no_repositories(repo_service):
 
     assert result == []
     repo_service.repo_repo.get_repositories_for_user.assert_called_once_with(user_id)
+
+
+def test_get_repositories_of_user___integration():
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            response.json()
+        
+        def log_in(username):
+            data = {
+                "username": username,
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            jwt = response.json()["token"]
+            return jwt
+        
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def get_repos(username: str | None, of_user: str) -> dict:
+            if username is not None:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                response = client.get(f"/api/v1/repositories/u/{of_user}", headers=header)
+                return response.json()
+            else:
+                response = client.get(f"/api/v1/repositories/u/{of_user}")
+                return response.json()
+
+        
+        add_user("u1")
+        add_user("u2")
+        add_user("u3")
+        add_user("u4")
+
+        org1 = add_org("u1", "o1")
+        org2 = add_org("u2", "o2")
+
+        add_repo("u1", "u1_public", True, None)
+        add_repo("u1", "u1_private", False, None)
+        add_repo("u1", "o1_public", True, org1["id"])
+        add_repo("u1", "o1_private", False, org1["id"])
+
+        add_repo("u2", "u2_private", False, None)
+
+        assert len(get_repos("u1", "u1")["repos"]) == 4
+        assert len(get_repos("u2", "u1")["repos"]) == 2
+        assert len(get_repos(None, "u1")["repos"]) == 2
+        assert len(get_repos("u1", "u2")["repos"]) == 0
+        assert len(get_repos("u2", "u2")["repos"]) == 1
+
+
+def test_get_repo_by_canonical_name___integration():
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            response.json()
+        
+        def log_in(username):
+            data = {
+                "username": username,
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            jwt = response.json()["token"]
+            return jwt
+        
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def get_repo_by_canonical_name(username: str | None, repo_canonical_name: str):
+            if username is not None:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                response = client.get(f"/api/v1/repositories/{repo_canonical_name}", headers=header)
+                return response
+            else:
+                response = client.get(f"/api/v1/repositories/{repo_canonical_name}")
+                return response
+
+        
+        add_user("u1")
+        add_user("u2")
+        add_user("u3")
+        add_user("u4")
+
+        org1 = add_org("u1", "o1")
+        org2 = add_org("u2", "o2")
+
+        add_repo("u1", "u1_public", True, None)
+        add_repo("u1", "u1_private", False, None)
+        add_repo("u1", "o1_public", True, org1["id"])
+        add_repo("u1", "o1_private", False, org1["id"])
+
+        add_repo("u2", "u2_private", False, None)
+
+        assert get_repo_by_canonical_name("u1", "u1/u1_public").is_success
+        assert get_repo_by_canonical_name("u1", "u1/u1_private").is_success
+        assert get_repo_by_canonical_name("u1", "o1/o1_public").is_success
+        assert get_repo_by_canonical_name("u1", "o1/o1_private").is_success
+        assert get_repo_by_canonical_name("u1", "u1/o1_public").status_code == 404
+        assert get_repo_by_canonical_name("u1", "u1/o1_private").status_code == 404
+        assert get_repo_by_canonical_name("u1", "u2/u2_private").status_code == 404
+
+        assert get_repo_by_canonical_name("u2", "u1/u1_public").is_success
+        assert get_repo_by_canonical_name("u2", "u1/u1_private").status_code == 404
+        assert get_repo_by_canonical_name("u2", "o1/o1_public").is_success
+        assert get_repo_by_canonical_name("u2", "o1/o1_private").status_code == 404
+        assert get_repo_by_canonical_name("u2", "u1/o1_public").status_code == 404
+        assert get_repo_by_canonical_name("u2", "u1/o1_private").status_code == 404
+        assert get_repo_by_canonical_name("u2", "u2/u2_private").is_success
