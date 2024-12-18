@@ -1,7 +1,8 @@
+from fastapi.testclient import TestClient
 import pytest
 import unittest.mock as mock
 
-from sqlmodel import Session
+from sqlmodel import SQLModel, Session
 
 from app.api.config.security import hash_password
 from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO
@@ -9,6 +10,7 @@ from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
 from app.api.config.exception_handler import NotFoundException, UserException, FieldTakenException
+from app.api.main import app
 
 @pytest.fixture
 def mock_session():
@@ -23,6 +25,12 @@ def user_service(mock_session, mock_user_repo):
     service = UserService(mock_session)
     service.user_repo = mock_user_repo
     return service
+
+@pytest.fixture(scope="function", autouse=True)
+def reset_db():
+    from app.api.config.database import engine
+    SQLModel.metadata.drop_all(bind=engine)
+    SQLModel.metadata.create_all(bind=engine)
 
 def test_change_password(user_service, mock_user_repo):
     dto = UserPasswordChangeDTO(old_password="Password1234", new_password="NewPassword1234")
@@ -113,7 +121,7 @@ def test_add_admin___integration():
 
     with TestClient(app) as client:
     
-        def get_auth_header(data):
+        def get_auth_header(data: dict | None) -> dict:
             response = client.post("/api/v1/users/login", json=data)
             assert response.status_code == 200
             
@@ -175,3 +183,34 @@ def test_add_admin___integration():
         created_admin = response.json()
         assert created_admin["username"] == data["username"]
         assert created_admin["role"] == "admin"
+
+def test_add___integration():
+
+    with TestClient(app) as client:
+
+        def add_user(username: str | None, status_code: int | None) -> dict:
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            assert response.status_code == status_code
+            return response.json()
+
+        def log_in(username: str | None, status_code: int | None) -> str:
+            data = {
+                "username": username,
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            assert response.status_code == status_code
+
+        username = "Username1"
+        
+        user = add_user(username, 200)
+        assert user["username"] == username
+
+        log_in(username, 200)
+        
+        add_user(username, 400)
