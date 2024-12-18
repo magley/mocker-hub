@@ -87,3 +87,49 @@ def test_add_org_integration():
 
         org1 = response.json()
         assert response.is_error
+
+
+def test_find_org_names_by_ids_valid(org_service):
+    """Test case for when valid org ids are passed."""
+    ids = [1, 2]
+    expected_output = {1: "abc", 2: "def"}
+    org_service.org_repo.find_orgs_by_ids.return_value = expected_output
+
+    result = org_service.find_org_names_by_ids(ids)
+
+    assert result == expected_output
+    org_service.org_repo.find_orgs_by_ids.assert_called_once_with(ids)
+
+
+def test_find_org_names_by_ids_empty_list(org_service):
+    """Test case for when an empty list is passed."""
+    ids = []
+    org_service.org_repo.find_orgs_by_ids.return_value = {}
+
+    result = org_service.find_org_names_by_ids(ids)
+    assert result == {}
+    org_service.org_repo.find_orgs_by_ids.assert_called_once_with(ids)
+
+
+def test_find_org_names_by_ids_partial_match(org_service):
+    """Test case for when some org ids are valid and others are not."""
+    ids = [1, 2, 999999]
+    expected_output = {1: "abc", 2: "def"}
+    org_service.org_repo.find_orgs_by_ids.return_value = expected_output
+
+    result = org_service.find_org_names_by_ids(ids)
+
+    assert result == expected_output
+    org_service.org_repo.find_orgs_by_ids.assert_called_once_with(ids)
+
+
+def test_find_org_names_by_ids_no_matches(org_service):
+    """Test case for when no org ids match."""
+    ids = [999998, 999999]
+    expected_output = {}
+    org_service.org_repo.find_orgs_by_ids.return_value = expected_output
+
+    result = org_service.find_org_names_by_ids(ids)
+
+    assert result == expected_output
+    org_service.org_repo.find_orgs_by_ids.assert_called_once_with(ids)
