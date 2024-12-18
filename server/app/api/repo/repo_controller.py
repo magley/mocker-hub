@@ -20,15 +20,18 @@ def register_repo(jwt: JWTDep, dto: RepositoryCreateDTO, repo_service: Repositor
     repo = repo_service.add(user_id, dto)
     return repo
 
-@router.get("/u/{user_id}", response_model=ReposOfUserDTO, status_code=200, summary="Get repositories of suer")
+@router.get("/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get repositories of suer")
 def get_repositories_of_user(
     jwt: JWTDepOptional, 
-    user_id: int, 
+    username: str, 
     repo_service: RepositoryService = Depends(get_repo_service), 
     user_service: UserService = Depends(get_user_service),
     org_service: OrganizationService = Depends(get_org_service)
 ):
     me_id = get_id_from_jwt_optional(jwt)
+
+    user = user_service.find_by_username(username)
+    user_id = user.id
 
     # NOTE: I had to convert Repository -> RepositoryDTO manually here,
     # because FastAPI does automatic conversion ONLY if the DTO is the

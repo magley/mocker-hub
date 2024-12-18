@@ -89,6 +89,7 @@ def sign_jwt(user: User) -> str:
     payload = {
         "id": user.id,
         "role": user.role.value,
+        "sub": user.username,
         "must_change_password": user.must_change_password,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -104,6 +105,10 @@ def get_role_from_jwt(jwt: JWTDep):
 
 def get_id_from_jwt(jwt: JWTDep):
     return decode_jwt(jwt)["id"]
+
+
+def get_username_from_jwt(jwt: JWTDep):
+    return decode_jwt(jwt)["sub"]
 
 
 def get_id_from_jwt_optional(jwt: JWTDepOptional) -> int | None:

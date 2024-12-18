@@ -62,6 +62,12 @@ class UserService:
         if user is None:
             raise NotFoundException(User, id)
         return user
+    
+    def find_by_username(self, username: str) -> User:
+        user = self.user_repo.find_by_username(username)
+        if user is None:
+            raise NotFoundException(User, username)
+        return user      
       
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:
