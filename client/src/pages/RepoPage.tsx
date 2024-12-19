@@ -3,15 +3,16 @@ import { Nav, Spinner, Tab } from 'react-bootstrap';
 import { RepoOverview } from '../components/RepoOverview';
 import { RepoTags } from '../components/RepoTags';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { RepoExtDTO, RepositoryService } from '../api/repo.api';
+import { RepoExtDTO, RepositoryBadge, RepositoryService } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import "./RepoPage.css";
+import { formatDistanceToNow } from 'date-fns';
 
 interface RepoOwner {
     name: string,
     id: number,
     isUser: boolean,
-    official: boolean,
+    badge: RepositoryBadge,
     linkURL: string
 }
 
@@ -25,7 +26,7 @@ export const RepositoryPage: React.FC = () => {
         name: '...',
         id: 1,
         isUser: true,
-        official: false,
+        badge: RepositoryBadge.none,
         linkURL: "."
     });
 
@@ -37,7 +38,7 @@ export const RepositoryPage: React.FC = () => {
                 name: res.data.org_name === null ? res.data.owner_name : res.data.org_name,
                 id: res.data.organization_id === null ? res.data.owner_id : res.data.organization_id,
                 isUser: res.data.organization_id === null,
-                official: res.data.official,
+                badge: res.data.badge,
                 linkURL: res.data.org_name === null ? `/u/${res.data.owner_name}/repos` : `/o/${res.data.org_name}`
             });
         }).catch((err: AxiosError) => {
@@ -64,11 +65,14 @@ export const RepositoryPage: React.FC = () => {
             <div className="repo-page-header mb-4">
                 <h1>
                     {repo?.canonical_name}
-                    {/* Official badge */}
-                    {repo?.official &&
-                        <span className="badge rounded-pill bg-primary" style={{ fontSize: '0.5em', marginLeft: '1em' }}>
-                            <i className="bi bi bi-award-fill"></i>
-                            Official
+                    {/* Badge */}
+                    {repo && repo?.badge !== RepositoryBadge.none &&
+                        <span
+                            className={`badge rounded-pill ${RepositoryService.BadgeToBootstrapColor(repo?.badge)}`}
+                            style={{ fontSize: '0.5em', marginLeft: '0.5em' }}
+                        >
+                            <i className={`bi ${RepositoryService.BadgeToHumanBootstrapIcon(repo?.badge)}`}> </i>
+                            {RepositoryService.BadgeToHumanText(repo?.badge)}
                         </span>
                     }
                     {/* Private badge */}
@@ -82,10 +86,35 @@ export const RepositoryPage: React.FC = () => {
                 <h5>
                     {repoOwner.isUser ? <>By </> : <>Part of </>}
                     <NavLink to={repoOwner.linkURL}>{repoOwner.name}</NavLink>
+
+                    <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
+
+                    {/* Last update */}
+                    {repo && repo.last_updated && (
+                        <>
+                            Updated {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
+                        </>
+                    )}
                 </h5>
-                {/* TODO: Star count */}
-                <p>
-                    <i className="bi bi-moon moon"></i><span>{44}</span>
+
+                <p className="d-flex">
+                    {/* Download Count */}
+                    {
+                        <span className="align-items-center">
+                            <i className="bi bi-download"></i>
+                            <span> {repo?.downloads}</span>
+                        </span>
+                    }
+
+                    <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
+
+                    {/* Star Count [TODO] */}
+                    {/*repo.stars > 0*/ true && (
+                        <span className="align-items-center">
+                            <i className="bi bi-moon moon"></i>
+                            <span>{17}</span>
+                        </span>
+                    )}
                 </p>
             </div>
 

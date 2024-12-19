@@ -282,7 +282,7 @@ export const RepositoriesOfUser: React.FC = () => {
                                 {/* Last update */}
                                 {repo.last_updated && (
                                     <Card.Text style={{ fontSize: '0.8rem' }}>
-                                        {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
+                                        Updated {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
                                     </Card.Text>
                                 )}
 
