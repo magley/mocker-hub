@@ -31,6 +31,7 @@ export function Navbar() {
             {
                 role === 'superadmin' &&
                 <>
+                    <NavLink className={"navlink"} to="/register-admin" end>New admin</NavLink>
                 </>
             }
             {

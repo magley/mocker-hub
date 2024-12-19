@@ -4,6 +4,7 @@ import { NotFound } from './pages/NotFound';
 import { RepoCreate } from './pages/RepoCreate';
 import { UserPasswordChangeRequired } from './pages/UserPasswordChangeRequired';
 import { UserRegistration } from './pages/UserRegistration';
+import { UserAdminRegistration } from './pages/UserAdminRegistration';
 import { UserLogin } from './pages/UserLogin';
 import { BrowserRouter, Route, RouteProps, Routes } from "react-router";
 import { UserLogout } from './pages/UserLogout';
@@ -40,6 +41,7 @@ function App() {
                 <Navbar />
                 <Routes>
                     {authRoute("/register", [""], UserRegistration)}
+                    {authRoute("/register-admin", ["superadmin"], UserAdminRegistration)}
 
                     {/* Anybody. */}
                     {authRoute("/", [], Home)}
