@@ -102,20 +102,22 @@ def test_add_existing_user(user_service, mock_user_repo):
 
 def test_add_admin(user_service, mock_user_repo):
     dto = UserRegisterDTO(username="Username1", email="a@email.com", password="Password1")
-    user_start = User(id=1, username="Username1", email="a@email.com", role=UserRole.user, hashed_password=hash_password("Password1"))
-    user_end = User(id=1, username="Username1", email="a@email.com", role=UserRole.admin, hashed_password=hash_password("Password1"))
 
-    with mock.patch.object(user_service, "add", return_value=user_start) as _:
-        mock_user_repo.set_role.return_value = user_end
+    mock_user_repo.find_by_email.return_value = None
+    mock_user_repo.find_by_username.return_value = None
 
-        def set_role(user: User, role: UserRole):
-            user.sqlmodel_update({"role": role})
-            return user
-        mock_user_repo.set_role.side_effect = set_role
+    def mock_add(user: User):
+        return user
+    mock_user_repo.add.side_effect = mock_add
 
-        result = user_service.add_admin(dto)
-        
-        assert result.role == UserRole.admin
+    def set_role(user: User, role: UserRole):
+        user.sqlmodel_update({"role": role})
+        return user
+    mock_user_repo.set_role.side_effect = set_role
+
+    result = user_service.add_admin(dto)
+    
+    assert result.role == UserRole.admin
 
 def test_add_admin___integration():
 
@@ -184,6 +186,17 @@ def test_add_admin___integration():
         assert created_admin["username"] == data["username"]
         assert created_admin["role"] == "admin"
 
+        # [4] Adding an admin with a non-unique username
+        data["email"] = "email2@email.com"
+        response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+        assert response.status_code == 400
+
+        # [5] Adding an admin with a non-unique email
+        data["username"] = "Username2"
+        data["email"] = "email1@email.com"
+        response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+        assert response.status_code == 400
+        
 def test_add___integration():
 
     with TestClient(app) as client:
