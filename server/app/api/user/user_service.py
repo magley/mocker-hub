@@ -70,5 +70,10 @@ class UserService:
         return user      
       
 
+    def add_admin(self, dto: UserRegisterDTO) -> User:
+        user = self.add(dto)
+        user = self.user_repo.set_role(user, UserRole.admin)
+        return user
+
 def get_user_service(session: Session = Depends(get_database)) -> UserService:
     return UserService(session)
