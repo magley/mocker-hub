@@ -60,6 +60,8 @@ def init_dummy_data():
     repo_service = RepositoryService(session)
     org_service = OrganizationService(session)
 
+    admin1 = user_service.add_admin(UserRegisterDTO(username="admin1", email="admin1@test.com", password="1234"))
+
     user1 = user_service.add(UserRegisterDTO(username="user1", email="user1@test.com", password="1234"))
     user2 = user_service.add(UserRegisterDTO(username="user2", email="user2@test.com", password="1234"))
     user3 = user_service.add(UserRegisterDTO(username="user3", email="user3@test.com", password="1234"))
@@ -73,14 +75,15 @@ def init_dummy_data():
 
     org_service.add_user_to_org(org_id=org1.id, user_id=user2.id)
 
-    repo1 = repo_service.add(user1.id, RepositoryCreateDTO(name="python", desc="Python3 docker image!", public=True, organization_id=None))
-    repo2 = repo_service.add(user1.id, RepositoryCreateDTO(name="node", desc="NodeJS docker image!!!!", public=False, organization_id=None))
-    repo3 = repo_service.add(user1.id, RepositoryCreateDTO(name="dsa", desc="DSA... what could it be?", public=True, organization_id=org1.id))
-    repo4 = repo_service.add(user1.id, RepositoryCreateDTO(name="mio", desc="Mio's... nothing at all", public=False, organization_id=org1.id))
-    repo5 = repo_service.add(user2.id, RepositoryCreateDTO(name="dsa-ui", desc="Just a temp repo....", public=True, organization_id=org1.id))
-    repo6 = repo_service.add(user2.id, RepositoryCreateDTO(name="istrue", desc="istrue e repo o algo", public=True, organization_id=org2.id))
-    repo7 = repo_service.add(user3.id, RepositoryCreateDTO(name="redis", desc="The best NoSQL DB!!!!", public=True, organization_id=None))
-    repo8 = repo_service.add(user4.id, RepositoryCreateDTO(name="redis", desc="The worst NoSQL DB!!!", public=True, organization_id=None))
+    repo1 = repo_service.add(admin1.id, RepositoryCreateDTO(name="python", desc="Official Python Image", public=True, organization_id=None))
+    repo2 = repo_service.add(user1.id, RepositoryCreateDTO(name="python", desc="Python3 docker image!", public=True, organization_id=None))
+    repo3 = repo_service.add(user1.id, RepositoryCreateDTO(name="node", desc="NodeJS docker image!!!!", public=False, organization_id=None))
+    repo4 = repo_service.add(user1.id, RepositoryCreateDTO(name="dsa", desc="DSA... what could it be?", public=True, organization_id=org1.id))
+    repo5 = repo_service.add(user1.id, RepositoryCreateDTO(name="mio", desc="Mio's... nothing at all", public=False, organization_id=org1.id))
+    repo6 = repo_service.add(user2.id, RepositoryCreateDTO(name="dsa-ui", desc="Just a temp repo....", public=True, organization_id=org1.id))
+    repo7 = repo_service.add(user2.id, RepositoryCreateDTO(name="istrue", desc="istrue e repo o algo", public=True, organization_id=org2.id))
+    repo8 = repo_service.add(user3.id, RepositoryCreateDTO(name="redis", desc="The best NoSQL DB!!!!", public=True, organization_id=None))
+    repo9 = repo_service.add(user4.id, RepositoryCreateDTO(name="redis", desc="The worst NoSQL DB!!!", public=True, organization_id=None))
 
     
     print("Finished adding dummy data.")

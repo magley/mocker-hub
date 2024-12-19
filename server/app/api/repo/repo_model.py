@@ -48,6 +48,8 @@ class Repository(SQLModel, table=True):
     organization: Organization = Relationship(back_populates="repositories")
 
     badge: RepositoryBadge = Field(default=RepositoryBadge.none)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    downloads: int = Field(default=0)
 
     @staticmethod
     def compute_canonical_name(name: str, user: str, official: bool, org: str | None) -> str:

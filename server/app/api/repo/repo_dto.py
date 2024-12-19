@@ -13,6 +13,9 @@ class RepositoryDTO(BaseModel):
     owner_id: int
     organization_id: int | None = None
     badge: RepositoryBadge
+    last_updated: datetime
+    downloads: int
+
 
 class RepositoryCreateDTO(BaseModel):
     name: str
