@@ -1,9 +1,18 @@
+from datetime import datetime, timezone
+import enum
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.api.org.org_model import Organization
 from typing import TYPE_CHECKING, Optional
 if TYPE_CHECKING:
     from app.api.user.user_model import User
+
+class RepositoryBadge(str, enum.Enum):
+    none = "none"
+    official = "official"
+    verified = "verified"
+    sponsored_oss = "sponsored_oss"
+
 
 class Repository(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -24,7 +33,10 @@ class Repository(SQLModel, table=True):
     """
     desc: str = Field(default="")
     public: bool = Field(default=True)
-    official: bool = Field(default=False)
+
+    @property
+    def official(self) -> bool:
+        return self.badge == RepositoryBadge.official
     """
     Official repositories are created and maintained by administrators.
     """
@@ -34,6 +46,10 @@ class Repository(SQLModel, table=True):
 
     organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
     organization: Organization = Relationship(back_populates="repositories")
+
+    badge: RepositoryBadge = Field(default=RepositoryBadge.none)
+    last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    downloads: int = Field(default=0)
 
     @staticmethod
     def compute_canonical_name(name: str, user: str, official: bool, org: str | None) -> str:

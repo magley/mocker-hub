@@ -22,9 +22,21 @@ class NotFoundException(UserException):
 
     def __str__(self):
         return self.message
+    
+
+class AccessDeniedException(UserException):
+    def __init__(self, msg: str):
+        self.message = f"{msg}"
+
+    def __str__(self):
+        return self.message
 
 
 def register_exception_handler(app: FastAPI):
+    @app.exception_handler(NotFoundException)
+    def _NotFoundException(r: Request, e: NotFoundException):
+        raise HTTPException(404, detail={"message": str(e)}) 
+    
     @app.exception_handler(UserException)
     def _UserException(r: Request, e: UserException):
         raise HTTPException(400, detail={"message": str(e)}) 

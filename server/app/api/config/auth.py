@@ -53,15 +53,43 @@ class JWTBearer(HTTPBearer):
         except Exception:
             return False
         return True
+    
+class JWTBearerOptional(HTTPBearer):
+    def __init__(self, auto_error: bool = False):
+        super(JWTBearerOptional, self).__init__(auto_error=auto_error)
+
+    async def __call__(self, request: Request):
+        credentials: HTTPAuthorizationCredentials = await super(JWTBearerOptional, self).__call__(request)
+        if credentials is None:
+            return None
+        
+        if credentials:
+            if credentials.scheme != "Bearer":
+                raise HTTPException(status_code=403, detail="Invalid authentication scheme.")
+            if not self.verify_jwt(credentials.credentials):
+                raise HTTPException(status_code=403, detail="Invalid token or expired token.")
+            return credentials.credentials
+
+        return None
+
+    def verify_jwt(self, jwtoken: str) -> bool:
+        try:
+            decode_jwt(jwtoken)
+        except Exception:
+            return False
+        return True
+
  
 
 JWTDep = Annotated[str, Depends(JWTBearer())]
+JWTDepOptional = Annotated[str, Depends(JWTBearerOptional())]
 
 
 def sign_jwt(user: User) -> str:
     payload = {
         "id": user.id,
         "role": user.role.value,
+        "sub": user.username,
         "must_change_password": user.must_change_password,
     }
     return jwt.encode(payload, JWT_SECRET, algorithm=JWT_ALGORITHM)
@@ -77,6 +105,22 @@ def get_role_from_jwt(jwt: JWTDep):
 
 def get_id_from_jwt(jwt: JWTDep):
     return decode_jwt(jwt)["id"]
+
+
+def get_username_from_jwt(jwt: JWTDep):
+    return decode_jwt(jwt)["sub"]
+
+
+def get_id_from_jwt_optional(jwt: JWTDepOptional) -> int | None:
+    """
+    Returns the user ID from the JWT or None if there is no JWT.
+    Use this only when the JWT is optional. Otherwise, use `get_id_from_jwt`. 
+    """
+    try:
+        return get_id_from_jwt(jwt)
+    except:
+        return None
+
 
 def validate_jwt_or_raise_exceptions(jwt: JWTDep, expected_roles: List[str] | List[UserRole] | None, ignore_password_change_requirement: bool):
     token = decode_jwt(jwt)
@@ -114,7 +158,7 @@ def pre_authorize(roles: List[str] | List[UserRole] | None, ignore_password_chan
     ## Usage
 
     - `@pre_authorize` must go after `@router.foo`.
-    - The endpoint function you're wrapping must have a parameter `jwt: JWTDep`. It must be called `jwt`.
+    - The endpoint function you're wrapping must have a parameter `jwt: JWTDep` or `jwt: JWTDepOptional`. It must be called `jwt`.
     """
 
     def decorator(func: Callable):

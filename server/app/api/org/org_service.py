@@ -1,4 +1,4 @@
-from typing import List
+from typing import Dict, List
 from fastapi import Depends
 from sqlmodel import Session
 from app.api.config.database import get_database
@@ -71,6 +71,9 @@ class OrganizationService:
     
     def find_orgs_that_user_is_member_of(self, user_id: int) -> List[Organization]:
         return self.org_repo.find_orgs_that_user_is_member_of(user_id)
+    
+    def find_org_names_by_ids(self, ids: List[int]) -> Dict[int, str]:
+        return self.org_repo.find_orgs_by_ids(ids)
 
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:

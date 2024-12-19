@@ -3,6 +3,7 @@ import { Buffer } from 'buffer';
 export interface JWTStruct {
     id: number,
     role: string,
+    sub: string,
     must_change_password: boolean
 };
 
@@ -35,13 +36,13 @@ export function getJwtRole(): string {
     return getJWT(jwtString).role;
 }
 
-// export function getJwtUsername(): string {
-//     const jwtString = getJWTStringOrNull();
-//     if (jwtString == null) {
-//         return "";
-//     }
-//     return getJWT(jwtString).sub;
-// }
+export function getJwtUsername(): string {
+    const jwtString = getJWTStringOrNull();
+    if (jwtString == null) {
+        return "";
+    }
+    return getJWT(jwtString).sub;
+}
 
 export function getJwtMustChangePassword(): boolean {
     const jwtString = getJWTStringOrNull();
