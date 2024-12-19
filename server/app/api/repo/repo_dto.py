@@ -1,7 +1,8 @@
-import datetime
+from datetime import datetime
 from typing import Dict, List
 from pydantic import BaseModel, EmailStr, Field
 from app.api.user.user_model import UserRole
+from app.api.repo.repo_model import RepositoryBadge
 
 class RepositoryDTO(BaseModel):
     id: int
@@ -9,9 +10,9 @@ class RepositoryDTO(BaseModel):
     canonical_name: str
     desc: str
     public: bool
-    official: bool
     owner_id: int
     organization_id: int | None = None
+    badge: RepositoryBadge
 
 class RepositoryCreateDTO(BaseModel):
     name: str

@@ -12,7 +12,7 @@ from app.api.config.exception_handler import FieldTakenException, NotFoundExcept
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
 from app.api.repo.repo_dto import RepositoryCreateDTO
-from app.api.repo.repo_model import Repository
+from app.api.repo.repo_model import Repository, RepositoryBadge
 from app.api.main import app
 from app.api.org.org_repo import OrganizationRepo
 
@@ -185,7 +185,7 @@ def test_add___integration():
         created_repo = response.json()
 
         assert created_repo['canonical_name'] == f'u1/python'
-        assert created_repo['official'] == False
+        assert created_repo['badge'] == RepositoryBadge.none
 
         response = client.post("/api/v1/repositories/", json=data)
         assert response.is_client_error

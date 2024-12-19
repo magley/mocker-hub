@@ -6,7 +6,7 @@ from app.api.config.database import get_database
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
-from app.api.repo.repo_model import Repository
+from app.api.repo.repo_model import Repository, RepositoryBadge
 from app.api.repo.repo_dto import RepositoryCreateDTO
 from app.api.org.org_repo import OrganizationRepo
  
@@ -50,13 +50,19 @@ class RepositoryService:
         canonical_name = Repository.compute_canonical_name(dto.name, owner.username, repo_is_official, org_name)
         if self.repo_repo.find_by_canonical_name(canonical_name):
             raise FieldTakenException("Repository name")
+        
+        # Determine the badge for this repository.
+
+        badge = RepositoryBadge.none
+        if owner.role == UserRole.admin:
+            badge = RepositoryBadge.official 
 
         # Create the new repository.
 
         new_repo = Repository.model_validate(dto, update={
             "canonical_name": canonical_name,
-            "official": repo_is_official,
             "owner_id": owner.id,
+            "badge": badge,
         })
 
         return self.repo_repo.add(new_repo)
