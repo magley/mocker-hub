@@ -165,6 +165,7 @@ export const RepoCreate = () => {
                         type="radio"
                         label={<><i className="bi bi-journal-bookmark"></i> <b>Public</b> - Anyone can see and pull from this repository</>}
                         name="visibility"
+                        id="visibility-radio-public"
                         checked={isPublic}
                         onChange={() => setIsPublic(true)}
                     />
@@ -172,6 +173,7 @@ export const RepoCreate = () => {
                         type="radio"
                         label={<><i className="bi bi-lock"></i> <b>Private</b> - Only you have access to this repository</>}
                         name="visibility"
+                        id="visibility-radio-private"
                         checked={!isPublic}
                         onChange={() => setIsPublic(false)}
                     />
