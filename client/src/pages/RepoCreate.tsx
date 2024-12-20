@@ -1,10 +1,12 @@
 import { useEffect, useState } from 'react';
-import { Form, Button, DropdownButton, Dropdown, Col, Row, Alert } from 'react-bootstrap';
+import { Form, Button, DropdownButton, Dropdown, Col, Row, Alert, Spinner } from 'react-bootstrap';
 import './RepoCreate.css';
 import { RepoCreateDTO, RepoDTO, RepositoryService } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import { getJwtId } from '../util/localstorage';
 import { OrganizationDTOBasic, OrganizationService } from '../api/org.api';
+import { useNavigate } from 'react-router-dom';
+import { ToastType, useToastStore } from '../util/toastStore';
 
 interface Owner {
     name: string;
@@ -19,6 +21,10 @@ export const RepoCreate = () => {
     const [isPublic, setIsPublic] = useState(true);
     const [owners, setOwners] = useState<Owner[]>([]);
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
+
+    const navigate = useNavigate();
+    const addToast = useToastStore((state) => state.addToast);
 
     useEffect(() => {
         // Fetch all organizations this user can create repositories in.
@@ -95,6 +101,7 @@ export const RepoCreate = () => {
             return;
         }
 
+
         let dto: RepoCreateDTO = {
             desc: data.description,
             name: data.name,
@@ -102,12 +109,17 @@ export const RepoCreate = () => {
             organization_id: owner!.organization_id,
         };
 
+        setLoading(true);
         setError('');
         RepositoryService.CreateRepository(dto).then((res) => {
             let repo: RepoDTO = res.data;
-            console.log(repo);
+
+            addToast(`Created repository ${repo.name}`, ToastType.success);
+            navigate(`/r/${repo.canonical_name}`);
         }).catch((err: AxiosError) => {
             setError((err.response?.data as any)["detail"]["message"]);
+        }).finally(() => {
+            setLoading(false);
         });
     };
 
@@ -184,6 +196,14 @@ export const RepoCreate = () => {
 
             <div className="d-flex justify-content-end">
                 <Button variant="primary" type="submit">
+                    {loading && (
+                        <Spinner
+                            as="span"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                        > </Spinner>
+                    )}
                     Create Repository
                 </Button>
             </div>
