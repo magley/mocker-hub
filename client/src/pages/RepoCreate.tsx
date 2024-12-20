@@ -60,10 +60,10 @@ export const RepoCreate = () => {
 
     const userOrOrgToStr = (owner: Owner) => {
         if (owner.user_id != null) {
-            return `(You)`;
+            return `${owner.name} (You)`;
         }
         if (owner.organization_id != null) {
-            return `Organization ${owner.organization_id}`;
+            return `${owner.name} (Organization)`;
         }
         console.error(`Bad owner object: ${owner}`);
         return "";
