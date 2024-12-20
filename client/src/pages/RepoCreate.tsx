@@ -12,6 +12,7 @@ interface Owner {
     name: string;
     user_id: number | null;
     organization_id: number | null;
+    image_path: string | null;
 }
 
 export const RepoCreate = () => {
@@ -38,14 +39,15 @@ export const RepoCreate = () => {
                 return {
                     name: o.name,
                     user_id: null,
-                    organization_id: o.id
+                    organization_id: o.id,
+                    image_path: o.image,
                 };
             });
 
             // Create list of "owners" (the user himself + all the organizations above).
 
-            const all_possible_owners = [
-                { name: "user 1", user_id: getJwtId(), organization_id: null },
+            const all_possible_owners: Owner[] = [
+                { name: "user 1", user_id: getJwtId(), organization_id: null, image_path: null },
                 ...organizations_i_can_make_repos_in
             ]
             setOwners(all_possible_owners);
@@ -141,6 +143,12 @@ export const RepoCreate = () => {
                         >
                             {owners.map((o) => (
                                 <Dropdown.Item key={o.name} eventKey={o.name}>
+                                    {o.image_path !== null && (
+                                        <img
+                                            src={`${OrganizationService.GetImageURI(o.image_path)}`}
+                                            style={{ width: '50px', height: '50px', objectFit: 'cover', marginRight: '10px' }}
+                                        />
+                                    )}
                                     {userOrOrgToStr(o)}
                                 </Dropdown.Item>
                             ))}
