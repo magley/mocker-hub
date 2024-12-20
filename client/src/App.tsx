@@ -12,6 +12,7 @@ import { ProtectedRoute } from './components/ProtectedRoute';
 import { OrganizationCreate } from './pages/OrgCreate';
 import { RepositoriesOfUser } from './pages/RepoOfUser';
 import { RepositoryPage } from './pages/RepoPage';
+import { TheToastContainer } from './components/TheToastContainer';
 
 // This function converts:
 //
@@ -63,6 +64,7 @@ function App() {
                     {/* "Not found", must be at the end. */}
                     {authRoute("*", [], NotFound)}
                 </Routes>
+                <TheToastContainer />
             </BrowserRouter>
         </>
     );
