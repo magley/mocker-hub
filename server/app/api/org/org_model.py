@@ -22,6 +22,9 @@ class Organization(SQLModel, table=True):
     name: str = Field()
     desc: str = Field(default="")
     image: str = Field(default="")
+    """
+    Path to the image, relative to the internal `/images/` folder.
+    """
 
     owner_id: int = Field(default=None, foreign_key="user.id")
     owner: "User" = Relationship()

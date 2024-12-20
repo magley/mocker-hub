@@ -1,5 +1,5 @@
 import { AxiosResponse } from "axios";
-import { axiosInstance } from "../util/http";
+import { axiosInstance, ENV } from "../util/http";
 
 export interface OrganizationCreateDTO {
     name: string
@@ -38,5 +38,9 @@ export class OrganizationService {
 
     static async GetMyOrganizations(): Promise<AxiosResponse<OrganizationDTOBasic[]>> {
         return await axiosInstance.get(`/organizations/my`);
+    }
+
+    static GetImageURI = (filename: string): string => {
+        return `${ENV.IMG}${filename}`;
     }
 }
