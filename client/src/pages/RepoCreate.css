@@ -1,0 +1,10 @@
+.repo-create {
+    padding: 20px 27%;
+    border-radius: 10px;
+
+    .is-public-radiogroup,
+    .desc-formgroup {
+        margin-top: 30px;
+        margin-bottom: 30px;
+    }
+}

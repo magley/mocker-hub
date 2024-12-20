@@ -1,0 +1,84 @@
+services:
+  backend:
+    build: ./server
+    image: magley/mocker-hub-backend:latest
+    ports:
+      - "8000:8000"
+    expose:
+      - "8000"
+    depends_on:
+      - db
+      - cache
+    environment:
+      PYTHONUNBUFFERED: 1
+      POSTGRES_USER: postgres
+      POSTGRES_DATABASE: postgres
+      POSTGRES_PASSWORD: admin
+      REDIS_HOST: cache
+      REDIS_PORT: 6379
+      SUPERADMIN_PASSWORD: admin123
+      JWT_SECRET: secret
+      JWT_ALGORITHM: HS256
+    restart: always
+    
+    develop:
+      watch:
+        - action: sync
+          path: ./
+          target: /code
+    
+    volumes:
+      - backend_cfg:/code/volume-server-cfg/
+      - ./images:/code/images
+
+  db:
+    image: postgres:15.9-alpine3.20
+    restart: always
+    shm_size: 128mb
+    ports:
+      - "8001:5432"
+    environment:
+      # POSTGRES_USER: postgres
+      # POSTGRES_DATABASE: postgres
+      POSTGRES_PASSWORD: admin
+
+  db_adminer:
+    # Login form data:
+    # --------------------------------
+    # Database:     PostgreSQL
+    # Server:       db
+    # Username:     POSTGRES_USER
+    # Password:     POSTGRES_PASSWORD
+    # Database:     POSTGRES_DATABASE
+    #
+    image: adminer:4.8.0-standalone
+    restart: always
+    ports:
+      - "8002:8080"
+
+  nginx:
+    build: ./nginx/
+    ports:
+      - "80:80"
+    depends_on:
+      - backend
+    volumes:
+      - ./images:/usr/share/nginx/html/images
+
+
+  cache:
+    image: redis:alpine3.20
+    restart: always
+    ports:
+      - '6888:6379'
+    # volumes: 
+      # - cache:/data
+
+
+volumes:
+  backend_cfg:
+    driver: local
+    driver_opts:
+      type: none
+      device: ./volume-server-cfg
+      o: bind

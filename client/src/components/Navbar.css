@@ -1,0 +1,34 @@
+nav {
+    background: #3F4FDB;
+    padding: 1.1375em;
+}
+
+.navlink {
+    margin-right: 0.5em;
+    margin-left: 0.25em;
+    text-decoration: none;
+    color: white;
+
+    .white {
+        color: white;
+    }
+
+    .blue {
+        color: #8ab4ef;
+    }
+}
+
+.bordered {
+    border: 2px solid white;
+    padding: 6px 12px;
+    border-radius: 3px;
+    font-size: 90%;
+}
+
+.bordered:hover {
+    background: #8ab4ef;
+}
+
+.bold {
+    font-weight: bold;
+}
