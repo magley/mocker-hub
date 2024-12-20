@@ -1,9 +1,11 @@
 import React, { useRef, useState } from 'react';
-import { Form, Button, Alert, Row, Col } from 'react-bootstrap';
+import { Form, Button, Alert, Row, Col, Spinner } from 'react-bootstrap';
 import './OrgCreate.css';
 import { fileToBase64 } from '../util/image';
 import { OrganizationCreateDTO, OrganizationService } from '../api/org.api';
 import { AxiosError } from 'axios';
+import { ToastType, useToastStore } from '../util/toastStore';
+import { useNavigate } from 'react-router-dom';
 
 export const OrganizationCreate = () => {
     const [name, setName] = useState('');
@@ -12,8 +14,12 @@ export const OrganizationCreate = () => {
     const [imagePreview, setImagePreview] = useState<string | null>(null);
     const [errors, setErrors] = useState<{ name?: string; description?: string; image?: string }>({});
     const [error, setError] = useState('');
+    const [loading, setLoading] = useState(false);
 
     const fileInputRef = useRef<HTMLInputElement>(null);
+
+    const navigate = useNavigate();
+    const addToast = useToastStore((state) => state.addToast);
 
     const validateForm = () => {
         const newErrors: { name?: string; description?: string; image?: string } = {};
@@ -43,10 +49,15 @@ export const OrganizationCreate = () => {
 
             setError('');
             setErrors({});
+            setLoading(true);
             OrganizationService.CreateOrganization(dto).then((res) => {
-                console.log(res);
+                const org = res.data;
+                addToast(`Created organization ${org.name}`, ToastType.success);
+                navigate(`/o/${org.name}`);
             }).catch((err: AxiosError) => {
                 setError((err.response?.data as any)["detail"]["message"]);
+            }).finally(() => {
+                setLoading(false);
             });
         } else {
             setErrors(formErrors);
@@ -134,6 +145,14 @@ export const OrganizationCreate = () => {
 
             <div className="d-flex justify-content-end mt-5">
                 <Button variant="primary" type="submit">
+                    {loading && (
+                        <Spinner
+                            as="span"
+                            size="sm"
+                            role="status"
+                            aria-hidden="true"
+                        > </Spinner>
+                    )}
                     Create Organization
                 </Button>
             </div>
