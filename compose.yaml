@@ -1,6 +1,7 @@
 services:
   backend:
     build: ./server
+    image: magley/mocker-hub-backend:latest
     ports:
       - "8000:8000"
     expose:
