@@ -23,12 +23,13 @@ class OrganizationService:
 
         if dto.image is None:
             dto.image = generate_inline_image(dto.name)
-        save_image(dto.image, f"org-{dto.name}")
+        image_fname = save_image(dto.image, f"org-{dto.name}")[1]
 
         # Create the organization.
 
         new_org = Organization.model_validate(dto, update={
             "owner_id": user_id,
+            "image": image_fname,
         })
 
         org = self.org_repo.add(new_org)

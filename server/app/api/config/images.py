@@ -1,13 +1,18 @@
 import base64
 import os
 import random
+from typing import Tuple
 from PIL import Image, ImageDraw, ImageFont
 import hashlib
 import base64
 from io import BytesIO
 
 
-def save_image(inline_image_base64: str, filename_without_path_or_extension: str) -> str:
+def save_image(inline_image_base64: str, filename_without_path_or_extension: str) -> Tuple[str, str]:
+    """
+    Returns: `(file_path, file_name)`
+    e.g. `(C:/.../images/abc.png, abc.png)`
+    """
     header, encoded = inline_image_base64.split(",", 1)
     file_format = header.split("/")[1].split(";")[0]
 
@@ -20,7 +25,7 @@ def save_image(inline_image_base64: str, filename_without_path_or_extension: str
         with open(filepath, "wb") as f:
             f.write(image_bytes)
 
-    return filepath
+    return (filepath, filename)
 
 
 def generate_inline_image(text: str, size: int=128, block_size=16) -> str:
