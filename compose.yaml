@@ -30,6 +30,7 @@ services:
     volumes:
       - backend_cfg:/code/volume-server-cfg/
       - ./images:/code/images
+      - "./distribution/certs:/mnt/local/certs"
 
   db:
     image: postgres:15.9-alpine3.20
@@ -73,6 +74,14 @@ services:
       - '6888:6379'
     # volumes: 
       # - cache:/data
+
+  distribution:
+    image: "registry:2" 
+    ports:
+      - "5000:5000"
+    volumes:
+      - "./distribution/config.yaml:/etc/docker/registry/config.yml"
+      - "./distribution/certs:/mnt/local/certs"
 
 
 volumes:
