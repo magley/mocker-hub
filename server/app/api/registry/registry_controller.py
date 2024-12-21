@@ -39,3 +39,16 @@ def registry_endpoint(request: Request, user_service: UserService = Depends(get_
     jwt = build_jwt_for_docker_registry(username, service, scope)
 
     return {"token": jwt}
+
+
+@router.api_route("/notifications", methods=["POST", "PUT"], summary="Webhook for Docker Registry")
+def registry_notification_endpoint(data: dict):
+    for event in data["events"]:
+        action = event.get("action", None)
+        username = event.get("actor", {}).get("name", None)
+        repository = event.get("target", {}).get("repository", None)
+        tag = event.get("target", {}).get("tag", None)
+        
+        print(f"User '{username}' completed '{action}' of repository '{repository}' with tag '{tag}'")
+
+    return {}
