@@ -26,6 +26,12 @@ export interface OrganizationDTO extends OrganizationDTOBasic {
     repositories: OrganizationRepoDTO[]
 }
 
+export interface OrganizationHasMemberDTO {
+    org_id: number
+    user_id: number | null
+    is_member: boolean
+}
+
 export class OrganizationService {
     static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.post(`/organizations`, dto);
@@ -42,5 +48,8 @@ export class OrganizationService {
     static GetImageURI = (filename: string): string => {
         return `${ENV.IMG}${filename}`;
     }
-
+        
+    static async AmIMemberOfOrg(org_id: number): Promise<AxiosResponse<OrganizationHasMemberDTO>> {
+        return await axiosInstance.get(`/organizations/me/${org_id}`);
+    }
 }

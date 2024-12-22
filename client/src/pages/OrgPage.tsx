@@ -13,12 +13,19 @@ export const OrganizationPage = () => {
     const [loading, setLoading] = useState<boolean>(true);
     const [org, setOrg] = useState<OrganizationDTOBasic>();
     const [key, setKey] = useState<string>('members');
+    const [amMemberOfOrg, setAmMemberOfOrg] = useState<boolean>(false);
     let navigate = useNavigate();
 
     useEffect(() => {
-        OrganizationService.FindByName(orgName!).then((res: AxiosResponse<OrganizationDTOBasic>) => {
+        fetchOrganizationByName(orgName!);
+    }, []);
+
+    const fetchOrganizationByName = (org_name: string) => {
+        OrganizationService.FindByName(org_name).then((res: AxiosResponse<OrganizationDTOBasic>) => {
             setLoading(false);
             setOrg(res.data);
+
+            fetchWhetherIamMemberOfOrg(res.data.id);
         }).catch((err: AxiosError) => {
             if (err.response?.status == 404) {
                 navigate("/");
@@ -27,7 +34,17 @@ export const OrganizationPage = () => {
                 console.error(err);
             }
         });
-    }, []);
+    }
+
+    const fetchWhetherIamMemberOfOrg = (org_id: number) => {
+        OrganizationService.AmIMemberOfOrg(org_id).then((res) => {
+            console.log(res.data);
+            setAmMemberOfOrg(res.data.is_member);
+        }).catch((err) => {
+            console.error(err);
+            setAmMemberOfOrg(false);
+        });
+    }
 
     if (loading) {
         return (
@@ -62,12 +79,12 @@ export const OrganizationPage = () => {
                                 Repositories
                             </Nav.Link>
                         </Nav.Item>
-                        <Nav.Item>
+                        {amMemberOfOrg && <Nav.Item>
                             <Nav.Link eventKey="teams" className={key === 'permissions' ? 'active' : ''}>
                                 <i className="bi bi-people-fill"> </i>
                                 Teams
                             </Nav.Link>
-                        </Nav.Item>
+                        </Nav.Item>}
                     </Nav>
 
                     <Tab.Content>
@@ -77,9 +94,9 @@ export const OrganizationPage = () => {
                         <Tab.Pane eventKey="repositories">
                             <OrgRepositories isActive={key === 'repositories'} />
                         </Tab.Pane>
-                        <Tab.Pane eventKey="teams">
+                        {amMemberOfOrg && <Tab.Pane eventKey="teams">
                             <OrgTeams isActive={key === 'teams'} org={org} />
-                        </Tab.Pane>
+                        </Tab.Pane>}
                     </Tab.Content>
                 </Tab.Container>
             </div>
