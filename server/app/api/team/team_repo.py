@@ -1,12 +1,12 @@
 from sqlmodel import Session, select
 from app.api.team.team_model import Team, TeamMember, TeamPermission
-from typing import List
+from typing import List, Optional
 
 class TeamRepo:
     def __init__(self, session: Session):
         self.session = session
 
-    def create(self, team: Team) -> Team:
+    def add(self, team: Team) -> Team:
         self.session.add(team)
         self.session.commit()
         self.session.refresh(team)
@@ -36,3 +36,17 @@ class TeamRepo:
     def find_all_by_organization(self, organization_id: int) -> List[Team]:
         statement = select(Team).filter(Team.organization_id == organization_id)
         return self.session.exec(statement).all()
+    
+    def find_member(self, team_id: int, user_id: int) -> Optional[TeamMember]:
+        statement = select(TeamMember).filter(
+            TeamMember.team_id == team_id,
+            TeamMember.user_id == user_id
+        )
+        return self.session.exec(statement).first()
+
+    def find_permission(self, team_id: int, repo_id: int) -> Optional[TeamPermission]:
+        statement = select(TeamPermission).filter(
+            TeamPermission.team_id == team_id,
+            TeamPermission.repo_id == repo_id
+        )
+        return self.session.exec(statement).first()
