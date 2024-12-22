@@ -37,50 +37,52 @@ export const OrganizationPage = () => {
         );
     }
 
-    return (
-        <div className="org-page">
-            {/* Organization Section */}
-            <div className="org-page-header mb-4">
-                <h1>
-                    {org?.name}
-                </h1>
+    if (org) {
+        return (
+            <div className="org-page">
+                {/* Organization Section */}
+                <div className="org-page-header mb-4">
+                    <h1>
+                        {org?.name}
+                    </h1>
+                </div>
+
+                {/* Tabs Section */}
+                <Tab.Container activeKey={key} onSelect={(k) => setKey(k!)} id="tabs">
+                    <Nav variant="tabs" className="mb-3">
+                        <Nav.Item>
+                            <Nav.Link eventKey="members" className={key === 'members' ? 'active' : ''}>
+                                <i className="bi bi-person"> </i>
+                                Members
+                            </Nav.Link>
+                        </Nav.Item>
+                        <Nav.Item>
+                            <Nav.Link eventKey="repositories" className={key === 'repositories' ? 'active' : ''}>
+                                <i className="bi bi-boxes"> </i>
+                                Repositories
+                            </Nav.Link>
+                        </Nav.Item>
+                        <Nav.Item>
+                            <Nav.Link eventKey="teams" className={key === 'permissions' ? 'active' : ''}>
+                                <i className="bi bi-people-fill"> </i>
+                                Teams
+                            </Nav.Link>
+                        </Nav.Item>
+                    </Nav>
+
+                    <Tab.Content>
+                        <Tab.Pane eventKey="members">
+                            <OrgMembers isActive={key === 'members'} />
+                        </Tab.Pane>
+                        <Tab.Pane eventKey="repositories">
+                            <OrgRepositories isActive={key === 'repositories'} />
+                        </Tab.Pane>
+                        <Tab.Pane eventKey="teams">
+                            <OrgTeams isActive={key === 'teams'} org={org} />
+                        </Tab.Pane>
+                    </Tab.Content>
+                </Tab.Container>
             </div>
-
-            {/* Tabs Section */}
-            <Tab.Container activeKey={key} onSelect={(k) => setKey(k!)} id="tabs">
-                <Nav variant="tabs" className="mb-3">
-                    <Nav.Item>
-                        <Nav.Link eventKey="members" className={key === 'members' ? 'active' : ''}>
-                            <i className="bi bi-person"> </i>
-                            Members
-                        </Nav.Link>
-                    </Nav.Item>
-                    <Nav.Item>
-                        <Nav.Link eventKey="repositories" className={key === 'repositories' ? 'active' : ''}>
-                            <i className="bi bi-boxes"> </i>
-                            Repositories
-                        </Nav.Link>
-                    </Nav.Item>
-                    <Nav.Item>
-                        <Nav.Link eventKey="teams" className={key === 'permissions' ? 'active' : ''}>
-                            <i className="bi bi-people-fill"> </i>
-                            Teams
-                        </Nav.Link>
-                    </Nav.Item>
-                </Nav>
-
-                <Tab.Content>
-                    <Tab.Pane eventKey="members">
-                        <OrgMembers isActive={key === 'members'} />
-                    </Tab.Pane>
-                    <Tab.Pane eventKey="repositories">
-                        <OrgRepositories isActive={key === 'repositories'} />
-                    </Tab.Pane>
-                    <Tab.Pane eventKey="teams">
-                        <OrgTeams isActive={key === 'teams'} />
-                    </Tab.Pane>
-                </Tab.Content>
-            </Tab.Container>
-        </div>
-    );
+        );
+    }
 }
