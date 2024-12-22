@@ -31,6 +31,7 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
 
         const data: TeamCreateDTO = {
             name: teamName,
+            desc: teamDescription,
             organization_id: org.id
         }
 

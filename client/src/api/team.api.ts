@@ -1,5 +1,5 @@
 import { AxiosResponse } from "axios";
-import { axiosInstance, ENV } from "../util/http";
+import { axiosInstance } from "../util/http";
 
 export enum TeamPermissionKind {
     read = "read",
@@ -21,6 +21,7 @@ export interface TeamPermissionsDTO {
 export interface TeamDTOBasic {
     id: number;
     name: string;
+    desc: string;
     organization_id?: number | null;
 }
 
@@ -31,6 +32,7 @@ export interface TeamDTOFull extends TeamDTOBasic {
 
 export interface TeamCreateDTO {
     name: string;
+    desc: string;
     organization_id: number;
 }
 

@@ -17,6 +17,7 @@ class TeamPermissionsDTO(BaseModel):
 class TeamDTOBasic(BaseModel):
     id: int
     name: str
+    desc: str
     organization_id: int | None = None
 
 class TeamDTOFull(TeamDTOBasic):
@@ -25,6 +26,7 @@ class TeamDTOFull(TeamDTOBasic):
 
 class TeamCreateDTO(BaseModel):
     name: str
+    desc: str
     organization_id: int
 
 class TeamAddMemberDTO(BaseModel):
