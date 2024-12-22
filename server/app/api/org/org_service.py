@@ -79,6 +79,9 @@ class OrganizationService:
     def find_by_name(self, org_name: str) -> Organization:
         return self.org_repo.find_by_name(org_name)
     
+    def is_user_member_of_org(self, org_id: int, user_id: int) -> bool:
+        return self.org_repo.user_is_in_org(user_id, org_id)
+    
 
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
