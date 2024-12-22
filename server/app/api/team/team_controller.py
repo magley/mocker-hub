@@ -1,3 +1,4 @@
+from typing import List
 from fastapi import APIRouter, Depends
 
 from app.api.config.auth import get_id_from_jwt, pre_authorize
@@ -14,3 +15,10 @@ def create_team(jwt: JWTDep, dto: TeamCreateDTO, team_service: TeamService = Dep
     user_id = get_id_from_jwt(jwt)
     team = team_service.create_team(dto, user_id)
     return team
+
+@router.get("/o/{org_id}", response_model=List[TeamDTOBasic], status_code=200, summary="Find all teams by organization")
+@pre_authorize([UserRole.user, UserRole.admin])
+def find_by_org_id(jwt: JWTDep, org_id: int, team_service: TeamService = Depends(get_team_service)):
+    user_id = get_id_from_jwt(jwt)
+    teams = team_service.find_by_org(org_id, user_id)
+    return teams

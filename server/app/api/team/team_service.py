@@ -120,6 +120,25 @@ class TeamService:
         
         return org
     
+    def find_by_org(self, org_id: int, user_id: int) -> List[Team]:
+        """
+        Find all teams of the given organization. 
+        The user making this request MUST be a member of the organization.
+        """
+
+        # Organization exists.
+
+        org = self.org_repo.find_by_id(org_id)
+        if org is None:
+            raise NotFoundException(Organization, org_id)
+
+        # I am a member of the organization.
+
+        if not self.org_repo.user_is_in_org(user_id, org.id):
+            raise NotFoundException(User, user_id)
+
+        return self.team_repo.find_all_by_organization(org_id)
+    
 
 def get_team_service(session: Session = Depends(get_database)) -> TeamService:
     return TeamService(session)
