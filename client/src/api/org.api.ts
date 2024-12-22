@@ -36,10 +36,11 @@ export class OrganizationService {
     }
 
     static async FindByName(name: string): Promise<AxiosResponse<OrganizationDTOBasic>> {
-        return await axiosInstance.get(`/organizations/${name}`);
+        return await axiosInstance.get(`/organizations/name/${name}`);
     }
 
     static GetImageURI = (filename: string): string => {
         return `${ENV.IMG}${filename}`;
     }
+
 }

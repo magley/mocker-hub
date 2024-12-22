@@ -85,6 +85,6 @@ export class RepositoryService {
 
 
     static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoExtDTO>> {
-        return await axiosInstance.get(`/repositories/${name}`);
+        return await axiosInstance.get(`/repositories/name/${name}`);
     }
 }

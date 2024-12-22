@@ -16,7 +16,7 @@ def create_org(jwt: JWTDep, dto: OrganizationCreateDTO, org_service: Organizatio
     repo = org_service.add(user_id, dto)
     return repo
 
-@router.get("/{org_name:path}", response_model=OrganizationDTOBasic, status_code=200, summary="Find organization by name")
+@router.get("/name/{org_name:path}", response_model=OrganizationDTOBasic, status_code=200, summary="Find organization by name")
 def get_by_name(org_name: str, org_service: OrganizationService = Depends(get_org_service)):
     org = org_service.find_by_name(org_name)
     return org
