@@ -1,0 +1,8 @@
+.org-page {
+    padding: 5px;
+    border-radius: 10px;
+
+    .org-page-header {
+        padding: 20px 27%;
+    }
+}
