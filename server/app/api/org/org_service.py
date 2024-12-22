@@ -75,6 +75,10 @@ class OrganizationService:
     
     def find_org_names_by_ids(self, ids: List[int]) -> Dict[int, str]:
         return self.org_repo.find_orgs_by_ids(ids)
+    
+    def find_by_name(self, org_name: str) -> Organization:
+        return self.org_repo.find_by_name(org_name)
+    
 
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:

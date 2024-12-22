@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from app.api.config.auth import get_id_from_jwt, pre_authorize
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTDep
-from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDTOBasic
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDTO, OrganizationDTOBasic
 from app.api.org.org_service import OrganizationService, get_org_service
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
@@ -16,6 +16,10 @@ def create_org(jwt: JWTDep, dto: OrganizationCreateDTO, org_service: Organizatio
     repo = org_service.add(user_id, dto)
     return repo
 
+@router.get("/{org_name:path}", response_model=OrganizationDTOBasic, status_code=200, summary="Find organization by name")
+def get_by_name(org_name: str, org_service: OrganizationService = Depends(get_org_service)):
+    org = org_service.find_by_name(org_name)
+    return org
 
 @router.get("/my", response_model=List[OrganizationDTOBasic], status_code=200, summary="Find all organizations that I am a member of")
 @pre_authorize([UserRole.user, UserRole.admin])
