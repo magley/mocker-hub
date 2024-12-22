@@ -5,4 +5,12 @@
     .org-page-header {
         padding: 20px 27%;
     }
+
+    .no-teams-text {
+        text-align: center;
+    }
+
+    .add-teams-button {
+        margin: auto;
+    }
 }

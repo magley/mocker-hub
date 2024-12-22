@@ -45,4 +45,8 @@ export class TeamService {
     static async FindByOrganizationId(org_id: number): Promise<AxiosResponse<TeamDTOBasic[]>> {
         return await axiosInstance.get(`/teams/o/${org_id}`);
     }
+
+    static async Create(dto: TeamCreateDTO): Promise<AxiosResponse<TeamDTOBasic>> {
+        return await axiosInstance.post(`/teams`, dto);
+    }
 }
