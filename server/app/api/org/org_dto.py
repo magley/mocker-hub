@@ -26,3 +26,8 @@ class OrganizationDTO(BaseModel):
     image: str
     owner_id: int 
     repositories: List[OrganizationRepoDTO]
+
+class OrganizationHasMemberDTO(BaseModel):
+    org_id: int
+    user_id: int | None
+    is_member: bool

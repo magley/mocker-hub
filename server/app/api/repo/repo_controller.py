@@ -46,7 +46,7 @@ def get_repositories_of_user(
     return ReposOfUserDTO(user_id=user_id, user_name=user.username, repos=repos, organization_names=org_names)
 
 
-@router.get("/{repo_canonical_name:path}", response_model=RepositoryExtDTO, status_code=200, summary="Find repository by its full name")
+@router.get("/name/{repo_canonical_name:path}", response_model=RepositoryExtDTO, status_code=200, summary="Find repository by its full name")
 def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, repo_service: RepositoryService = Depends(get_repo_service)):
     user_id = get_id_from_jwt_optional(jwt)
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
