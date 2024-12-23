@@ -7,6 +7,7 @@ import { Nav, Spinner, Tab } from "react-bootstrap";
 import { OrgMembers } from "../components/OrgMembers";
 import { OrgRepositories } from "../components/OrgRepositories";
 import { OrgTeams } from "../components/OrgTeams";
+import { OrgSettings } from "../components/OrgSettings";
 
 export const OrganizationPage = () => {
     const { "*": orgName } = useParams();
@@ -80,9 +81,15 @@ export const OrganizationPage = () => {
                             </Nav.Link>
                         </Nav.Item>
                         {amMemberOfOrg && <Nav.Item>
-                            <Nav.Link eventKey="teams" className={key === 'permissions' ? 'active' : ''}>
+                            <Nav.Link eventKey="teams" className={key === 'teams' ? 'active' : ''}>
                                 <i className="bi bi-people-fill"> </i>
                                 Teams
+                            </Nav.Link>
+                        </Nav.Item>}
+                        {amMemberOfOrg && <Nav.Item>
+                            <Nav.Link eventKey="settings" className={key === 'settings' ? 'active' : ''}>
+                                <i className="bi bi-gear"> </i>
+                                Settings
                             </Nav.Link>
                         </Nav.Item>}
                     </Nav>
@@ -96,6 +103,9 @@ export const OrganizationPage = () => {
                         </Tab.Pane>
                         {amMemberOfOrg && <Tab.Pane eventKey="teams">
                             <OrgTeams isActive={key === 'teams'} org={org} />
+                        </Tab.Pane>}
+                        {amMemberOfOrg && <Tab.Pane eventKey="settings">
+                            <OrgSettings isActive={key === 'settings'} org={org} />
                         </Tab.Pane>}
                     </Tab.Content>
                 </Tab.Container>
