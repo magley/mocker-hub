@@ -1,7 +1,7 @@
 import pytest
 from unittest.mock import MagicMock, patch
 
-from app.api.config.exception_handler import AccessDeniedException, NotFoundException
+from app.api.config.exception_handler import AccessDeniedException, NotFoundException, NotInRelationshipException
 from app.api.org.org_model import Organization
 from app.api.repo.repo_model import Repository
 from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO
@@ -232,3 +232,111 @@ class TestAddMember:
         team_service.user_repo.find_by_id.assert_called_once_with(dto.user_id)
         team_service.org_repo.user_is_in_org.assert_called_once_with(dto.user_id, team.organization_id)
         team_service.team_repo.add_member.assert_called_once_with(dto.team_id, dto.user_id)
+
+class TestAddPermission:
+    def test_add_permission_existing_permission(self, team_service: "TeamService"):
+        dto = TeamAddPermissionDTO(team_id=1, repo_id=1, kind="read_write")
+        user_id = 1
+        
+        existing_permission = TeamPermission(team_id=1, repo_id=1, kind="read_write")
+        team_service.team_repo.find_permission.return_value = existing_permission
+
+        result = team_service.add_permission(dto, user_id)
+
+        assert result == existing_permission
+        team_service.team_repo.find_permission.assert_called_once_with(dto.team_id, dto.repo_id)
+        team_service.team_repo.add_permission.assert_not_called()
+
+    def test_add_permission_repo_not_found(self, team_service: "TeamService"):
+        dto = TeamAddPermissionDTO(team_id=1, repo_id=999, kind="read_write")
+        user_id = 1
+        
+        team_service.team_repo.find_permission.return_value = None
+        team_service.repo_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            team_service.add_permission(dto, user_id)
+
+        team_service.repo_repo.find_by_id.assert_called_once_with(dto.repo_id)
+        team_service.team_repo.find_permission.assert_called_once_with(dto.team_id, dto.repo_id)
+        team_service.team_repo.add_permission.assert_not_called()
+
+    def test_add_permission_team_not_found(self, team_service: "TeamService"):
+        dto = TeamAddPermissionDTO(team_id=999, repo_id=1, kind="read_write")
+        user_id = 1
+        
+        team_service.team_repo.find_permission.return_value = None
+        team_service.repo_repo.find_by_id.return_value = Repository(id=1, name="repo1")
+        team_service.team_repo.get.return_value = None
+
+        with pytest.raises(NotFoundException):
+            team_service.add_permission(dto, user_id)
+
+        team_service.team_repo.find_permission.assert_called_once_with(dto.team_id, dto.repo_id)
+        team_service.team_repo.get.assert_called_once_with(dto.team_id)
+        team_service.team_repo.add_permission.assert_not_called()
+
+    def test_add_permission_repo_not_part_of_org(self, team_service: "TeamService"):
+        dto = TeamAddPermissionDTO(team_id=1, repo_id=1, kind="read_write")
+        user_id = 1
+        org = Organization(id=1, owner_id=1)
+        team = Team(id=1, name="Team A", desc="", organization_id=1)
+        repo = Repository(id=1, name="repo1", organization_id=2)
+        
+        team_service.team_repo.find_permission.return_value = None
+        team_service.repo_repo.find_by_id.return_value = repo
+        team_service.team_repo.get.return_value = team
+        team_service.org_repo.find_by_id.return_value = org
+
+        with pytest.raises(NotInRelationshipException):
+            team_service.add_permission(dto, user_id)
+
+        team_service.team_repo.find_permission.assert_called_once_with(dto.team_id, dto.repo_id)
+        team_service.repo_repo.find_by_id.assert_called_once_with(dto.repo_id)
+        team_service.team_repo.get.assert_called_once_with(dto.team_id)
+        team_service.team_repo.add_permission.assert_not_called()
+
+    def test_add_permission_user_not_owner(self, team_service: "TeamService"):
+        dto = TeamAddPermissionDTO(team_id=1, repo_id=1, kind="read_write")
+        user_id = 2
+        org = Organization(id=1, owner_id=1)
+        team = Team(id=1, name="Team A", desc="", organization_id=1)
+        repo = Repository(id=1, name="repo1", organization_id=1)
+        
+        team_service.team_repo.find_permission.return_value = None
+        team_service.repo_repo.find_by_id.return_value = repo
+        team_service.team_repo.get.return_value = team
+        team_service.org_repo.find_by_id.return_value = org
+
+        with pytest.raises(AccessDeniedException):
+            team_service.add_permission(dto, user_id)
+
+        team_service.team_repo.find_permission.assert_called_once_with(dto.team_id, dto.repo_id)
+        team_service.repo_repo.find_by_id.assert_called_once_with(dto.repo_id)
+        team_service.team_repo.get.assert_called_once_with(dto.team_id)
+        team_service.team_repo.add_permission.assert_not_called()
+
+    def test_add_permission_success(self, team_service: "TeamService"):
+        dto = TeamAddPermissionDTO(team_id=1, repo_id=1, kind="read_write")
+        user_id = 1
+        org = Organization(id=1, owner_id=1)
+        team = Team(id=1, name="Team A", desc="", organization_id=1)
+        repo = Repository(id=1, name="repo1", organization_id=1)
+        
+        team_service.team_repo.find_permission.return_value = None
+        team_service.repo_repo.find_by_id.return_value = repo
+        team_service.team_repo.get.return_value = team
+        team_service.org_repo.find_by_id.return_value = org
+        team_service.org_repo.user_is_in_org.return_value = True
+        new_permission = TeamPermission(team_id=1, repo_id=1, kind="read_write")
+        team_service.team_repo.add_permission = MagicMock(return_value=new_permission)
+
+        result = team_service.add_permission(dto, user_id)
+
+        assert result == new_permission
+        team_service.team_repo.find_permission.assert_called_once_with(dto.team_id, dto.repo_id)
+        team_service.repo_repo.find_by_id.assert_called_once_with(dto.repo_id)
+        team_service.team_repo.get.assert_called_once_with(dto.team_id)
+        team_service.team_repo.add_permission.assert_called_once_with(dto.team_id, dto.repo_id, dto.kind)
+
+#
