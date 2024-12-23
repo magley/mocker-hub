@@ -117,4 +117,118 @@ class TestFindByOrg:
         team_service.org_repo.user_is_in_org.assert_called_once_with(user_id, org_id)
         team_service.team_repo.find_all_by_organization.assert_called_once_with(org_id)
 
-#
+class TestAddMember:
+    def test_add_member_user_already_member(self, team_service: "TeamService"):
+        dto = TeamAddMemberDTO(team_id=1, user_id=1)
+        user_id = 1
+        existing_membership = TeamMember(user_id=1, team_id=1)
+        team_service.team_repo.find_member.return_value = existing_membership
+
+        result = team_service.add_member(dto, user_id)
+
+        assert result == existing_membership
+        team_service.team_repo.find_member.assert_called_once_with(dto.team_id, dto.user_id)
+        team_service.team_repo.add_member.assert_not_called()
+
+    def test_add_member_user_not_found(self, team_service: "TeamService"):
+        dto = TeamAddMemberDTO(team_id=1, user_id=999)
+        user_id = 1
+        team_service.team_repo.find_member.return_value = None
+        team_service.user_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            team_service.add_member(dto, user_id)
+
+        team_service.user_repo.find_by_id.assert_called_once_with(dto.user_id)
+        team_service.team_repo.find_member.assert_called_once_with(dto.team_id, dto.user_id)
+        team_service.team_repo.add_member.assert_not_called()
+
+    def test_add_member_team_not_found(self, team_service: "TeamService"):
+        dto = TeamAddMemberDTO(team_id=999, user_id=1)
+        user_id = 1
+        team_service.team_repo.find_member.return_value = None
+        team_service.user_repo.find_by_id.return_value = User(id=1, name="John Doe")
+        team_service.team_repo.get.return_value = None
+
+        with pytest.raises(NotFoundException):
+            team_service.add_member(dto, user_id)
+
+        team_service.team_repo.find_member.assert_called_once_with(dto.team_id, dto.user_id)
+        team_service.team_repo.get.assert_called_once_with(dto.team_id)
+        team_service.team_repo.add_member.assert_not_called()
+
+    def test_add_member_user_not_in_org(self, team_service: "TeamService"):
+        dto = TeamAddMemberDTO(team_id=1, user_id=2)
+        user_id = 1
+        org = Organization(id=1, owner_id=1)
+        team = Team(id=1, name="Team A", desc="", organization_id=org.id)
+        
+        team_service.team_repo.find_member.return_value = None
+        team_service.user_repo.find_by_id.return_value = User(id=2, name="Jane Doe")
+        team_service.org_repo.find_by_id.return_value = org
+        team_service.org_repo.user_is_in_org.return_value = False
+        team_service.get_team = MagicMock(return_value=team)
+
+        with pytest.raises(NotFoundException):
+            team_service.add_member(dto, user_id)
+
+        team_service.org_repo.user_is_in_org.assert_called_once_with(dto.user_id, org.id)
+        team_service.team_repo.find_member.assert_called_once_with(dto.team_id, dto.user_id)
+        team_service.team_repo.add_member.assert_not_called()
+
+    def test_add_member_org_not_found(self, team_service: "TeamService"):
+        dto = TeamAddMemberDTO(team_id=1, user_id=2)
+        user_id = 1
+        org = Organization(id=1, owner_id=1)
+        team = Team(id=1, name="Team A", desc="", organization_id=org.id)
+        
+        team_service.team_repo.find_member.return_value = None
+        team_service.user_repo.find_by_id.return_value = User(id=2, name="Jane Doe")
+        team_service.org_repo.find_by_id.return_value = None
+        team_service.get_team = MagicMock(return_value=team)
+
+        with pytest.raises(NotFoundException):
+            team_service.add_member(dto, user_id)
+
+        team_service.org_repo.find_by_id.assert_called_once_with(dto.team_id)
+        team_service.team_repo.find_member.assert_called_once_with(dto.team_id, dto.user_id)
+        team_service.team_repo.add_member.assert_not_called()
+
+    def test_add_member_user_not_owner(self, team_service: "TeamService"):
+        dto = TeamAddMemberDTO(team_id=1, user_id=2)
+        user_id = 3
+        org = Organization(id=1, owner_id=1)
+        team = Team(id=1, name="Team A", desc="", organization_id=org.id)
+        team_service.team_repo.find_member.return_value = None
+        team_service.user_repo.find_by_id.return_value = User(id=2, name="Jane Doe")
+        team_service.org_repo.find_by_id = MagicMock(return_value=org)
+        team_service.org_repo.user_is_in_org.return_value = True
+        team_service.get_team = MagicMock(return_value=team)
+
+        with pytest.raises(AccessDeniedException):
+            team_service.add_member(dto, user_id)
+
+        team_service.org_repo.user_is_in_org.assert_called_once_with(dto.user_id, org.id)
+        team_service.team_repo.find_member.assert_called_once_with(dto.team_id, dto.user_id)
+        team_service.team_repo.add_member.assert_not_called()
+
+    def test_add_member_success(self, team_service: "TeamService"):
+        dto = TeamAddMemberDTO(team_id=1, user_id=2)
+        user_id = 1
+        org = Organization(id=1, owner_id=1)
+        team = Team(id=1, name="Team A", desc="", organization_id=1)
+        team_service.team_repo.find_member.return_value = None
+        team_service.user_repo.find_by_id.return_value = User(id=2, name="Jane Doe")
+        team_service.org_repo.find_by_id.return_value = org
+        team_service.org_repo.user_is_in_org.return_value = True
+        new_member = TeamMember(user_id=2, team_id=1)
+        team_service.team_repo.add_member = MagicMock(return_value=new_member)
+        team_service.get_team = MagicMock(return_value=team)
+
+        result = team_service.add_member(dto, user_id)
+
+        assert result == new_member
+        team_service.team_repo.find_member.assert_called_once_with(dto.team_id, dto.user_id)
+        team_service.user_repo.find_by_id.assert_called_once_with(dto.user_id)
+        team_service.org_repo.user_is_in_org.assert_called_once_with(dto.user_id, team.organization_id)
+        team_service.team_repo.add_member.assert_called_once_with(dto.team_id, dto.user_id)
