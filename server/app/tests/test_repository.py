@@ -463,10 +463,10 @@ def test_get_repo_by_canonical_name___integration():
                 jwt = log_in(username)
                 header = {"Authorization": f"Bearer {jwt}"}
 
-                response = client.get(f"/api/v1/repositories/{repo_canonical_name}", headers=header)
+                response = client.get(f"/api/v1/repositories/name/{repo_canonical_name}", headers=header)
                 return response
             else:
-                response = client.get(f"/api/v1/repositories/{repo_canonical_name}")
+                response = client.get(f"/api/v1/repositories/name/{repo_canonical_name}")
                 return response
 
         
