@@ -9,7 +9,7 @@ from typing import List
 from app.api.team.team_model import Team, TeamMember, TeamPermission
 from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO
 from app.api.user.user_model import User
-from app.api.config.exception_handler import AccessDeniedException, NotFoundException, NotInRelationshipException, UserException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, NotInRelationshipException, UserException
 from app.api.org.org_model import Organization
 from app.api.config.database import get_database
 from app.api.repo.repo_model import Repository
@@ -53,7 +53,11 @@ class TeamService:
     def _ensure_repo_is_part_of_org(self, repo: Repository, org_id: int):
         if repo.organization_id != org_id:
             raise NotInRelationshipException(Organization, org_id, Repository, repo.id)
-
+        
+    def _ensure_team_with_that_name_not_in_org(self, team_name: str, org_id: int):
+        if self.team_repo.find_by_name_in_org(team_name, org_id) is not None:
+            raise FieldTakenException("Name")
+        
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
     def create_team(self, dto: TeamCreateDTO, user_id: int) -> Team:
@@ -63,6 +67,7 @@ class TeamService:
         if dto.name[0].isspace():
             raise UserException("Name must not begin with whitespace characters")
         
+        self._ensure_team_with_that_name_not_in_org(dto.name, dto.organization_id)
         org = self._get_org_by_id(dto.organization_id)
         self._ensure_user_is_owner_of_org(org, user_id)
 

@@ -15,6 +15,10 @@ class TeamRepo:
     def get(self, team_id: int) -> Team | None:
         return self.session.get(Team, team_id)
 
+    def find_by_name_in_org(self, team_name: str, org_id: int) -> Team | None:
+        statement = select(Team).where(Team.organization_id == org_id, Team.name == team_name)
+        return self.session.exec(statement).first()
+
     def get_all(self) -> List[Team]:
         statement = select(Team)
         return self.session.exec(statement).all()
