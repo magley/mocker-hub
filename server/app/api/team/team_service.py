@@ -57,6 +57,12 @@ class TeamService:
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
     def create_team(self, dto: TeamCreateDTO, user_id: int) -> Team:
+        if len(dto.name) == 0:
+            raise UserException("Name is required")  # Validate server-side too.
+
+        if dto.name[0].isspace():
+            raise UserException("Name must not begin with whitespace characters")
+        
         org = self._get_org_by_id(dto.organization_id)
         self._ensure_user_is_owner_of_org(org, user_id)
 
