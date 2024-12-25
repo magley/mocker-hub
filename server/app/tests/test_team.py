@@ -5,7 +5,7 @@ from unittest.mock import MagicMock, patch
 
 from sqlmodel import SQLModel
 
-from app.api.config.exception_handler import AccessDeniedException, NotFoundException, NotInRelationshipException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, NotInRelationshipException, UserException
 from app.api.org.org_model import Organization
 from app.api.repo.repo_model import Repository
 from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO
@@ -35,10 +35,29 @@ def team_service():
 
 
 class TestCreateTeam:
+    def test_create_team_bad_name(self, team_service: "TeamService"):
+        user_id = 1
+        dto = TeamCreateDTO(organization_id=1, name=" Starts with whitespace", desc="")
+        with pytest.raises(UserException):
+            team_service.create_team(dto, user_id)
+
+        dto = TeamCreateDTO(organization_id=1, name="", desc="")
+        with pytest.raises(UserException):
+            team_service.create_team(dto, user_id)
+
+    def test_create_team_name_already_taken_in_same_org(self, team_service: "TeamService"):
+        user_id = 1
+        dto1 = TeamCreateDTO(organization_id=1, name="Team01", desc="")  # This team already exists
+
+        team_service.team_repo.find_by_name_in_org.return_value = MagicMock()
+        with pytest.raises(FieldTakenException):
+            team_service.create_team(dto1, user_id)
+
     def test_create_team_organization_not_found(self, team_service: "TeamService"):
         dto = TeamCreateDTO(organization_id=1, name="New Team", desc="")
         user_id = 1
         
+        team_service.team_repo.find_by_name_in_org.return_value = None
         team_service.org_repo.find_by_id.return_value = None
 
         with pytest.raises(NotFoundException):
@@ -49,6 +68,7 @@ class TestCreateTeam:
         user_id = 2
         
         org = Organization(id=1, owner_id=1)
+        team_service.team_repo.find_by_name_in_org.return_value = None
         team_service.org_repo.find_by_id.return_value = org
 
         with pytest.raises(AccessDeniedException):
@@ -59,6 +79,7 @@ class TestCreateTeam:
         user_id = 1
         
         org = Organization(id=1, owner_id=1)
+        team_service.team_repo.find_by_name_in_org.return_value = None
         team_service.org_repo.find_by_id.return_value = org
         new_team = Team(id=None, name="New Team", desc="", organization_id=1)
         new_team_with_id = Team(id=1, name="New Team", desc="", organization_id=1)
