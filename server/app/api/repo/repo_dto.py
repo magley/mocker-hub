@@ -32,3 +32,7 @@ class ReposOfUserDTO(BaseModel):
 class RepositoryExtDTO(RepositoryDTO):
     owner_name: str
     org_name: str | None
+
+class RepositoryDescUpdateDTO(BaseModel):
+    id: int
+    desc: str

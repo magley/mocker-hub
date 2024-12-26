@@ -32,3 +32,10 @@ class RepositoryRepo:
         )
 
         return self.session.exec(query).all()
+    
+    def set_desc(self, repo: Repository, desc: str) -> Repository:
+        repo.sqlmodel_update({"desc": desc})
+        self.session.add(repo)
+        self.session.commit()
+        self.session.refresh(repo)
+        return repo
