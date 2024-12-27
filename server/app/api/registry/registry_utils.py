@@ -1,7 +1,3 @@
-# Note: This isn't a service because it doesn't need to be. `registry` isn't a
-# standard feature (in the "package by feature" context), but an infrastructure
-# detail.
-
 import base64
 import datetime
 import uuid

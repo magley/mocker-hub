@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.user.user_service import UserService, get_user_service
-from app.api.registry.registry_service import decode_auth_header, parse_scope, build_jwt_for_docker_registry
+from app.api.registry.registry_utils import decode_auth_header, parse_scope, build_jwt_for_docker_registry
 
 router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
 
