@@ -13,6 +13,7 @@ import { OrganizationCreate } from './pages/OrgCreate';
 import { RepositoriesOfUser } from './pages/RepoOfUser';
 import { RepositoryPage } from './pages/RepoPage';
 import { TheToastContainer } from './components/TheToastContainer';
+import { OrganizationPage } from './pages/OrgPage';
 
 // This function converts:
 //
@@ -53,6 +54,7 @@ function App() {
 
                     {authRoute("/u/:username/repos", [], RepositoriesOfUser)}
                     {authRoute("/r/*", [], RepositoryPage)}
+                    {authRoute("/o/*", [], OrganizationPage)}
 
                     {/* Any role. */}
                     {authRoute("/password-change-required", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}

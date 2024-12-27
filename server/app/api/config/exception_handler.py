@@ -23,7 +23,6 @@ class NotFoundException(UserException):
     def __str__(self):
         return self.message
     
-
 class AccessDeniedException(UserException):
     def __init__(self, msg: str):
         self.message = f"{msg}"
@@ -31,6 +30,15 @@ class AccessDeniedException(UserException):
     def __str__(self):
         return self.message
 
+class NotInRelationshipException(UserException):
+    """
+    Exceptions of the type: `[e1] is not in [e2]`.
+    """
+    def __init__(self, e1_type, e1_id, e2_type, e2_id):
+          self.message = f"{e1_type} with identifier {e1_id} does not have a {e2_type} with identifier {e2_id}"
+
+    def __str__(self):
+        return self.message
 
 def register_exception_handler(app: FastAPI):
     @app.exception_handler(NotFoundException)
