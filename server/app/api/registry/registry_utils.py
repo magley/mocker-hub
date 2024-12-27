@@ -1,5 +1,6 @@
 import base64
 import datetime
+import os
 import uuid
 
 import jwt
@@ -7,12 +8,14 @@ import jwt
 from app.api.registry.registry_dto import RegistryAction, RegistryActionOperation
 
 SECRET_KEY = ""
-with open("/mnt/local/certs/private_key.pem", "r") as f:
-    SECRET_KEY = f.read()
+if os.getenv('mocker_hub_TEST_ENV') is None:
+    with open("/mnt/local/certs/private_key.pem", "r") as f:
+        SECRET_KEY = f.read()
     
 CERT_DER_B64 = ""
-with open("/mnt/local/certs/cert.der.b64", "r") as f:
-    CERT_DER_B64 = f.read()
+if os.getenv('mocker_hub_TEST_ENV') is None:
+    with open("/mnt/local/certs/cert.der.b64", "r") as f:
+        CERT_DER_B64 = f.read()
 
 
 def decode_auth_header(auth_token):
