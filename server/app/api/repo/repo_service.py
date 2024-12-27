@@ -9,6 +9,7 @@ from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_model import Repository, RepositoryBadge
 from app.api.repo.repo_dto import RepositoryCreateDTO
 from app.api.org.org_repo import OrganizationRepo
+from app.api.access_control.access_control_service import AccessControlService
  
 class RepositoryService:
     def __init__(self, session: Session):
@@ -16,6 +17,7 @@ class RepositoryService:
         self.repo_repo = RepositoryRepo(session)
         self.user_repo = UserRepo(session)
         self.org_repo = OrganizationRepo(session)
+        self.access_control_service = AccessControlService(session)
 
     def find_by_canonical_name(self, canonical_name: str) -> Repository:
         repo = self.repo_repo.find_by_canonical_name(canonical_name)
@@ -73,35 +75,10 @@ class RepositoryService:
         # Filter out repositories which `whos_asking_user_id` cannot see.
         result = []
         for repo in user_repos:
-            if self.user_has_read_access_to_repo(repo, whos_asking_user_id):
+            if self.access_control_service.has_read_access(whos_asking_user_id, repo.id):
                 result.append(repo)
 
         return result
-    
-    def user_has_read_access_to_repo(self, repo: Repository, user_id: int | None):
-        if repo.public:
-            return True
-        
-        # Private repo - signed out users certainly cannot see them.
-        if user_id is None:
-            return False
-        
-        repo_is_personal = repo.organization_id is None
-        if repo_is_personal:
-            # For personal repositories, you must be the owner of the repo.
-
-            if not repo.owner_id == user_id:
-                return False
-        else:
-            # For organization repositories, you must be a member of the same org.
-
-            user_is_in_org = self.org_repo.user_is_in_org(user_id, repo.organization_id)
-            if not user_is_in_org:
-                return False
-            
-            # TODO: Teams...
-
-        return True # Just in case :)
         
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
