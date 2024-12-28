@@ -37,8 +37,7 @@ def registry_endpoint(
         repo = repo_service.find_by_canonical_name(action.repo_canonical_name)
 
         if RegistryActionOperation.push in action.operations:
-            # TODO: Once we have has_write_access, use it here.
-            can_write = access_control_service.has_read_access(user.id, repo.id)
+            can_write = access_control_service.has_write_access(user.id, repo.id)
             if not can_write:
                 raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")
         elif RegistryActionOperation.pull in action.operations:
