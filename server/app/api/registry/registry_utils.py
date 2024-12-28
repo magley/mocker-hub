@@ -9,14 +9,23 @@ from app.api.registry.registry_dto import RegistryAction, RegistryActionOperatio
 
 SECRET_KEY = ""
 if os.getenv('mocker_hub_TEST_ENV') is None:
-    with open("/mnt/local/certs/private_key.pem", "r") as f:
-        SECRET_KEY = f.read()
+    try:
+        with open("/mnt/local/certs/private_key.pem", "r") as f:
+            SECRET_KEY = f.read()
+    except FileNotFoundError as e:
+        print(e)
+        print("Did you forget to add the certificates?")
+        print("Go to /distribution/certs and unpack certs.rar")
     
 CERT_DER_B64 = ""
 if os.getenv('mocker_hub_TEST_ENV') is None:
-    with open("/mnt/local/certs/cert.der.b64", "r") as f:
-        CERT_DER_B64 = f.read()
-
+    try:
+        with open("/mnt/local/certs/cert.der.b64", "r") as f:
+            CERT_DER_B64 = f.read()
+    except FileNotFoundError as e:
+        print(e)
+        print("Did you forget to add the certificates?")
+        print("Go to /distribution/certs and unpack certs.rar")
 
 def decode_auth_header(auth_token):
     """
