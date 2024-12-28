@@ -160,7 +160,11 @@ class RepositoryService:
         repo = self._update_repo_attribute(repo, dto)
         return repo
 
-    def user_has_update_permission(self, user_id: int, repo_id: int) -> bool:
+    def user_has_update_permission(self, user_id: int | None, repo_id: int) -> bool:
+        # Check whether the guest is making request
+        if user_id is None:
+            return False
+        
         repo = self.find_by_id(repo_id)
 
         # Check whether the owner (admin or user) is making request

@@ -38,6 +38,7 @@ export interface ReposOfUserDTO {
 export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
+    can_update: boolean,
 }
 
 export class RepositoryService {

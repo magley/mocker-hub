@@ -2,6 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { Nav, Spinner, Tab } from 'react-bootstrap';
 import { RepoOverview } from '../components/RepoOverview';
 import { RepoTags } from '../components/RepoTags';
+import { RepoSettings } from '../components/RepoSettings';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
 import { RepoExtDTO, RepositoryBadge, RepositoryService } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
@@ -123,14 +124,22 @@ export const RepositoryPage: React.FC = () => {
                 <Nav variant="tabs" className="mb-3">
                     <Nav.Item>
                         <Nav.Link eventKey="overview" className={key === 'overview' ? 'active' : ''}>
+                            <i className="bi bi-list"> </i>                            
                             Overview
                         </Nav.Link>
                     </Nav.Item>
                     <Nav.Item>
                         <Nav.Link eventKey="tags" className={key === 'tags' ? 'active' : ''}>
+                            <i className="bi bi-tag"> </i>
                             Tags
                         </Nav.Link>
                     </Nav.Item>
+                    {repo?.can_update && <Nav.Item>
+                        <Nav.Link eventKey="settings" className={key === 'settings' ? 'active' : ''}>
+                            <i className="bi bi-gear"> </i>
+                            Settings
+                        </Nav.Link>
+                    </Nav.Item>}
                 </Nav>
 
                 <Tab.Content>
@@ -139,6 +148,9 @@ export const RepositoryPage: React.FC = () => {
                     </Tab.Pane>
                     <Tab.Pane eventKey="tags">
                         <RepoTags isActive={key === 'tags'} />
+                    </Tab.Pane>
+                    <Tab.Pane eventKey="settings">
+                        {repo && <RepoSettings isActive={key === 'settings'} repo={repo} />}
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>
