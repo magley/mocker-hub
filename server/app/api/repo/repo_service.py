@@ -145,44 +145,6 @@ class RepositoryService:
 
         return True # Just in case :)
     
-    def update_repo_desc_by_id(self, user_id: int, repo_id: int, dto: RepositoryDescUpdateDTO) -> Repository:
-        # TODO: Add exceptions and do clean code
-        
-        repo = self.repo_repo.find_by_id(repo_id)
-        
-        if repo is None:
-            raise NotFoundException(Repository, repo_id)
-        
-        # Check whether the owner (admin or user) requests the update
-        if user_id == repo.owner_id:
-            repo = self.repo_repo.set_desc(repo, dto.desc)
-            return repo
-        
-        # Check whether the repository belongs to an organization
-        if repo.organization is not None:
-            user_is_organization_member = user_id in [member.user_id for member in repo.organization.members]
-            if user_is_organization_member:
-
-                # Check wheter the repository owner requests the update
-                if user_id == repo.organization.owner_id:
-                    repo = self.repo_repo.set_desc(repo, dto.desc)
-                    return repo
-
-                # Check wheter a team member with admin permissions requests the update
-                ''' Find all teams belonging to the organization '''
-                teams = self._get_all_teams_by_org(repo.organization_id)
-
-                for team in teams:
-                    ''' Check if the team has admin permissions for the observed repository '''
-                    for permission in team.permissions:
-                        if permission.repo_id == repo.id and permission.kind == TeamPermissionKind.admin:
-                            ''' Check if the member belongs to the team '''
-                            if user_id in [member.user_id for member in team.members]:
-                                repo = self.repo_repo.set_desc(repo, dto.desc)
-                                return repo
-
-        raise AccessDeniedException(f"User {user_id} cannot update repository with identifier {repo.id}")
-
     def find_by_id(self, repo_id: int) -> Repository:
         repo = self.repo_repo.find_by_id(repo_id)
         if repo is None:

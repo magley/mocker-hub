@@ -65,7 +65,7 @@ def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, re
 @pre_authorize([UserRole.user, UserRole.admin])
 def update_repo_desc_by_id(jwt: JWTDep, repo_id: int, dto: RepositoryDescUpdateDTO, repo_service:RepositoryService = Depends(get_repo_service)):
     user_id = get_id_from_jwt(jwt)
-    repo = repo_service.update_repo_desc_by_id(user_id, repo_id, dto)
+    repo = repo_service.update_repo_by_id(user_id, repo_id, dto)
     return repo
 
 @router.put("/{repo_id}/visibility", response_model=RepositoryDTO, status_code=200, summary="Update repository visibility by its id")
