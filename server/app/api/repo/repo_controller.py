@@ -57,7 +57,7 @@ def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, re
     result = repo.model_dump()
     result["owner_name"] = repo.owner.username
     result["org_name"] = None if (repo.organization is None) else repo.organization.name
-    result["can_update"] = repo_service.user_can_update_repo(user_id, repo.id)
+    result["can_update"] = repo_service.user_has_update_permission(user_id, repo.id)
     result = RepositoryExtDTO.model_validate(result)
 
     return result

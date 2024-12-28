@@ -152,45 +152,30 @@ class RepositoryService:
         return repo
     
     def update_repo_by_id(self, user_id: int, repo_id: int, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO) -> Repository:
-        
-        repo = self.find_by_id(repo_id)
-        
-        # Check whether the owner (admin or user) requests the update
-        if user_id == repo.owner_id:
-            repo = self._update_repo_attribute(repo, dto)
-            return repo
-                
-        # Check whether the repository belongs to an organization
-        if repo.organization is not None:
-
-            # Check whether the repository owner or a team member with admin permissions requests the update
-            user_is_owner = user_id == repo.organization.owner_id
-            team_privileged_user = self._is_user_org_member_with_admin_permissions(user_id, repo)  
-            
-            if user_is_owner or team_privileged_user:
-                repo = self._update_repo_attribute(repo, dto)
-                return repo
-                
-        raise AccessDeniedException(f"User {user_id} cannot update repository with identifier {repo.id}")
-
-    def user_can_update_repo(self, user_id: int, repo_id: int) -> bool:
+        user_can_make_update = self.user_has_update_permission(user_id, repo_id)
+        if not user_can_make_update:
+            raise AccessDeniedException(f"User {user_id} cannot update repository with identifier {repo_id}")
 
         repo = self.find_by_id(repo_id)
-        
-        # Check whether the owner (admin or user) requests the update
+        repo = self._update_repo_attribute(repo, dto)
+        return repo
+
+    def user_has_update_permission(self, user_id: int, repo_id: int) -> bool:
+        repo = self.find_by_id(repo_id)
+
+        # Check whether the owner (admin or user) is making request
         if user_id == repo.owner_id:
             return True
-        
+                
         # Check whether the repository belongs to an organization
         if repo.organization is not None:
-
-            # Check whether the repository owner or a team member with admin permissions requests the update
+            # Check whether the repository owner or a team member with admin permissions is making request
             user_is_owner = user_id == repo.organization.owner_id
             team_privileged_user = self._is_user_org_member_with_admin_permissions(user_id, repo)  
             
             if user_is_owner or team_privileged_user:
                 return True
-                
+        
         return False
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
