@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends
 
 from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
-from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize, get_role_from_jwt
+from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTBearer, JWTDep, JWTDepOptional
 from app.api.user.user_service import UserService, get_user_service
@@ -66,4 +66,11 @@ def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, re
 def update_repo_desc_by_id(jwt: JWTDep, repo_id: int, dto: RepositoryDescUpdateDTO, repo_service:RepositoryService = Depends(get_repo_service)):
     user_id = get_id_from_jwt(jwt)
     repo = repo_service.update_repo_desc_by_id(user_id, repo_id, dto)
+    return repo
+
+@router.put("/{repo_id}/visibility", response_model=RepositoryDTO, status_code=200, summary="Update repository visibility by its id")
+@pre_authorize([UserRole.user, UserRole.admin])
+def update_repo_visibility_by_id(jwt: JWTDep, repo_id: int, dto: RepositoryVisibilityUpdateDTO, repo_service:RepositoryService = Depends(get_repo_service)):
+    user_id = get_id_from_jwt(jwt)
+    repo = repo_service.update_repo_by_id(user_id, repo_id, dto)
     return repo

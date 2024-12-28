@@ -34,5 +34,7 @@ class RepositoryExtDTO(RepositoryDTO):
     org_name: str | None
 
 class RepositoryDescUpdateDTO(BaseModel):
-    id: int
     desc: str
+
+class RepositoryVisibilityUpdateDTO(BaseModel):
+    public: bool

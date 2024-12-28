@@ -39,3 +39,10 @@ class RepositoryRepo:
         self.session.commit()
         self.session.refresh(repo)
         return repo
+    
+    def set_visibility(self, repo: Repository, public: bool) -> Repository:
+        repo.sqlmodel_update({"public": public})
+        self.session.add(repo)
+        self.session.commit()
+        self.session.refresh(repo)
+        return repo

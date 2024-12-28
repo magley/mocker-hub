@@ -33,6 +33,30 @@ class RepositoryService:
             raise NotFoundException(List[Team], org_id)
         return teams
     
+    def _update_repo_attribute(self, repo: Repository, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO) -> Repository:
+        if isinstance(dto, RepositoryDescUpdateDTO):
+            repo = self.repo_repo.set_desc(repo, dto.desc)
+        elif isinstance(dto, RepositoryVisibilityUpdateDTO):
+            repo = self.repo_repo.set_visibility(repo, dto.public)
+        return repo
+
+    def _is_user_org_member_with_admin_permissions(self, user_id: int, repo: Repository):
+        user_is_organization_member = user_id in [member.user_id for member in repo.organization.members]
+        
+        if not user_is_organization_member:
+            return False
+
+        ''' Find all teams belonging to the organization '''
+        teams = self._get_all_teams_by_org(repo.organization_id)
+
+        for team in teams:
+            ''' Check if the team has admin permissions for the observed repository '''
+            for permission in team.permissions:
+                if permission.repo_id == repo.id and permission.kind == TeamPermissionKind.admin:
+                    ''' Check if the member belongs to the team '''
+                    if user_id in [member.user_id for member in team.members]:
+                        return True
+
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
     def find_by_canonical_name(self, canonical_name: str) -> Repository:
@@ -157,6 +181,34 @@ class RepositoryService:
                                 repo = self.repo_repo.set_desc(repo, dto.desc)
                                 return repo
 
+        raise AccessDeniedException(f"User {user_id} cannot update repository with identifier {repo.id}")
+
+    def find_by_id(self, repo_id: int) -> Repository:
+        repo = self.repo_repo.find_by_id(repo_id)
+        if repo is None:
+            raise NotFoundException(Repository, repo_id)
+        return repo
+    
+    def update_repo_by_id(self, user_id: int, repo_id: int, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO) -> Repository:
+        
+        repo = self.find_by_id(repo_id)
+        
+        # Check whether the owner (admin or user) requests the update
+        if user_id == repo.owner_id:
+            repo = self._update_repo_attribute(repo, dto)
+            return repo
+                
+        # Check whether the repository belongs to an organization
+        if repo.organization is not None:
+
+            # Check whether the repository owner or a team member with admin permissions requests the update
+            user_is_owner = user_id == repo.organization.owner_id
+            team_privileged_user = self._is_user_org_member_with_admin_permissions(user_id, repo)  
+            
+            if user_is_owner or team_privileged_user:
+                repo = self._update_repo_attribute(repo, dto)
+                return repo
+                
         raise AccessDeniedException(f"User {user_id} cannot update repository with identifier {repo.id}")
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
