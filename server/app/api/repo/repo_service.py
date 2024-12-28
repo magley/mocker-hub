@@ -173,5 +173,25 @@ class RepositoryService:
                 
         raise AccessDeniedException(f"User {user_id} cannot update repository with identifier {repo.id}")
 
+    def user_can_update_repo(self, user_id: int, repo_id: int) -> bool:
+
+        repo = self.find_by_id(repo_id)
+        
+        # Check whether the owner (admin or user) requests the update
+        if user_id == repo.owner_id:
+            return True
+        
+        # Check whether the repository belongs to an organization
+        if repo.organization is not None:
+
+            # Check whether the repository owner or a team member with admin permissions requests the update
+            user_is_owner = user_id == repo.organization.owner_id
+            team_privileged_user = self._is_user_org_member_with_admin_permissions(user_id, repo)  
+            
+            if user_is_owner or team_privileged_user:
+                return True
+                
+        return False
+
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)
