@@ -20,7 +20,7 @@ def register_repo(jwt: JWTDep, dto: RepositoryCreateDTO, repo_service: Repositor
     repo = repo_service.add(user_id, dto)
     return repo
 
-@router.get("/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get repositories of suer")
+@router.get("/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get repositories of user")
 def get_repositories_of_user(
     jwt: JWTDepOptional, 
     username: str, 
