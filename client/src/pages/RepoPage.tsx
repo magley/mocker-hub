@@ -150,7 +150,7 @@ export const RepositoryPage: React.FC = () => {
                         <RepoTags isActive={key === 'tags'} />
                     </Tab.Pane>
                     <Tab.Pane eventKey="settings">
-                        {repo && <RepoSettings isActive={key === 'settings'} repo={repo} />}
+                        {repo && <RepoSettings isActive={key === 'settings'} repo={repo} repoStateChanger={setRepo} />}
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>

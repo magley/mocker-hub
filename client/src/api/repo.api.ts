@@ -1,5 +1,6 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance } from "../util/http";
+import { dot } from "node:test/reporters";
 
 export enum RepositoryBadge {
     none = "none",
@@ -39,6 +40,10 @@ export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
     can_update: boolean,
+}
+
+export interface RepositoryVisibilityUpdateDTO {
+    public: boolean,
 }
 
 export class RepositoryService {
@@ -86,5 +91,9 @@ export class RepositoryService {
 
     static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoExtDTO>> {
         return await axiosInstance.get(`/repositories/name/${name}`);
+    }
+
+    static async UpdateRepoVisibilityById(repoId: number, dto: RepositoryVisibilityUpdateDTO): Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.put(`/repositories/${repoId}/visibility`, dto)
     }
 }
