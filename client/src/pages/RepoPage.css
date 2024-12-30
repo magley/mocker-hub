@@ -9,5 +9,9 @@
     .badge {
         vertical-align: middle;
     }
+
+    .repo-page-desc {
+        white-space: pre-wrap;
+    }
 }
 

@@ -1,9 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { RepoExtDTO } from '../api/repo.api';
+import { RepoExtDTO, RepositoryService } from '../api/repo.api';
+import { RepositoryDescUpdateDTO } from '../api/repo.api';
+import { ToastType, useToastStore } from '../util/toastStore';
+import { Alert } from 'react-bootstrap';
+import { AxiosError } from 'axios';
 
-export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO }> = (props) => {
+export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, repoStateChanger: any }> = (props) => {
     const [isEditing, setIsEditing] = useState(false);
     const [newDesc, setNewDesc] = useState(props.repo.desc);
+    const addToast = useToastStore((state) => state.addToast);
+    const [error, setError] = useState('');
 
     useEffect(() => {
         if (props.isActive) {
@@ -12,12 +18,27 @@ export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO }> = (
     }, [props.isActive]);
 
     const updateChanges = () => {
-        console.log("Saving:", newDesc);
         setIsEditing(false);
+
+        let dto: RepositoryDescUpdateDTO = {
+            desc: newDesc,
+        };
+        
+        RepositoryService.UpdateRepoDescById(props.repo.id, dto).then((res) => {
+            props.repoStateChanger({
+                ...props.repo,
+                ...res.data,
+            });
+            addToast(`Updated repository ${props.repo.name}`, ToastType.success);
+            setError('');
+        }).catch((err: AxiosError) => {
+            setError((err.response?.data as any)["detail"]["message"]);
+        });
     };
 
     return (
         <div className="tab-pane fade show active" id="overview">
+            {error && <Alert variant="danger">{error}</Alert>}
             {isEditing ? (
                 <div>
                     <textarea className="form-control" rows={7} value={newDesc} onChange={(e) => setNewDesc(e.target.value)}/>
@@ -32,7 +53,7 @@ export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO }> = (
                 </div>
             ) : (
                 <div className="d-flex align-items-center">
-                    <p className="mb-0">{props.repo.desc}</p>
+                    <div className='repo-page-desc'>{props.repo.desc}</div>
                     {props.repo.can_update && (
                         <button className="btn btn-link p-0 ms-2" onClick={() => setIsEditing(true)}>
                             <i className="bi bi-pencil"></i>

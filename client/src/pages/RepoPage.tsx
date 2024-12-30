@@ -83,7 +83,7 @@ export const RepositoryPage: React.FC = () => {
                             Private
                         </span>
                     }
-                </h1>
+                </h1>   
                 <h5>
                     {repoOwner.isUser ? <>By </> : <>Part of </>}
                     <NavLink to={repoOwner.linkURL}>{repoOwner.name}</NavLink>
@@ -144,7 +144,7 @@ export const RepositoryPage: React.FC = () => {
 
                 <Tab.Content>
                     <Tab.Pane eventKey="overview">
-                        {repo && <RepoOverview isActive={key === 'overview'} repo={repo} />}
+                        {repo && <RepoOverview isActive={key === 'overview'} repo={repo} repoStateChanger={setRepo} />}
                     </Tab.Pane>
                     <Tab.Pane eventKey="tags">
                         <RepoTags isActive={key === 'tags'} />

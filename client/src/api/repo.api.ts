@@ -46,6 +46,10 @@ export interface RepositoryVisibilityUpdateDTO {
     public: boolean,
 }
 
+export interface RepositoryDescUpdateDTO {
+    desc: string,
+}
+
 export class RepositoryService {
     static BadgeToHumanText(badge: RepositoryBadge): string {
         switch (badge) {
@@ -95,5 +99,9 @@ export class RepositoryService {
 
     static async UpdateRepoVisibilityById(repoId: number, dto: RepositoryVisibilityUpdateDTO): Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.put(`/repositories/${repoId}/visibility`, dto)
+    }
+
+    static async UpdateRepoDescById(repoId: number, dto: RepositoryDescUpdateDTO) : Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.put(`/repositories/${repoId}/desc`, dto)
     }
 }
