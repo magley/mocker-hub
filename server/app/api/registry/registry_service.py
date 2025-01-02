@@ -1,16 +1,8 @@
-from typing import List, Optional
 from fastapi import Depends, HTTPException
-from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.user.user_model import User, UserRole
-from app.api.user.user_repo import UserRepo
-from app.api.repo.repo_repo import RepositoryRepo
-from app.api.repo.repo_model import Repository, RepositoryBadge
-from app.api.repo.repo_dto import RepositoryCreateDTO
-from app.api.org.org_repo import OrganizationRepo
 from app.api.access_control.access_control_service import AccessControlService
-from app.api.registry.registry_utils import decode_auth_header, parse_scope, build_jwt_for_docker_registry
+from app.api.registry.registry_utils import parse_scope, build_jwt_for_docker_registry
 from app.api.user.user_service import UserService
 from app.api.repo.repo_service import RepositoryService
 from app.api.registry.registry_dto import RegistryActionOperation
