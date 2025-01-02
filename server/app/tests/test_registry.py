@@ -20,8 +20,17 @@ def registry_service() -> RegistryService:
     
     return service
 
-def test_handle_registry_request_push(registry_service: RegistryService):
-    jwt.encode = MagicMock(return_value="mocked.jwt.token")
+@pytest.fixture
+def mock_jwt_encode():
+    original_jwt_encode = jwt.encode
+    mock_jwt_encode = MagicMock(return_value="mocked.jwt.token")
+
+    jwt.encode = mock_jwt_encode
+    yield mock_jwt_encode
+
+    jwt.encode = original_jwt_encode
+
+def test_handle_registry_request_push(registry_service: RegistryService, mock_jwt_encode):
     registry_service.user_service.exists_with_credentials.return_value = True
     registry_service.user_service.find_by_username.return_value = MagicMock(id=1, username="testuser")
     registry_service.repo_service.find_by_canonical_name.return_value = MagicMock(id=1, canonical_name="test/repo")
@@ -53,8 +62,7 @@ def test_handle_registry_request_invalid_credentials(registry_service: RegistryS
     assert excinfo.value.status_code == 401
     assert "Invalid username or password" in str(excinfo.value.detail)
 
-def test_handle_registry_request_pull(registry_service: RegistryService):
-    jwt.encode = MagicMock(return_value="mocked.jwt.token") 
+def test_handle_registry_request_pull(registry_service: RegistryService, mock_jwt_encode):
     registry_service.user_service.exists_with_credentials.return_value = True
     registry_service.user_service.find_by_username.return_value = MagicMock(id=1, username="testuser")
     registry_service.repo_service.find_by_canonical_name.return_value = MagicMock(id=1, canonical_name="test/repo")
@@ -90,7 +98,6 @@ def test_handle_registry_request_no_push_access(registry_service: RegistryServic
     assert "User testuser cannot push to repo test/repo" in str(excinfo.value.detail)
 
 def test_handle_registry_request_unknown_operation(registry_service: RegistryService):
-    jwt.encode = MagicMock(return_value="mocked.jwt.token")    
     registry_service.user_service.exists_with_credentials.return_value = True
     registry_service.user_service.find_by_username.return_value = MagicMock(id=1, username="testuser")
     registry_service.repo_service.find_by_canonical_name.return_value = MagicMock(id=1, canonical_name="test/repo")
@@ -104,8 +111,7 @@ def test_handle_registry_request_unknown_operation(registry_service: RegistrySer
         registry_service.handle_registry_request(username, password, scope, service)
     assert "delete" in str(ex)
 
-def test_handle_registry_request_jwt_generation(registry_service: RegistryService):
-    jwt.encode = MagicMock(return_value="mocked.jwt.token")
+def test_handle_registry_request_jwt_generation(registry_service: RegistryService, mock_jwt_encode):
     registry_service.user_service.exists_with_credentials.return_value = True
     registry_service.user_service.find_by_username.return_value = MagicMock(id=1, username="testuser")
 
@@ -141,7 +147,7 @@ def test_parse_scope_invalid_scope():
         parse_scope(username, scope)
     assert "delete" in str(ex)
 
-def test_build_jwt_for_docker_registry_with_scope():
+def test_build_jwt_for_docker_registry_with_scope(mock_jwt_encode):
     username = "testuser"
     service = "docker-registry"
     scope = "repository:test/repo:push,pull"
@@ -151,7 +157,7 @@ def test_build_jwt_for_docker_registry_with_scope():
     assert isinstance(jwt_token, str)
     assert len(jwt_token) > 0
 
-def test_build_jwt_for_docker_registry_without_scope():
+def test_build_jwt_for_docker_registry_without_scope(mock_jwt_encode):
     username = "testuser"
     service = "docker-registry"
     scope = None
