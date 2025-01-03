@@ -8,14 +8,16 @@ from app.api.config.security import hash_password
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
-from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, UserException
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
-from app.api.repo.repo_dto import RepositoryCreateDTO
+from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.repo.repo_model import Repository, RepositoryBadge
 from app.api.main import app
 from app.api.org.org_repo import OrganizationRepo
-from app.api.org.org_model import Organization
+from app.api.org.org_model import Organization, OrganizationMembers
+from app.api.team.team_model import Team, TeamMember, TeamPermission, TeamPermissionKind
+from app.api.team.team_repo import TeamRepo
 
 @pytest.fixture
 def mock_session():
@@ -34,6 +36,10 @@ def mock_org_repo():
     return mock.MagicMock(spec=OrganizationRepo)
 
 @pytest.fixture
+def mock_team_repo():
+    return mock.MagicMock(spec=TeamRepo)
+
+@pytest.fixture
 def user_service(mock_session, mock_user_repo):
     service = UserService(mock_session)
     service.user_repo = mock_user_repo
@@ -45,6 +51,7 @@ def repo_service(mock_session):
     service.repo_repo = mock.MagicMock(spec=RepositoryRepo)
     service.user_repo = mock.MagicMock(spec=UserRepo)
     service.org_repo = mock.MagicMock(spec=OrganizationRepo)
+    service.team_repo = mock.MagicMock(spec=TeamRepo)
     return service
 
 @pytest.fixture
@@ -512,6 +519,8 @@ def test_user_has_update_permission_guest(repo_service):
     result = repo_service.user_has_update_permission(user_id, repo_id)
 
     assert result == False
+    repo_service.repo_repo.find_by_id.assert_not_called()
+    repo_service.team_repo.find_all_by_organization.assert_not_called()
 
 
 def test_user_has_update_permission_owner(repo_service):
@@ -520,15 +529,16 @@ def test_user_has_update_permission_owner(repo_service):
     user_id = 1
     repo_id = 1
 
-    repo1 = mock.MagicMock(Repository)
-    repo1.id = repo_id
-    repo1.owner_id = user_id
+    repo = mock.MagicMock(Repository)
+    repo.id = repo_id
+    repo.owner_id = user_id
 
-    repo_service.repo_repo.find_by_id.return_value = repo1
+    repo_service.repo_repo.find_by_id.return_value = repo
     result = repo_service.user_has_update_permission(user_id, repo_id)
 
     assert result == True
     repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+    repo_service.team_repo.find_all_by_organization.assert_not_called()
 
 
 def test_user_has_update_permission_user_updates_missing_repo(repo_service):
@@ -543,31 +553,26 @@ def test_user_has_update_permission_user_updates_missing_repo(repo_service):
         repo_service.user_has_update_permission(user_id, repo_id)
 
     repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+    repo_service.team_repo.find_all_by_organization.assert_not_called()
 
 
 def test_user_has_update_permission_user_without_permissions(repo_service):
     """ 
-        Test case for when the user doesn't have permissions for a repository update. 
-        This test case is slightly more complex as it checks the user-organization relationship.
+        Test case for when the user does not have any permissions to update the repository.
     """
 
     user_id = 1
     repo_id = 1
 
-    repo1 = mock.MagicMock(Repository)
-    repo1.organization = mock.MagicMock(Organization)
-    member1 = mock.MagicMock(User)
-    member2 = mock.MagicMock(User)
-    member1.user_id = 1
-    member2.user_id = 2
-    repo1.organization.members = [member1, member2]
+    repo = mock.MagicMock(Repository)
+    repo.organization = mock.MagicMock(Organization)
 
-    repo_service.repo_repo.find_by_id.return_value = repo1
+    repo_service.repo_repo.find_by_id.return_value = repo
     result = repo_service.user_has_update_permission(user_id, repo_id)
 
     assert result == False
     repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
-    # repo_service._is_user_org_member_with_admin_permissions.assert_called_once_with(user_id, repo1)
+    repo_service.team_repo.find_all_by_organization.assert_not_called()
 
 
 def test_user_has_update_permission_user_org_owner(repo_service):
@@ -576,12 +581,148 @@ def test_user_has_update_permission_user_org_owner(repo_service):
     user_id = 1
     repo_id = 1
 
-    repo1 = mock.MagicMock(Repository)
-    repo1.organization = mock.MagicMock(Organization)
-    repo1.organization.owner_id = user_id
+    repo = mock.MagicMock(Repository)
+    repo.organization = mock.MagicMock(Organization)
+    repo.organization.owner_id = user_id
 
-    repo_service.repo_repo.find_by_id.return_value = repo1
+    repo_service.repo_repo.find_by_id.return_value = repo
     result = repo_service.user_has_update_permission(user_id, repo_id)
 
     assert result == True
     repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+    repo_service.team_repo.find_all_by_organization.assert_not_called()
+
+
+def test_user_has_update_permission_user_org_member_without_team(repo_service):
+    """ 
+        Test case for when the organization has members but no teams, and consequently, no update permissions.
+    """
+
+    user_id = 1
+    repo_id = 1
+    org_id = 1
+
+    repo = mock.MagicMock(Repository)
+    repo.organization = mock.MagicMock(Organization)
+    repo.organization.id = org_id
+
+    # Create a test organization member
+    org_mem = mock.MagicMock(OrganizationMembers)
+    org_mem.user_id = user_id
+    org_mem.organization_id = org_id
+    repo.organization.members = [org_mem]
+
+    repo_service.repo_repo.find_by_id.return_value = repo
+    repo_service.team_repo.find_all_by_organization.return_value = None
+    
+    with pytest.raises(NotFoundException):
+        repo_service.user_has_update_permission(user_id, repo_id)
+
+    repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+    repo_service.team_repo.find_all_by_organization.assert_called_once()
+
+
+
+def test_user_has_update_permission_user_org_team_member(repo_service):
+    """
+        Test case for when the user is a member of the team with admin permissions.
+    """
+
+    user_id = 1
+    repo_id = 1
+    org_id = 1
+    team_id = 1
+
+    repo = mock.MagicMock(Repository)
+    repo.organization = mock.MagicMock(Organization)
+    repo.organization.id = org_id
+
+    # Create a test organization member
+    org_mem = mock.MagicMock(OrganizationMembers)
+    org_mem.user_id = user_id
+    org_mem.organization_id = org_id
+    repo.organization.members = [org_mem]
+
+    # Create a team member
+    team_mem = mock.MagicMock(TeamMember)
+    team_mem.user_id = user_id
+    team_mem.team_id = team_id
+
+    # Create a team with admin permissions for the observed repository
+    team = mock.MagicMock(Team)
+    team.id = team_id
+    team.members = [team_mem]
+    team_permission = mock.MagicMock(TeamPermission)
+    team_permission.repo_id = repo.id
+    team_permission.kind = TeamPermissionKind.admin
+    team.permissions = [team_permission]
+
+    repo_service.repo_repo.find_by_id.return_value = repo
+    repo_service.team_repo.find_all_by_organization.return_value = [team]
+
+    result = repo_service.user_has_update_permission(user_id, repo_id)
+
+    assert result == True
+    repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+    repo_service.team_repo.find_all_by_organization.assert_called_once()
+
+
+@pytest.mark.parametrize("dto_class, a_name, a_value", [(RepositoryDescUpdateDTO, "desc", "Some repo desc"), (RepositoryVisibilityUpdateDTO, "public", True)])
+class TestUpdateRepoById:
+
+    def test_update_by_guest(self, repo_service, dto_class, a_name, a_value):
+        """
+            Test case for when the user is a guest and attempts to update the repository.
+        """   
+        user_id = None
+        repo_id = 1
+        dto = dto_class(**{a_name: a_value})
+
+        with pytest.raises(AccessDeniedException):
+            repo_service.update_repo_by_id(user_id, repo_id, dto)
+       
+        repo_service.repo_repo.find_by_id.assert_not_called()
+        repo_service.repo_repo.set_desc.assert_not_called() if a_name == "desc" else repo_service.repo_repo.set_visibility.assert_not_called()
+
+    """
+        NOTE: 
+            Since all variations of unit tests for `user_has_update_permission` have already been tested,
+            for the sake  of  simplicity, the following unit tests  for  `update_repo_by_id`  will assume 
+            the user is the repository owner.
+    """
+
+    def test_update_by_user_when_missing_repo(self, repo_service, dto_class, a_name, a_value):
+        """
+            Test case for when the user is requesting an update for a missing repository.
+        """   
+        user_id = 1
+        repo_id = 1
+        dto = dto_class(**{a_name: a_value})
+
+        with pytest.raises(AccessDeniedException):
+            repo_service.update_repo_by_id(user_id, repo_id, dto)
+        
+        repo_service.repo_repo.set_desc.assert_not_called() if a_name == "desc" else repo_service.repo_repo.set_visibility.assert_not_called()
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+
+    def test_update_by_owner(self, repo_service, dto_class, a_name, a_value):
+        """
+            Test case for when the user is the owner of the repository and successfully makes an update.        
+        """   
+        user_id = 1
+        repo_id = 1
+        dto = dto_class(**{a_name: a_value})
+
+        repo = mock.MagicMock(Repository)
+        repo.owner_id = user_id
+        repo_service.repo_repo.find_by_id.return_value = repo
+        if a_name == "desc":
+            repo_service.repo_repo.set_desc.return_value = repo
+        else: 
+            repo_service.repo_repo.set_visibility.return_value = repo
+        
+        result = repo_service.update_repo_by_id(user_id, repo_id, dto)
+
+        assert result == repo
+        assert repo_service.repo_repo.find_by_id.call_count == 2
+        repo_service.repo_repo.set_desc.assert_called_once_with(repo, dto.desc) if a_name == "desc" else repo_service.repo_repo.set_visibility.assert_called_once_with(repo, dto.public)
