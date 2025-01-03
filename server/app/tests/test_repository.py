@@ -726,3 +726,68 @@ class TestUpdateRepoById:
         assert result == repo
         assert repo_service.repo_repo.find_by_id.call_count == 2
         repo_service.repo_repo.set_desc.assert_called_once_with(repo, dto.desc) if a_name == "desc" else repo_service.repo_repo.set_visibility.assert_called_once_with(repo, dto.public)
+
+
+def test_update_repo_by_id___integration():
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            return response.json()
+        
+        def log_in(username):
+            data = {
+                "username": username,
+                "password": "1234"
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            jwt = response.json()["token"]
+            return jwt
+        
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def update_repo_desc_by_id(username: str, repo_id: int, desc: str):
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+            
+            data = {
+                "desc": desc
+            }
+
+            response = client.put(f"/api/v1/repositories/{repo_id}/desc", json=data, headers=header)
+            return response
+
+
+        add_user("username_1")
+
+        organization_1 = add_org("username_1", "organization_1")
+        repo_1 = add_repo("username_1", "repo_1", True, organization_1["id"])
+
+        assert update_repo_desc_by_id("username_1", repo_1["id"], "some random desc").is_success
