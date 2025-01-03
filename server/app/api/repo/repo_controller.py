@@ -10,6 +10,7 @@ from app.api.user.user_service import UserService, get_user_service
 from app.api.org.org_service import OrganizationService, get_org_service
 from app.api.config.exception_handler import NotFoundException
 from app.api.repo.repo_model import Repository
+from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
 
 router = APIRouter(prefix="/repositories", tags=["repositories"])
 
@@ -47,11 +48,15 @@ def get_repositories_of_user(
 
 
 @router.get("/name/{repo_canonical_name:path}", response_model=RepositoryExtDTO, status_code=200, summary="Find repository by its full name")
-def get_repo_by_canonical_name(jwt: JWTDepOptional, repo_canonical_name: str, repo_service: RepositoryService = Depends(get_repo_service)):
+def get_repo_by_canonical_name(
+    jwt: JWTDepOptional, 
+    repo_canonical_name: str, 
+    repo_service: RepositoryService = Depends(get_repo_service),
+    access_control_service: AccessControlService = Depends(get_access_control_service)):
     user_id = get_id_from_jwt_optional(jwt)
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
 
-    if not repo_service.user_has_read_access_to_repo(repo, user_id):
+    if not access_control_service.has_read_access(user_id, repo.id):
         raise NotFoundException(Repository, repo_canonical_name)
     
     result = repo.model_dump()

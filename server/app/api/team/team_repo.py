@@ -54,3 +54,10 @@ class TeamRepo:
             TeamPermission.repo_id == repo_id
         )
         return self.session.exec(statement).first()
+    
+    def find_permissions_by_repo_and_org(self, repo_id: int, org_id: int) -> List[TeamPermission]:
+        statement = select(TeamPermission).join(TeamPermission.team).filter(
+            TeamPermission.repo_id == repo_id,
+            Team.organization_id == org_id
+        )
+        return self.session.exec(statement).all()
