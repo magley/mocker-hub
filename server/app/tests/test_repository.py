@@ -759,6 +759,16 @@ def test_update_repo_by_id___integration():
             }
             return client.post("/api/v1/organizations", json=dto1, headers=header).json()
 
+        def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+            # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+            from app.api.config.database import engine
+            from app.api.org.org_repo import OrganizationRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            org_repo = OrganizationRepo(session)
+            return org_repo.add_user_to_org(org_id, user_id)
+
         def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
             jwt = log_in(username)
             header = {"Authorization": f"Bearer {jwt}"}
@@ -773,6 +783,35 @@ def test_update_repo_by_id___integration():
             response = client.post("/api/v1/repositories/", json=data, headers=header)
             return response.json()
         
+        def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "organization_id": org_id,
+                "name": name,
+                "desc": desc,
+            }
+            return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+        def add_team_member(user_id: int, team_id: int) -> TeamMember:
+            # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_member(team_id, user_id)
+        
+        def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+            # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_permission(team_id, repo_id, kind)
+
         def update_repo_desc_by_id(username: str, repo_id: int, desc: str):
             jwt = log_in(username)
             header = {"Authorization": f"Bearer {jwt}"}
@@ -784,10 +823,36 @@ def test_update_repo_by_id___integration():
             response = client.put(f"/api/v1/repositories/{repo_id}/desc", json=data, headers=header)
             return response
 
+        def update_repo_visibility_by_id(username: str, repo_id: int, public: bool):
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+            
+            data = {
+                "public": public
+            }
 
-        add_user("username_1")
+            response = client.put(f"/api/v1/repositories/{repo_id}/visibility", json=data, headers=header)
+            return response
 
-        organization_1 = add_org("username_1", "organization_1")
-        repo_1 = add_repo("username_1", "repo_1", True, organization_1["id"])
+        add_user("user_1")
+        add_user("user_2")
+        add_user("user_3")
+        user_4 = add_user("user_4")
 
-        assert update_repo_desc_by_id("username_1", repo_1["id"], "some random desc").is_success
+        organization_1 = add_org("user_1", "organization_1")
+        organization_2 = add_org("user_2", "organization_2")
+        organization_3 = add_org("user_3", "organization_3")
+        repo_1 = add_repo("user_1", "repo_1", True, organization_1["id"])
+        repo_2 = add_repo("user_2", "repo_2", True, organization_2["id"])
+        repo_3 = add_repo("user_2", "repo_3", True, organization_3["id"])
+
+        add_user_to_org(user_4["id"], organization_1["id"])
+        team_1 = add_team("user_1", organization_1["id"], "team_1")
+        add_team_member(user_4["id"], team_1["id"])
+        add_team_permission(team_1["id"], repo_1["id"], TeamPermissionKind.admin)
+
+
+        assert update_repo_desc_by_id("user_1", repo_1["id"], "desc").is_success
+        assert update_repo_desc_by_id("user_1", -1, "desc").status_code == 404
+        assert update_repo_desc_by_id("user_1", repo_2["id"], "desc").status_code == 400
+        assert update_repo_desc_by_id("user_4", repo_1["id"], "desc").is_success
