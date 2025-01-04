@@ -167,19 +167,15 @@ class RepositoryService:
         
         repo = self.find_by_id(repo_id)
 
-        # Check whether the owner (admin or user) is making request
+        # Check whether the repo owner (admin or user) is making request
         if user_id == repo.owner_id:
             return True
                 
         # Check whether the repository belongs to an organization
         if repo.organization is not None:
-            # Check whether the repository owner or a team member with admin permissions is making request
-            user_is_owner = user_id == repo.organization.owner_id
-            if user_is_owner:
-                return True
-            
+            # Check whether a team member with admin permissions is making request
             team_privileged_user = self._is_user_org_member_with_admin_permissions(user_id, repo)  
-            if user_is_owner or team_privileged_user:
+            if team_privileged_user:
                 return True
         
         return False

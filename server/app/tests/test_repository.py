@@ -575,24 +575,6 @@ def test_user_has_update_permission_user_without_permissions(repo_service):
     repo_service.team_repo.find_all_by_organization.assert_not_called()
 
 
-def test_user_has_update_permission_user_org_owner(repo_service):
-    """Test case for when the user is the organization owner."""
-    
-    user_id = 1
-    repo_id = 1
-
-    repo = mock.MagicMock(Repository)
-    repo.organization = mock.MagicMock(Organization)
-    repo.organization.owner_id = user_id
-
-    repo_service.repo_repo.find_by_id.return_value = repo
-    result = repo_service.user_has_update_permission(user_id, repo_id)
-
-    assert result == True
-    repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
-    repo_service.team_repo.find_all_by_organization.assert_not_called()
-
-
 def test_user_has_update_permission_user_org_member_without_team(repo_service):
     """ 
         Test case for when the organization has members but no teams, and consequently, no update permissions.
