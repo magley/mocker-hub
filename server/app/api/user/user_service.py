@@ -69,11 +69,20 @@ class UserService:
             raise NotFoundException(User, username)
         return user      
       
-
     def add_admin(self, dto: UserRegisterDTO) -> User:
         user = self.add(dto)
         user = self.user_repo.set_role(user, UserRole.admin)
         return user
+    
+    def exists_with_credentials(self, username: str, password: str) -> bool:
+        user = self.user_repo.find_by_username(username)
+        
+        if user is None:
+            return False
+        if not verify_password(password, user.hashed_password):
+            raise False
+
+        return True  
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:
     return UserService(session)

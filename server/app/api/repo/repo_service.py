@@ -12,16 +12,16 @@ from app.api.org.org_repo import OrganizationRepo
 from app.api.team.team_repo import TeamRepo
 from app.api.org.org_model import Organization
 from app.api.team.team_model import Team, TeamPermissionKind
-
-
+from app.api.access_control.access_control_service import AccessControlService
+ 
 class RepositoryService:
     def __init__(self, session: Session):
         self.session = session
         self.repo_repo = RepositoryRepo(session)
         self.user_repo = UserRepo(session)
         self.org_repo = OrganizationRepo(session)
+        self.access_control_service = AccessControlService(session)
         self.team_repo = TeamRepo(session)
-
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
     # Utility methods. Many of these already exist as methods of other services, but we can't
@@ -117,7 +117,7 @@ class RepositoryService:
         # Filter out repositories which `whos_asking_user_id` cannot see.
         result = []
         for repo in user_repos:
-            if self.user_has_read_access_to_repo(repo, whos_asking_user_id):
+            if self.access_control_service.has_read_access(whos_asking_user_id, repo.id):
                 result.append(repo)
 
         return result

@@ -20,6 +20,7 @@ from app.api.org.org_repo import OrganizationRepo
 from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.team.team_model import Team, TeamMember, TeamPermission, TeamPermissionKind
 from app.api.team.team_repo import TeamRepo
+from app.api.access_control.access_control_service import AccessControlService
 
 @pytest.fixture
 def mock_session():
@@ -54,6 +55,7 @@ def repo_service(mock_session):
     service.user_repo = mock.MagicMock(spec=UserRepo)
     service.org_repo = mock.MagicMock(spec=OrganizationRepo)
     service.team_repo = mock.MagicMock(spec=TeamRepo)
+    service.access_control_service = mock.MagicMock(spec=AccessControlService)
     return service
 
 @pytest.fixture
@@ -226,87 +228,23 @@ def test_find_by_canonical_name_not_found(repo_service):
     repo_service.repo_repo.find_by_canonical_name.assert_called_once_with(canonical_name)
 
 
-def test_user_has_read_access_to_repo_public(repo_service, mock_repo):
-    """Test case for when the repository is public."""
-    mock_repo.public = True
-    
-    assert repo_service.user_has_read_access_to_repo(mock_repo, None) == True
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == True
-
-
-def test_user_has_read_access_to_repo_private_signed_out(repo_service, mock_repo):
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = None
-    
-    assert repo_service.user_has_read_access_to_repo(mock_repo, None) == False
-
-
-def test_user_has_read_access_to_repo_private_personal_owner(repo_service, mock_repo):
-    """Test case for when the repository is personal, and the user is the owner."""
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = None
-    
-    # I am the owner of this private repo.
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == True
-    # Someone else is the owner of this private personal repo.
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 2) == False
-
-
-def test_user_has_read_access_to_repo_private_org_member(repo_service, mock_repo):
-    """Test case for when the repository is an organization repository and the user is a member."""
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = 1
-    
-    # Member of the org.
-    repo_service.org_repo.user_is_in_org.return_value = True
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == True
-    
-    # Outsider relative to the org.
-    repo_service.org_repo.user_is_in_org.return_value = False
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == False
-
-
-def test_user_has_read_access_to_repo_private_org_not_member(repo_service, mock_repo):
-    """Test case for when the repository is an organization repository and the user is not a member."""
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = 1
-    
-    # Outsider relative to org.
-    repo_service.org_repo.user_is_in_org.return_value = False
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == False
-
-"""
-NOTE: `user_had_red_access` has way too many possible cases to test them all because
-of the number of variables:
-
-- am i logged in
-    - am i the owner of this repo
-- is the repo public
-- is the repo in an organization
-    - am i a member of this repo
-
-So instead, `user_had_red_access` is done with whitebox testing.
-The integration tests should cover some interesting cases (if any).
-"""
-
-def test_get_repositories_of_user_all_accessible(repo_service, mock_repo):
+def test_get_repositories_of_user_all_accessible(repo_service):
     """Test case for when all repositories are accessible by whos_asking_user_id."""
     user_id = 1
     whos_asking_user_id = 2
 
+    mock_repo = mock.MagicMock(Repository)
+    mock_repo.id = 1
+
     repo_service.repo_repo.get_repositories_for_user.return_value = [mock_repo, mock_repo]
-    repo_service.user_has_read_access_to_repo = mock.MagicMock(return_value=True)
+    repo_service.access_control_service.has_read_access.return_value = True
 
     result = repo_service.get_repositories_of_user(user_id, whos_asking_user_id)
 
     assert len(result) == 2
     assert result == [mock_repo, mock_repo]
     repo_service.repo_repo.get_repositories_for_user.assert_called_once_with(user_id)
-    repo_service.user_has_read_access_to_repo.assert_any_call(mock_repo, whos_asking_user_id)
+    repo_service.access_control_service.has_read_access.assert_any_call(whos_asking_user_id, mock_repo.id)
 
 
 def test_get_repositories_of_user_some_accessible(repo_service):
@@ -321,14 +259,15 @@ def test_get_repositories_of_user_some_accessible(repo_service):
     repo2.id = 2
 
     repo_service.repo_repo.get_repositories_for_user.return_value = [repo1, repo2]
-    repo_service.user_has_read_access_to_repo = mock.MagicMock(side_effect=[True, False])
+    repo_service.access_control_service.has_read_access = mock.MagicMock(side_effect=[True, False])
 
     result = repo_service.get_repositories_of_user(user_id, whos_asking_user_id)
 
     assert len(result) == 1
     assert result == [repo1]
     repo_service.repo_repo.get_repositories_for_user.assert_called_once_with(user_id)
-    repo_service.user_has_read_access_to_repo.assert_any_call(repo1, whos_asking_user_id)
+    repo_service.access_control_service.has_read_access.assert_any_call(whos_asking_user_id, repo1.id)
+    repo_service.access_control_service.has_read_access.assert_any_call(whos_asking_user_id, repo2.id)
 
 
 def test_get_repositories_of_user_no_repositories(repo_service):
