@@ -45,7 +45,7 @@ class RepositoryService:
         
         if not user_is_organization_member:
             return False
-
+        
         ''' Find all teams belonging to the organization '''
         teams = self._get_all_teams_by_org(repo.organization_id)
 
@@ -56,6 +56,8 @@ class RepositoryService:
                     ''' Check if the member belongs to the team '''
                     if user_id in [member.user_id for member in team.members]:
                         return True
+        
+        return False
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 

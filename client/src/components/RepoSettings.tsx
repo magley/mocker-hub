@@ -6,7 +6,7 @@ import { ToastType, useToastStore } from '../util/toastStore';
 import { AxiosError } from 'axios';
 import { RepositoryVisibilityUpdateDTO } from '../api/repo.api' 
 
-export const RepoSettings: React.FC<{ isActive: boolean, repo: RepoExtDTO, repoStateChanger: any }> = (props) => {
+export const RepoSettings: React.FC<{ isActive: boolean, repo: RepoExtDTO, setRepo: any }> = (props) => {
     const addToast = useToastStore((state) => state.addToast);
     const [error, setError] = useState('');
 
@@ -22,11 +22,15 @@ export const RepoSettings: React.FC<{ isActive: boolean, repo: RepoExtDTO, repoS
         };
 
         RepositoryService.UpdateRepoVisibilityById(props.repo.id, dto).then((res) => {
-            props.repoStateChanger({
+            props.setRepo({
                 ...props.repo,
                 ...res.data,
             });
-            addToast(`Updated repository ${props.repo.name}`, ToastType.success);
+            if (res.data.public) {
+                addToast(`${props.repo.name} is now a public repository.`, ToastType.success);
+            } else {
+                addToast(`${props.repo.name} is now a private repository.`, ToastType.success);
+            }
             setError('');
         }).catch((err: AxiosError) => {
             setError((err.response?.data as any)["detail"]["message"]);
@@ -45,10 +49,10 @@ export const RepoSettings: React.FC<{ isActive: boolean, repo: RepoExtDTO, repoS
                     </Card.Title>
                     {error && <Alert variant="danger">{error}</Alert>}
                     <p className="text-muted mt-3">
-                        {props.repo.public ? "This repository is public." : "This repository is private."}
+                        {props.repo.public ? <> This repository is <strong>public</strong>.</> : <> This repository is <strong>private</strong>.</> }
                     </p>
                     <Button variant="outline-primary" onClick={changeVisibility}>
-                        Change visibility
+                        {props.repo.public ? 'Make private' : 'Make public'}
                     </Button>
                 </Card.Body>
             </Card>

@@ -5,7 +5,7 @@ import { ToastType, useToastStore } from '../util/toastStore';
 import { Alert } from 'react-bootstrap';
 import { AxiosError } from 'axios';
 
-export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, repoStateChanger: any }> = (props) => {
+export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, setRepo: any }> = (props) => {
     const [isEditing, setIsEditing] = useState(false);
     const [newDesc, setNewDesc] = useState(props.repo.desc);
     const addToast = useToastStore((state) => state.addToast);
@@ -25,11 +25,11 @@ export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, repoS
         };
         
         RepositoryService.UpdateRepoDescById(props.repo.id, dto).then((res) => {
-            props.repoStateChanger({
+            props.setRepo({
                 ...props.repo,
                 ...res.data,
             });
-            addToast(`Updated repository ${props.repo.name}`, ToastType.success);
+            addToast(`Updated the description of ${props.repo.name}.`, ToastType.success);
             setError('');
         }).catch((err: AxiosError) => {
             setError((err.response?.data as any)["detail"]["message"]);

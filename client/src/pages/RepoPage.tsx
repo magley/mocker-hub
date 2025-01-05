@@ -144,13 +144,13 @@ export const RepositoryPage: React.FC = () => {
 
                 <Tab.Content>
                     <Tab.Pane eventKey="overview">
-                        {repo && <RepoOverview isActive={key === 'overview'} repo={repo} repoStateChanger={setRepo} />}
+                        {repo && <RepoOverview isActive={key === 'overview'} repo={repo} setRepo={setRepo} />}
                     </Tab.Pane>
                     <Tab.Pane eventKey="tags">
                         <RepoTags isActive={key === 'tags'} />
                     </Tab.Pane>
                     <Tab.Pane eventKey="settings">
-                        {repo && <RepoSettings isActive={key === 'settings'} repo={repo} repoStateChanger={setRepo} />}
+                        {repo && <RepoSettings isActive={key === 'settings'} repo={repo} setRepo={setRepo} />}
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>
