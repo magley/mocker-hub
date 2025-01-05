@@ -1,6 +1,8 @@
+from fastapi import Response
 from fastapi.testclient import TestClient
 import pytest
 import unittest.mock as mock
+from typing import Callable
 
 from sqlmodel import SQLModel, Session
 
@@ -709,27 +711,61 @@ class TestUpdateRepoById:
         assert repo_service.repo_repo.find_by_id.call_count == 2
         repo_service.repo_repo.set_desc.assert_called_once_with(repo, dto.desc) if a_name == "desc" else repo_service.repo_repo.set_visibility.assert_called_once_with(repo, dto.public)
 
-
-def test_update_repo_by_id___integration():
+        
+@pytest.mark.parametrize("user_type, update_type", [("user", "desc"), ("user", "visibility"), ("admin", "desc"), ("admin", "visibility")])
+def test_update_repo_by_id___integration(user_type, update_type):
     with TestClient(app) as client:
         def add_user(username):
             data = {
                 "username": username,
                 "email": f"{username}@gmail.com",
-                "password": "1234"
+                "password": "12345678"
             }
             response = client.post("/api/v1/users/", json=data)
             return response.json()
         
-        def log_in(username):
+        def log_in(username: str, password: str = "12345678"):
             data = {
                 "username": username,
-                "password": "1234"
+                "password": password
             }
             response = client.post("/api/v1/users/login", json=data)
+            if response.status_code == 400:
+                assert response.json() == False
             jwt = response.json()["token"]
             return jwt
         
+        def change_superadmin_password():
+            # [1] Loading the super admin credentials
+            config_file = "./volume-server-cfg/superadmin_password.txt"
+
+            with open(config_file, "r") as f:
+                old_password = f.readline()
+
+            jwt = log_in("admin", old_password)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            # [2] Changing the super admin password
+            data = {
+                "old_password": old_password,
+                "new_password": "12345678"
+            }
+            response = client.post("/api/v1/users/password", json=data, headers=header)
+            assert response.is_success
+        
+        def add_admin(admin_username: str) -> dict:
+            jwt = log_in("admin", "12345678")
+            header = {"Authorization": f"Bearer {jwt}"}
+            data = {
+                "username": admin_username,
+                "email": f"{admin_username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+            created_admin = response.json()
+
+            return created_admin
+
         def add_org(username, name: str) -> dict:
             jwt = log_in(username)
             header = {"Authorization": f"Bearer {jwt}"}
@@ -816,25 +852,48 @@ def test_update_repo_by_id___integration():
             response = client.put(f"/api/v1/repositories/{repo_id}/visibility", json=data, headers=header)
             return response
 
-        add_user("user_1")
-        add_user("user_2")
-        add_user("user_3")
-        user_4 = add_user("user_4")
+        def get_fun(update_type: str) -> Callable[[str, int, str | bool], Response]:
+            if update_type == "desc":
+                return update_repo_desc_by_id
+            else:
+                return update_repo_visibility_by_id
+
+        if (user_type == "user"):
+            add_user("user_1")
+            user_2 = add_user("user_2")
+        else:
+            change_superadmin_password()
+            add_admin("user_1")
+            user_2 = add_admin("user_2")
 
         organization_1 = add_org("user_1", "organization_1")
         organization_2 = add_org("user_2", "organization_2")
-        organization_3 = add_org("user_3", "organization_3")
         repo_1 = add_repo("user_1", "repo_1", True, organization_1["id"])
-        repo_2 = add_repo("user_2", "repo_2", True, organization_2["id"])
-        repo_3 = add_repo("user_2", "repo_3", True, organization_3["id"])
+        repo_2 = add_repo("user_1", "repo_2", True, organization_1["id"])
+        repo_3 = add_repo("user_1", "repo_3", True, organization_1["id"])
+        repo_4 = add_repo("user_2", "repo_4", True, organization_2["id"])
 
-        add_user_to_org(user_4["id"], organization_1["id"])
+        # Add a member to a team with admin permissions to the specific repo
+        add_user_to_org(user_2["id"], organization_1["id"])
         team_1 = add_team("user_1", organization_1["id"], "team_1")
-        add_team_member(user_4["id"], team_1["id"])
+        add_team_member(user_2["id"], team_1["id"])
         add_team_permission(team_1["id"], repo_1["id"], TeamPermissionKind.admin)
+        add_team_permission(team_1["id"], repo_2["id"], TeamPermissionKind.read)
+        add_team_permission(team_1["id"], repo_3["id"], TeamPermissionKind.read_write)
 
+        update = get_fun(update_type)
+        attribute = "some desc" if update_type == "desc" else True
 
-        assert update_repo_desc_by_id("user_1", repo_1["id"], "desc").is_success
-        assert update_repo_desc_by_id("user_1", -1, "desc").status_code == 404
-        assert update_repo_desc_by_id("user_1", repo_2["id"], "desc").status_code == 400
-        assert update_repo_desc_by_id("user_4", repo_1["id"], "desc").is_success
+        """ NOTE: 'User' is a regular user or an admin. """
+        # User who is the owner of the repo
+        assert update("user_1", repo_1["id"], attribute).is_success
+        # User who is trying to update a non existing repo
+        assert update("user_1", -1, attribute).status_code == 404
+        # User without any special relations to the repo
+        assert update("user_1", repo_4["id"], attribute).status_code == 400
+        # User who is a team member with admin permissions against repo
+        assert update("user_2", repo_1["id"], attribute).is_success
+        # User who is a team member with read permissions against repo
+        assert update("user_2", repo_2["id"], attribute).status_code == 400
+        # User who is a team member with read write permissions against repo
+        assert update("user_2", repo_3["id"], attribute).status_code == 400
