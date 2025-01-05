@@ -1,6 +1,5 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance } from "../util/http";
-import { dot } from "node:test/reporters";
 
 export enum RepositoryBadge {
     none = "none",
