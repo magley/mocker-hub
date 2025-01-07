@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List
 from fastapi import Depends
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from sqlmodel import Session
@@ -10,8 +10,6 @@ from app.api.repo.repo_model import Repository, RepositoryBadge
 from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.org.org_repo import OrganizationRepo
 from app.api.team.team_repo import TeamRepo
-from app.api.org.org_model import Organization
-from app.api.team.team_model import Team, TeamPermissionKind
 from app.api.access_control.access_control_service import AccessControlService
  
 class RepositoryService:
@@ -26,38 +24,15 @@ class RepositoryService:
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
     # Utility methods. Many of these already exist as methods of other services, but we can't
     # use them because of circular dependencies (FastAPI does not support it).
-
-    def _get_all_teams_by_org(self, org_id: int) -> List[Team]:
-        teams = self.team_repo.find_all_by_organization(org_id)
-        if teams is None:
-            raise NotFoundException(List[Team], org_id)
-        return teams
     
     def _update_repo_attribute(self, repo: Repository, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO) -> Repository:
-        if isinstance(dto, RepositoryDescUpdateDTO):
+        if dto is None:
+            raise AccessDeniedException(f"Repository {repo.id} cannot be updated with a None value")
+        elif isinstance(dto, RepositoryDescUpdateDTO):
             repo = self.repo_repo.set_desc(repo, dto.desc)
         elif isinstance(dto, RepositoryVisibilityUpdateDTO):
             repo = self.repo_repo.set_visibility(repo, dto.public)
         return repo
-
-    def _is_user_org_member_with_admin_permissions(self, user_id: int, repo: Repository):
-        user_is_organization_member = user_id in [member.user_id for member in repo.organization.members]
-        
-        if not user_is_organization_member:
-            return False
-        
-        ''' Find all teams belonging to the organization '''
-        teams = self._get_all_teams_by_org(repo.organization_id)
-
-        for team in teams:
-            ''' Check if the team has admin permissions for the observed repository '''
-            for permission in team.permissions:
-                if permission.repo_id == repo.id and permission.kind == TeamPermissionKind.admin:
-                    ''' Check if the member belongs to the team '''
-                    if user_id in [member.user_id for member in team.members]:
-                        return True
-        
-        return False
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
@@ -122,65 +97,16 @@ class RepositoryService:
 
         return result
     
-    def user_has_read_access_to_repo(self, repo: Repository, user_id: int | None):
-        if repo.public:
-            return True
-        
-        # Private repo - signed out users certainly cannot see them.
-        if user_id is None:
-            return False
-        
-        repo_is_personal = repo.organization_id is None
-        if repo_is_personal:
-            # For personal repositories, you must be the owner of the repo.
-
-            if not repo.owner_id == user_id:
-                return False
-        else:
-            # For organization repositories, you must be a member of the same org.
-
-            user_is_in_org = self.org_repo.user_is_in_org(user_id, repo.organization_id)
-            if not user_is_in_org:
-                return False
-            
-            # TODO: Teams...
-
-        return True # Just in case :)
-    
     def find_by_id(self, repo_id: int) -> Repository:
         repo = self.repo_repo.find_by_id(repo_id)
         if repo is None:
             raise NotFoundException(Repository, repo_id)
         return repo
     
-    def update_repo_by_id(self, user_id: int, repo_id: int, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO) -> Repository:
-        user_can_make_update = self.user_has_update_permission(user_id, repo_id)
-        if not user_can_make_update:
-            raise AccessDeniedException(f"User {user_id} cannot update repository with identifier {repo_id}")
-
+    def update_repo_by_id(self, repo_id: int, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO | None) -> Repository:
         repo = self.find_by_id(repo_id)
         repo = self._update_repo_attribute(repo, dto)
         return repo
-
-    def user_has_update_permission(self, user_id: int | None, repo_id: int) -> bool:
-        # Check whether the guest is making request
-        if user_id is None:
-            return False
-        
-        repo = self.find_by_id(repo_id)
-
-        # Check whether the repo owner (admin or user) is making request
-        if user_id == repo.owner_id:
-            return True
-                
-        # Check whether the repository belongs to an organization
-        if repo.organization is not None:
-            # Check whether a team member with admin permissions is making request
-            team_privileged_user = self._is_user_org_member_with_admin_permissions(user_id, repo)  
-            if team_privileged_user:
-                return True
-        
-        return False
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)
