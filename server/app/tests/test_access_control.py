@@ -6,7 +6,9 @@ from app.api.org.org_repo import OrganizationRepo
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.team.team_repo import TeamRepo
 from app.api.user.user_repo import UserRepo
-from app.api.team.team_model import TeamPermissionKind
+from app.api.team.team_model import TeamPermission, TeamPermissionKind
+from app.api.repo.repo_model import Repository
+from app.api.org.org_model import Organization
 
 @pytest.fixture
 def service() -> AccessControlService:
@@ -55,7 +57,7 @@ class TestHasReadAccess:
     class TestPublicRepo:
         class TestNoOrg:
             def test_public_repo_no_org_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
                 repo.owner_id = 1
                 repo.organization = None
@@ -64,7 +66,7 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_no_org_user_is_not_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
                 repo.owner_id = 1
                 repo.organization = None
@@ -73,7 +75,7 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_no_org_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
                 repo.owner_id = 1
                 repo.organization = None
@@ -83,9 +85,9 @@ class TestHasReadAccess:
 
         class TestOrgNoTeamPermission:
             def test_public_repo_org_no_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
@@ -95,9 +97,9 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_org_no_team_permission_user_is_member_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -107,9 +109,9 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_org_no_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -119,9 +121,9 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_org_no_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -131,13 +133,13 @@ class TestHasReadAccess:
 
         class TestOrgWithTeamPermission:
             def test_public_repo_org_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -146,12 +148,12 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_org_team_permission_user_is_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -160,12 +162,12 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_org_team_permission_user_is_not_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -174,12 +176,12 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_org_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -189,12 +191,12 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_public_repo_org_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -205,7 +207,7 @@ class TestHasReadAccess:
     class TestPrivateRepo:
         class TestNoOrg:
             def test_private_repo_no_org_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
                 repo.owner_id = 1
                 repo.organization = None
@@ -214,7 +216,7 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_private_repo_no_org_user_is_not_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
                 repo.owner_id = 1
                 repo.organization = None
@@ -223,7 +225,7 @@ class TestHasReadAccess:
                 assert result is False
 
             def test_private_repo_no_org_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
                 repo.owner_id = 1
                 repo.organization = None
@@ -233,9 +235,9 @@ class TestHasReadAccess:
 
         class TestOrgNoTeamPermission:
             def test_private_repo_org_no_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
@@ -245,9 +247,9 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_private_repo_org_no_team_permission_user_is_member_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -257,9 +259,9 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_private_repo_org_no_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -269,9 +271,9 @@ class TestHasReadAccess:
                 assert result is False
 
             def test_private_repo_org_no_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -281,13 +283,13 @@ class TestHasReadAccess:
 
         class TestOrgWithTeamPermission:
             def test_private_repo_org_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -296,12 +298,12 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_private_repo_org_team_permission_user_is_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -310,12 +312,12 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_private_repo_org_team_permission_user_is_not_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -324,12 +326,12 @@ class TestHasReadAccess:
                 assert result is False
 
             def test_private_repo_org_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -339,12 +341,12 @@ class TestHasReadAccess:
                 assert result is False
 
             def test_private_repo_org_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
@@ -387,7 +389,7 @@ class TestHasWriteAccess:
     class TestPublicRepo:
         class TestNoOrg:
             def test_public_repo_no_org_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
                 repo.owner_id = 1
                 repo.organization = None
@@ -397,7 +399,7 @@ class TestHasWriteAccess:
                 assert service.has_read_access(user_id=1, repo_id=123)
 
             def test_public_repo_no_org_user_is_not_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
                 repo.owner_id = 1
                 repo.organization = None
@@ -406,7 +408,7 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_public_repo_no_org_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
                 repo.owner_id = 1
                 repo.organization = None
@@ -416,9 +418,9 @@ class TestHasWriteAccess:
 
         class TestOrgNoTeamPermission:
             def test_public_repo_org_no_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
@@ -429,9 +431,9 @@ class TestHasWriteAccess:
                 assert service.has_read_access(user_id=1, repo_id=123)
 
             def test_public_repo_org_no_team_permission_user_is_member_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -441,9 +443,9 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_public_repo_org_no_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -453,9 +455,9 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_public_repo_org_no_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -465,13 +467,13 @@ class TestHasWriteAccess:
 
         class TestOrgWithTeamPermission:
             def test_public_repo_org_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
@@ -482,14 +484,14 @@ class TestHasWriteAccess:
                 assert service.has_read_access(user_id=1, repo_id=123)
 
             def test_public_repo_org_team_permission_user_is_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
-                team_permission.permission = TeamPermissionKind.read_write
+                team_permission.kind = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
                 service.team_repo.find_member.return_value = MagicMock()
@@ -499,12 +501,12 @@ class TestHasWriteAccess:
 
 
             def test_public_repo_org_team_permission_user_is_not_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
@@ -514,12 +516,12 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_public_repo_org_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
@@ -530,12 +532,12 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_public_repo_org_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = True
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
@@ -547,7 +549,7 @@ class TestHasWriteAccess:
     class TestPrivateRepo:
         class TestNoOrg:
             def test_private_repo_no_org_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
                 repo.owner_id = 1
                 repo.organization = None
@@ -557,7 +559,7 @@ class TestHasWriteAccess:
                 assert service.has_read_access(user_id=1, repo_id=123)
 
             def test_private_repo_no_org_user_is_not_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
                 repo.owner_id = 1
                 repo.organization = None
@@ -566,7 +568,7 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_private_repo_no_org_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
                 repo.owner_id = 1
                 repo.organization = None
@@ -576,9 +578,9 @@ class TestHasWriteAccess:
 
         class TestOrgNoTeamPermission:
             def test_private_repo_org_no_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
@@ -589,9 +591,9 @@ class TestHasWriteAccess:
                 assert service.has_read_access(user_id=1, repo_id=123)
 
             def test_private_repo_org_no_team_permission_user_is_member_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -601,9 +603,9 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_private_repo_org_no_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -613,9 +615,9 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_private_repo_org_no_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 service.repo_repo.find_by_id.return_value = repo
@@ -625,13 +627,13 @@ class TestHasWriteAccess:
 
         class TestOrgWithTeamPermission:
             def test_private_repo_org_team_permission_user_is_owner(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
                 repo.owner_id = 1
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
@@ -642,14 +644,14 @@ class TestHasWriteAccess:
                 assert service.has_read_access(user_id=1, repo_id=123)
 
             def test_private_repo_org_team_permission_user_is_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
-                team_permission.permission = TeamPermissionKind.read_write
+                team_permission.kind = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
                 service.team_repo.find_permissions_by_repo_and_org.return_value = [team_permission]
                 service.team_repo.find_member.return_value = MagicMock()
@@ -658,12 +660,12 @@ class TestHasWriteAccess:
                 assert service.has_read_access(user_id=2, repo_id=123)
 
             def test_private_repo_org_team_permission_user_is_not_in_team(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
@@ -673,12 +675,12 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_private_repo_org_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo
@@ -689,12 +691,12 @@ class TestHasWriteAccess:
                 assert result is False
 
             def test_private_repo_org_team_permission_user_is_guest(self, service: AccessControlService):
-                repo = MagicMock()
+                repo = MagicMock(spec=Repository)
                 repo.public = False
-                org = MagicMock()
+                org = MagicMock(spec=Organization)
                 org.id = 1
                 repo.organization = org
-                team_permission = MagicMock()
+                team_permission = MagicMock(spec=TeamPermission)
                 team_permission.team_id = 1
                 team_permission.permission = TeamPermissionKind.read_write
                 service.repo_repo.find_by_id.return_value = repo

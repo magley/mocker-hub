@@ -110,7 +110,7 @@ class AccessControlService:
         # Case 7: Repo is in org and org has team permissions for that repo.
 
         for team_permission in team_permissions:
-            if team_permission.permission in [TeamPermissionKind.read_write, TeamPermissionKind.admin]:
+            if team_permission.kind in [TeamPermissionKind.read_write, TeamPermissionKind.admin]:
                 if self.team_repo.find_member(team_permission.team_id, user_id) is not None:
                     return True
 
