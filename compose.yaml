@@ -9,6 +9,7 @@ services:
     depends_on:
       - db
       - cache
+      - elasticsearch
     environment:
       PYTHONUNBUFFERED: 1
       POSTGRES_USER: postgres
@@ -82,6 +83,18 @@ services:
     volumes:
       - "./distribution/config.yaml:/etc/docker/registry/config.yml"
       - "./distribution/certs:/mnt/local/certs"
+
+  elasticsearch:
+      image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+      container_name: elasticsearch
+      environment:
+        - discovery.type=single-node
+        - ES_JAVA_OPTS=-Xmx1g -Xms1g
+        - ELASTIC_PASSWORD=1234
+        - xpack.security.enabled=false
+      ports:
+        - 9200:9200
+        - 9300:9300
 
 
 volumes:
