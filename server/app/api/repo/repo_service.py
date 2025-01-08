@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import Depends
-from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.user.user_model import User, UserRole
@@ -27,7 +27,7 @@ class RepositoryService:
     
     def _update_repo_attribute(self, repo: Repository, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO) -> Repository:
         if dto is None:
-            raise AccessDeniedException(f"Repository {repo.id} cannot be updated with a None value")
+            raise InvalidInputException(f"Repository {repo.id} cannot be updated with a None value")
         elif isinstance(dto, RepositoryDescUpdateDTO):
             repo = self.repo_repo.set_desc(repo, dto.desc)
         elif isinstance(dto, RepositoryVisibilityUpdateDTO):

@@ -10,15 +10,15 @@ from app.api.config.security import hash_password
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
-from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, UserException
+from app.api.config.exception_handler import InvalidInputException, FieldTakenException, NotFoundException
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
 from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.repo.repo_model import Repository, RepositoryBadge
 from app.api.main import app
 from app.api.org.org_repo import OrganizationRepo
-from app.api.org.org_model import Organization, OrganizationMembers
-from app.api.team.team_model import Team, TeamMember, TeamPermission, TeamPermissionKind
+from app.api.org.org_model import OrganizationMembers
+from app.api.team.team_model import TeamMember, TeamPermission, TeamPermissionKind
 from app.api.team.team_repo import TeamRepo
 from app.api.access_control.access_control_service import AccessControlService
 
@@ -493,7 +493,7 @@ class TestUpdateRepoById:
             repo_service.repo_repo.set_visibility.return_value = mock_repo
 
         if a_name == None:
-            with pytest.raises(AccessDeniedException):
+            with pytest.raises(InvalidInputException):
                 repo_service.update_repo_by_id(repo_id, dto)
         else:
             result = repo_service.update_repo_by_id(repo_id, dto)
