@@ -2,12 +2,16 @@ from fastapi import APIRouter, FastAPI
 from contextlib import asynccontextmanager
 from app.api.config.initialize import init_create_tables, configure_cors, init_dummy_data, init_superadmin
 from app.api.config.exception_handler import register_exception_handler
+import app.api.events
 import app.api.user.user_controller
 import app.api.repo.repo_controller
 import app.api.org.org_controller
 import app.api.registry.registry_controller
 import app.api.team.team_controller
 from app.api.config.cache import init_cache
+from app.api.config.elasticsearch import init_elasticsearch_connection
+from app.api.events.event_model import Event
+
 
 the_router = APIRouter()
 the_router.include_router(app.api.user.user_controller.router)
@@ -29,6 +33,8 @@ async def lifespan(app: FastAPI):
     init_create_tables()
     init_cache()
     init_superadmin()
+    init_elasticsearch_connection()
+    Event.init()
     yield
 
 app = FastAPI(lifespan=lifespan)
