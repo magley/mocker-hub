@@ -38,6 +38,15 @@ export interface ReposOfUserDTO {
 export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
+    can_update: boolean,
+}
+
+export interface RepositoryVisibilityUpdateDTO {
+    public: boolean,
+}
+
+export interface RepositoryDescUpdateDTO {
+    desc: string,
 }
 
 export class RepositoryService {
@@ -85,5 +94,13 @@ export class RepositoryService {
 
     static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoExtDTO>> {
         return await axiosInstance.get(`/repositories/name/${name}`);
+    }
+
+    static async UpdateRepoVisibilityById(repoId: number, dto: RepositoryVisibilityUpdateDTO): Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.put(`/repositories/${repoId}/visibility`, dto)
+    }
+
+    static async UpdateRepoDescById(repoId: number, dto: RepositoryDescUpdateDTO) : Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.put(`/repositories/${repoId}/desc`, dto)
     }
 }

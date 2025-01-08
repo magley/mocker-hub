@@ -1,14 +1,15 @@
-from typing import List, Optional
+from typing import List
 from fastapi import Depends
-from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_model import Repository, RepositoryBadge
-from app.api.repo.repo_dto import RepositoryCreateDTO
+from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.org.org_repo import OrganizationRepo
+from app.api.team.team_repo import TeamRepo
 from app.api.access_control.access_control_service import AccessControlService
  
 class RepositoryService:
@@ -18,6 +19,22 @@ class RepositoryService:
         self.user_repo = UserRepo(session)
         self.org_repo = OrganizationRepo(session)
         self.access_control_service = AccessControlService(session)
+        self.team_repo = TeamRepo(session)
+
+    # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
+    # Utility methods. Many of these already exist as methods of other services, but we can't
+    # use them because of circular dependencies (FastAPI does not support it).
+    
+    def _update_repo_attribute(self, repo: Repository, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO) -> Repository:
+        if dto is None:
+            raise InvalidInputException(f"Repository {repo.id} cannot be updated with a None value")
+        elif isinstance(dto, RepositoryDescUpdateDTO):
+            repo = self.repo_repo.set_desc(repo, dto.desc)
+        elif isinstance(dto, RepositoryVisibilityUpdateDTO):
+            repo = self.repo_repo.set_visibility(repo, dto.public)
+        return repo
+
+    # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
     def find_by_canonical_name(self, canonical_name: str) -> Repository:
         repo = self.repo_repo.find_by_canonical_name(canonical_name)
@@ -79,7 +96,17 @@ class RepositoryService:
                 result.append(repo)
 
         return result
-        
+    
+    def find_by_id(self, repo_id: int) -> Repository:
+        repo = self.repo_repo.find_by_id(repo_id)
+        if repo is None:
+            raise NotFoundException(Repository, repo_id)
+        return repo
+    
+    def update_repo_by_id(self, repo_id: int, dto: RepositoryDescUpdateDTO | RepositoryVisibilityUpdateDTO | None) -> Repository:
+        repo = self.find_by_id(repo_id)
+        repo = self._update_repo_attribute(repo, dto)
+        return repo
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)

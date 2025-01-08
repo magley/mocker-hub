@@ -1,14 +1,14 @@
 from typing import List
 from fastapi import APIRouter, Depends
 
-from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO
+from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTBearer, JWTDep, JWTDepOptional
 from app.api.user.user_service import UserService, get_user_service
 from app.api.org.org_service import OrganizationService, get_org_service
-from app.api.config.exception_handler import NotFoundException
+from app.api.config.exception_handler import NotFoundException, AccessDeniedException
 from app.api.repo.repo_model import Repository
 from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
 
@@ -21,7 +21,7 @@ def register_repo(jwt: JWTDep, dto: RepositoryCreateDTO, repo_service: Repositor
     repo = repo_service.add(user_id, dto)
     return repo
 
-@router.get("/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get repositories of suer")
+@router.get("/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get repositories of user")
 def get_repositories_of_user(
     jwt: JWTDepOptional, 
     username: str, 
@@ -46,13 +46,13 @@ def get_repositories_of_user(
 
     return ReposOfUserDTO(user_id=user_id, user_name=user.username, repos=repos, organization_names=org_names)
 
-
 @router.get("/name/{repo_canonical_name:path}", response_model=RepositoryExtDTO, status_code=200, summary="Find repository by its full name")
 def get_repo_by_canonical_name(
     jwt: JWTDepOptional, 
     repo_canonical_name: str, 
     repo_service: RepositoryService = Depends(get_repo_service),
     access_control_service: AccessControlService = Depends(get_access_control_service)):
+
     user_id = get_id_from_jwt_optional(jwt)
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
 
@@ -62,6 +62,40 @@ def get_repo_by_canonical_name(
     result = repo.model_dump()
     result["owner_name"] = repo.owner.username
     result["org_name"] = None if (repo.organization is None) else repo.organization.name
+    result["can_update"] = access_control_service.has_write_access(user_id, repo.id)
     result = RepositoryExtDTO.model_validate(result)
 
     return result
+
+@router.put("/{repo_id}/desc", response_model=RepositoryDTO, status_code=200, summary="Update repository description by its id")
+@pre_authorize([UserRole.user, UserRole.admin])
+def update_repo_desc_by_id(
+    jwt: JWTDep, repo_id: int, 
+    dto: RepositoryDescUpdateDTO, 
+    repo_service:RepositoryService = Depends(get_repo_service),
+    access_control_service: AccessControlService = Depends(get_access_control_service)):
+    
+    user_id = get_id_from_jwt(jwt)
+
+    if not access_control_service.has_write_access(user_id, repo_id):
+        raise AccessDeniedException(f"User {user_id} cannot update repository description with identifier {repo_id}")
+    
+    repo = repo_service.update_repo_by_id(repo_id, dto)
+    return repo
+
+@router.put("/{repo_id}/visibility", response_model=RepositoryDTO, status_code=200, summary="Update repository visibility by its id")
+@pre_authorize([UserRole.user, UserRole.admin])
+def update_repo_visibility_by_id(
+    jwt: JWTDep, 
+    repo_id: int, 
+    dto: RepositoryVisibilityUpdateDTO, 
+    repo_service:RepositoryService = Depends(get_repo_service),
+    access_control_service: AccessControlService = Depends(get_access_control_service)):
+
+    user_id = get_id_from_jwt(jwt)
+    
+    if not access_control_service.has_write_access(user_id, repo_id):
+        raise AccessDeniedException(f"User {user_id} cannot update repository visibiliy with identifier {repo_id}")
+    
+    repo = repo_service.update_repo_by_id(repo_id, dto)
+    return repo

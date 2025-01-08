@@ -32,3 +32,10 @@ class ReposOfUserDTO(BaseModel):
 class RepositoryExtDTO(RepositoryDTO):
     owner_name: str
     org_name: str | None
+    can_update: bool
+
+class RepositoryDescUpdateDTO(BaseModel):
+    desc: str
+
+class RepositoryVisibilityUpdateDTO(BaseModel):
+    public: bool

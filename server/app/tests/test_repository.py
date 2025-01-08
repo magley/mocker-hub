@@ -1,6 +1,8 @@
+from fastapi import Response
 from fastapi.testclient import TestClient
 import pytest
 import unittest.mock as mock
+from typing import Callable
 
 from sqlmodel import SQLModel, Session
 
@@ -8,13 +10,16 @@ from app.api.config.security import hash_password
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
-from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
+from app.api.config.exception_handler import InvalidInputException, FieldTakenException, NotFoundException
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
-from app.api.repo.repo_dto import RepositoryCreateDTO
+from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.repo.repo_model import Repository, RepositoryBadge
 from app.api.main import app
 from app.api.org.org_repo import OrganizationRepo
+from app.api.org.org_model import OrganizationMembers
+from app.api.team.team_model import TeamMember, TeamPermission, TeamPermissionKind
+from app.api.team.team_repo import TeamRepo
 from app.api.access_control.access_control_service import AccessControlService
 
 @pytest.fixture
@@ -34,6 +39,10 @@ def mock_org_repo():
     return mock.MagicMock(spec=OrganizationRepo)
 
 @pytest.fixture
+def mock_team_repo():
+    return mock.MagicMock(spec=TeamRepo)
+
+@pytest.fixture
 def user_service(mock_session, mock_user_repo):
     service = UserService(mock_session)
     service.user_repo = mock_user_repo
@@ -45,6 +54,7 @@ def repo_service(mock_session):
     service.repo_repo = mock.MagicMock(spec=RepositoryRepo)
     service.user_repo = mock.MagicMock(spec=UserRepo)
     service.org_repo = mock.MagicMock(spec=OrganizationRepo)
+    service.team_repo = mock.MagicMock(spec=TeamRepo)
     service.access_control_service = mock.MagicMock(spec=AccessControlService)
     return service
 
@@ -439,3 +449,254 @@ def test_get_repo_by_canonical_name___integration():
         assert get_repo_by_canonical_name("u2", "u1/o1_public").status_code == 404
         assert get_repo_by_canonical_name("u2", "u1/o1_private").status_code == 404
         assert get_repo_by_canonical_name("u2", "u2/u2_private").is_success
+
+@pytest.mark.parametrize(
+    "dto_class, a_name, a_value", [
+    (None, None, None), 
+    (RepositoryDescUpdateDTO, "desc", "Some repo desc"), 
+    (RepositoryVisibilityUpdateDTO, "public", True)
+])
+class TestUpdateRepoById:
+
+    def test_update_when_missing_repo(self, repo_service, dto_class, a_name, a_value):
+        """
+            Test case for when the user is requesting an update for a missing repository.
+        """   
+        repo_id = 1
+        repo_service.repo_repo.find_by_id.return_value = None
+        dto = dto_class(**{a_name: a_value}) if dto_class is not None else None
+
+        with pytest.raises(NotFoundException):
+            repo_service.update_repo_by_id(repo_id, dto)
+        
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+
+        if a_name == "desc":
+            repo_service.repo_repo.set_desc.assert_not_called()
+        elif a_name == "public": 
+            repo_service.repo_repo.set_visibility.assert_not_called()
+        else:
+            repo_service.repo_repo.set_desc.assert_not_called()
+            repo_service.repo_repo.set_visibility.assert_not_called()
+
+    def test_update_by_eligible_user(self, mock_repo, repo_service, dto_class, a_name, a_value):
+        """
+            Test case for when the user is eligible to make an update.        
+        """   
+        repo_id = 1
+        dto = dto_class(**{a_name: a_value}) if dto_class is not None else None
+
+        repo_service.repo_repo.find_by_id.return_value = mock_repo
+        if a_name == "desc":
+            repo_service.repo_repo.set_desc.return_value = mock_repo
+        elif a_name == "public": 
+            repo_service.repo_repo.set_visibility.return_value = mock_repo
+
+        if a_name == None:
+            with pytest.raises(InvalidInputException):
+                repo_service.update_repo_by_id(repo_id, dto)
+        else:
+            result = repo_service.update_repo_by_id(repo_id, dto)
+            assert result == mock_repo
+
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+
+        if a_name == "desc":
+            repo_service.repo_repo.set_desc.assert_called_once_with(mock_repo, dto.desc)
+        elif a_name == "public": 
+            repo_service.repo_repo.set_visibility.assert_called_once_with(mock_repo, dto.public)
+        else:
+            repo_service.repo_repo.set_desc.assert_not_called()
+            repo_service.repo_repo.set_visibility.assert_not_called()
+
+@pytest.mark.parametrize(
+    "user_type, update_type", [
+    ("user", "desc"), 
+    ("user", "visibility"), 
+    ("admin", "desc"), 
+    ("admin", "visibility")
+])
+def test_update_repo_by_id___integration(user_type, update_type):
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            return response.json()
+        
+        def log_in(username: str, password: str = "12345678"):
+            data = {
+                "username": username,
+                "password": password
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            if response.status_code == 400:
+                assert response.json() == False
+            jwt = response.json()["token"]
+            return jwt
+        
+        def change_superadmin_password():
+            # [1] Loading the super admin credentials
+            config_file = "./volume-server-cfg/superadmin_password.txt"
+
+            with open(config_file, "r") as f:
+                old_password = f.readline()
+
+            jwt = log_in("admin", old_password)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            # [2] Changing the super admin password
+            data = {
+                "old_password": old_password,
+                "new_password": "12345678"
+            }
+            response = client.post("/api/v1/users/password", json=data, headers=header)
+            assert response.is_success
+        
+        def add_admin(admin_username: str) -> dict:
+            jwt = log_in("admin", "12345678")
+            header = {"Authorization": f"Bearer {jwt}"}
+            data = {
+                "username": admin_username,
+                "email": f"{admin_username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+            created_admin = response.json()
+
+            return created_admin
+
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+            # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+            from app.api.config.database import engine
+            from app.api.org.org_repo import OrganizationRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            org_repo = OrganizationRepo(session)
+            return org_repo.add_user_to_org(org_id, user_id)
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "organization_id": org_id,
+                "name": name,
+                "desc": desc,
+            }
+            return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+        def add_team_member(user_id: int, team_id: int) -> TeamMember:
+            # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_member(team_id, user_id)
+        
+        def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+            # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_permission(team_id, repo_id, kind)
+
+        def update_repo_desc_by_id(username: str, repo_id: int, desc: str):
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+            
+            data = {
+                "desc": desc
+            }
+
+            response = client.put(f"/api/v1/repositories/{repo_id}/desc", json=data, headers=header)
+            return response
+
+        def update_repo_visibility_by_id(username: str, repo_id: int, public: bool):
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+            
+            data = {
+                "public": public
+            }
+
+            response = client.put(f"/api/v1/repositories/{repo_id}/visibility", json=data, headers=header)
+            return response
+
+        def get_fun(update_type: str) -> Callable[[str, int, str | bool], Response]:
+            if update_type == "desc":
+                return update_repo_desc_by_id
+            else:
+                return update_repo_visibility_by_id
+
+        if (user_type == "user"):
+            add_user("user_1")
+            user_2 = add_user("user_2")
+        else:
+            change_superadmin_password()
+            add_admin("user_1")
+            user_2 = add_admin("user_2")
+
+        organization_1 = add_org("user_1", "organization_1")
+        organization_2 = add_org("user_2", "organization_2")
+        repo_1 = add_repo("user_1", "repo_1", True, organization_1["id"])
+        repo_2 = add_repo("user_1", "repo_2", True, organization_1["id"])
+        repo_3 = add_repo("user_1", "repo_3", True, organization_1["id"])
+        repo_4 = add_repo("user_2", "repo_4", True, organization_2["id"])
+
+        # Add a member to a team with admin permissions to the specific repo
+        add_user_to_org(user_2["id"], organization_1["id"])
+        team_1 = add_team("user_1", organization_1["id"], "team_1")
+        add_team_member(user_2["id"], team_1["id"])
+        add_team_permission(team_1["id"], repo_1["id"], TeamPermissionKind.admin)
+        add_team_permission(team_1["id"], repo_2["id"], TeamPermissionKind.read)
+        add_team_permission(team_1["id"], repo_3["id"], TeamPermissionKind.read_write)
+
+        update = get_fun(update_type)
+        attribute = "some desc" if update_type == "desc" else True
+
+        """ NOTE: 'User' is a regular user or an admin. """
+        # User who is the owner of the repo
+        assert update("user_1", repo_1["id"], attribute).is_success
+        # User who is trying to update a non existing repo
+        assert update("user_1", -1, attribute).status_code == 400
+        # User without any special relations to the repo
+        assert update("user_1", repo_4["id"], attribute).status_code == 400
+        # User who is a team member with admin permissions against repo
+        assert update("user_2", repo_1["id"], attribute).is_success
+        # User who is a team member with read permissions against repo
+        assert update("user_2", repo_2["id"], attribute).status_code == 400
+        # User who is a team member with read write permissions against repo
+        assert update("user_2", repo_3["id"], attribute).status_code == 200
