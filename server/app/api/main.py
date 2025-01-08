@@ -3,6 +3,7 @@ from contextlib import asynccontextmanager
 from app.api.config.initialize import init_create_tables, configure_cors, init_dummy_data, init_superadmin
 from app.api.config.exception_handler import register_exception_handler
 import app.api.events
+import app.api.events.event_controller
 import app.api.user.user_controller
 import app.api.repo.repo_controller
 import app.api.org.org_controller
@@ -18,6 +19,7 @@ the_router.include_router(app.api.user.user_controller.router)
 the_router.include_router(app.api.repo.repo_controller.router)
 the_router.include_router(app.api.org.org_controller.router)
 the_router.include_router(app.api.team.team_controller.router)
+the_router.include_router(app.api.events.event_controller.router)
 
 internal_registry_router = APIRouter()
 internal_registry_router.include_router(app.api.registry.registry_controller.router)
