@@ -1,3 +1,4 @@
+import os
 from fastapi import APIRouter, FastAPI
 from contextlib import asynccontextmanager
 from app.api.config.initialize import init_create_tables, configure_cors, init_dummy_data, init_superadmin
@@ -36,7 +37,8 @@ async def lifespan(app: FastAPI):
     init_cache()
     init_superadmin()
     init_elasticsearch_connection()
-    Event.init()
+    if os.getenv('mocker_hub_TEST_ENV') is None:
+        Event.init()
     yield
 
 app = FastAPI(lifespan=lifespan)
