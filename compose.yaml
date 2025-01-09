@@ -32,6 +32,7 @@ services:
       - backend_cfg:/code/volume-server-cfg/
       - ./images:/code/images
       - "./distribution/certs:/mnt/local/certs"
+      - ./logs:/code/logs
 
   db:
     image: postgres:15.9-alpine3.20

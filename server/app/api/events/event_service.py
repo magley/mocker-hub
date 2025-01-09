@@ -1,7 +1,9 @@
+import logging
 import os
 from app.api.events.event_model import Event, EventLevel
 from elasticsearch_dsl import Search
 from datetime import datetime
+from app.api.config.logutil import LOGGER
 
 
 class EventService:
@@ -9,6 +11,8 @@ class EventService:
         ...
 
     def save(self, date_time: datetime, log_level: EventLevel, text_content: str) -> Event:
+        LOGGER.log(self.event_level_to_log_level(log_level), text_content)
+
         event = Event(date_time=date_time, log_level=log_level.value, text_content=text_content)
         if os.getenv('mocker_hub_TEST_ENV') is None:
             event.save()
@@ -26,6 +30,19 @@ class EventService:
             "log_level": hit.log_level, 
             "text_content": hit.text_content
         } for hit in response]
+    
+    def event_level_to_log_level(self, event_level: EventLevel):
+        if event_level == EventLevel.Debug:
+            return logging.DEBUG
+        elif event_level == EventLevel.Info:
+            return logging.INFO
+        elif event_level == EventLevel.Warning:
+            return logging.WARNING
+        elif event_level == EventLevel.Error:
+            return logging.ERROR
+        else:
+            raise ValueError(f"Unknown event level: {event_level}")
+
   
 
 def get_event_service() -> EventService:
