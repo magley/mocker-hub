@@ -69,7 +69,26 @@ def send_new_logs_to_es(new_content: str):
 class FileChangeHandler(FileSystemEventHandler):
     def __init__(self, file_path):
         self.file_path = file_path
-        self.previous_size = 0
+        self.size_file_path = self.file_path + '.meta'
+        self.previous_size = self.load_previous_size()
+
+    def load_previous_size(self):
+        if os.path.exists(self.size_file_path):
+            try:
+                with open(self.size_file_path, 'r') as size_file:
+                    val = int(size_file.read().strip())
+                    logging.info(f"Continuing file {self.file_path} from {val}")
+                    return val
+            except Exception as e:
+                logging.error(f"Error reading size file: {e}. Starting from 0.")
+        return 0
+
+    def save_previous_size(self):
+        try:
+            with open(self.size_file_path, 'w') as size_file:
+                size_file.write(str(self.previous_size))
+        except Exception as e:
+            logging.error(f"Error writing size file: {e}")
 
     def on_modified(self, event):
         if event.src_path == self.file_path:
@@ -80,6 +99,8 @@ class FileChangeHandler(FileSystemEventHandler):
                     new_content = file.read()
                     send_new_logs_to_es(new_content)
                 self.previous_size = current_size
+                self.save_previous_size()
+
 
 def monitor_file(file_path):
     event_handler = FileChangeHandler(file_path)

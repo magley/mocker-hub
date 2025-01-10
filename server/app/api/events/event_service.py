@@ -13,11 +13,6 @@ class EventService:
     def save(self, date_time: datetime, log_level: EventLevel, text_content: str):
         LOGGER.log(self.event_level_to_log_level(log_level), text_content)
 
-        # event = Event(date_time=date_time, log_level=log_level.value, text_content=text_content)
-        # if os.getenv('mocker_hub_TEST_ENV') is None:
-        #     event.save()
-        # return event
-
     def search(self, log_level: EventLevel, start_date: str = None, end_date: str = None):
         s = Search(index=Event.Index.name).filter("term", log_level=log_level.value)
         
