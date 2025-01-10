@@ -99,6 +99,7 @@ services:
 
   log_collector:
     build: ./log_collector
+    restart: on-failure
     volumes:
       - ./logs:/logs
     environment:
