@@ -97,6 +97,14 @@ services:
         - 9200:9200
         - 9300:9300
 
+  log_collector:
+    build: ./log_collector
+    volumes:
+      - ./logs:/logs
+    environment:
+      - ES_HOST=elasticsearch:9200
+    depends_on:
+      - elasticsearch
 
 volumes:
   backend_cfg:
