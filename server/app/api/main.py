@@ -1,3 +1,4 @@
+import asyncio
 import os
 from fastapi import APIRouter, FastAPI
 from contextlib import asynccontextmanager
@@ -11,7 +12,7 @@ import app.api.org.org_controller
 import app.api.registry.registry_controller
 import app.api.team.team_controller
 from app.api.config.cache import init_cache
-from app.api.config.elasticsearch import init_elasticsearch_connection
+from app.api.config.elasticsearch import try_to_init_elasticsearch
 from app.api.events.event_model import Event
 
 
@@ -36,9 +37,7 @@ async def lifespan(app: FastAPI):
     init_create_tables()
     init_cache()
     init_superadmin()
-    init_elasticsearch_connection()
-    if os.getenv('mocker_hub_TEST_ENV') is None:
-        Event.init()
+    asyncio.create_task(try_to_init_elasticsearch())
     yield
 
 app = FastAPI(lifespan=lifespan)

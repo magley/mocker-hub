@@ -1,14 +1,26 @@
+import asyncio
 import os
 from elasticsearch_dsl import connections
+from app.api.config.logutil import LOGGER
 
-
-def init_elasticsearch_connection():
+async def try_to_init_elasticsearch():
     if os.getenv('mocker_hub_TEST_ENV') is not None:
         print("[!] Detected mocker_hub_TEST_ENV -> Disabling Elasticsearch for testing")
-        # connections._co.clear()   # Obviously this is bad if we wanna do integration tests...
-    else:
-        """
-        NOTE: For each `Document` you want to be indexed in ElasticSearch,
-        you must call its `init()` function _AFTER_ this function.
-        """
-        connections.create_connection(hosts=["http://elasticsearch:9200"])
+        return
+
+    LOGGER.info("Establishing ElasticSearch connection...")
+    while True:
+        try:
+            from app.api.events.event_model import Event
+            es = connections.create_connection(hosts=["http://elasticsearch:9200"])
+
+            if es.ping():
+                LOGGER.info(f"Elasticsearch connected successfully")
+                Event.init()
+                return
+            else:
+                raise ConnectionError("Elasticsearch connected but is not reachable")
+        except Exception as e:
+            seconds = 5
+            LOGGER.error(f"Could not load ElasticSearch: {e}. Retrying in {seconds} seconds...")
+            await asyncio.sleep(seconds)
