@@ -10,4 +10,10 @@ COPY ./app /code/app
 
 RUN mkdir -p /code/logs
 
+COPY ./entrypoint.sh /code/entrypoint.sh
+RUN ls -l /code
+RUN chmod +x /code/entrypoint.sh
+
+ENTRYPOINT ["/code/entrypoint.sh"]
+
 CMD ["fastapi", "run", "app/api/main.py", "--port", "8000", "--proxy-headers"]
