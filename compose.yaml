@@ -90,12 +90,21 @@ services:
       container_name: elasticsearch
       environment:
         - discovery.type=single-node
-        - ES_JAVA_OPTS=-Xmx1g -Xms1g
+        - ES_JAVA_OPTS=-Xms256m -Xmx256m  # In case we run out of memory, change 256m to 512m or 1g
         - ELASTIC_PASSWORD=1234
         - xpack.security.enabled=false
+        - xpack.ml.enabled=false
       ports:
         - 9200:9200
         - 9300:9300
+      # I've added these lines below to speed up the booting of ES. In case something goes wrong, comment them out.
+      volumes:
+      - /tmp/elasticsearch/data
+      ulimits:
+        memlock:
+          soft: -1
+          hard: -1
+
 
   log_collector:
     build: ./log_collector
