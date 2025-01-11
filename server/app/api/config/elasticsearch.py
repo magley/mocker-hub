@@ -22,5 +22,5 @@ async def try_to_init_elasticsearch():
                 raise ConnectionError("Elasticsearch connected but is not reachable")
         except Exception as e:
             seconds = 5
-            LOGGER.error(f"Could not load ElasticSearch: {e}. Retrying in {seconds} seconds...")
+            LOGGER.error(f"Could not load ElasticSearch: {e}. Retrying in {seconds} seconds...", exc_info=False)
             await asyncio.sleep(seconds)

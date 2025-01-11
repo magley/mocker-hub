@@ -27,7 +27,7 @@ try:
     Event.init()
     logging.info("Connected to ElasticSearch!")
 except Exception as e:
-    logging.error(f"Failed to connect to ElasticSearch: {e}")
+    logging.error(f"Failed to connect to ElasticSearch: {str(e)}", exc_info=False)
     exit(1)
 
 def send_log_to_es(log_line: str):
@@ -39,7 +39,7 @@ def send_log_to_es(log_line: str):
 
     parts = log_line.split(" - ", 2)
     if len(parts) < 3:
-        logging.warning(f"Incorrect log format for line: {log_line}")
+        # logging.warning(f"Incorrect log format for line: {log_line}")
         return
     
     date_time = parts[0].strip()
@@ -50,7 +50,7 @@ def send_log_to_es(log_line: str):
         date_time = datetime.strptime(date_time, '%Y-%m-%d %H:%M:%S,%f')
         level = EventLevel(level)
     except ValueError as e:
-        logging.error(f"Error parsing log line: {log_line} - {e}")
+        # logging.error(f"Error parsing log line: {log_line} - {e}")
         return
 
     logging.info(f"Sending log to Elasticsearch: {log_line}")
@@ -100,7 +100,6 @@ class FileChangeHandler(FileSystemEventHandler):
                     send_new_logs_to_es(new_content)
                 self.previous_size = current_size
                 self.save_previous_size()
-
 
 def monitor_file(file_path):
     event_handler = FileChangeHandler(file_path)
