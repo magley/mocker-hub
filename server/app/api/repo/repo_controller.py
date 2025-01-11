@@ -61,7 +61,7 @@ def get_repo_by_canonical_name(
     user_id = get_id_from_jwt_optional(jwt)
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
 
-    event_service.save(datetime.now(), EventLevel.Info, f"User {user_id} GET repository {repo_canonical_name}")
+    event_service.log_read(user_id, Repository, repo_canonical_name)
 
     if not access_control_service.has_read_access(user_id, repo.id):
         raise NotFoundException(Repository, repo_canonical_name)
