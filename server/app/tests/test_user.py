@@ -11,6 +11,7 @@ from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
 from app.api.config.exception_handler import NotFoundException, UserException, FieldTakenException
 from app.api.main import app
+from app.api.config.elasticsearch import wait_for_elasticsearch
 
 @pytest.fixture
 def mock_session():
@@ -242,8 +243,8 @@ def test_add_admin___integration():
         assert response.status_code == 400
         
 def test_add___integration():
-
     with TestClient(app) as client:
+        assert wait_for_elasticsearch()
 
         def add_user(username: str | None, status_code: int | None) -> dict:
             data = {
