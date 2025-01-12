@@ -2,6 +2,16 @@
 
 ![Static Badge](https://img.shields.io/badge/license-BSD_2_Clause-blue)
 
+[![Python](https://img.shields.io/badge/Python-3776AB?logo=python&logoColor=fff)](#)
+[![TypeScript](https://img.shields.io/badge/TypeScript-3178C6?logo=typescript&logoColor=fff)](#)
+[![Bash](https://img.shields.io/badge/Bash-4EAA25?logo=gnubash&logoColor=fff)](#)
+[![CSS](https://img.shields.io/badge/CSS-1572B6?logo=css3&logoColor=fff)](#)
+[![Sass](https://img.shields.io/badge/Sass-C69?logo=sass&logoColor=fff)](#)
+[![HTML](https://img.shields.io/badge/HTML-%23E34F26.svg?logo=html5&logoColor=white)](#)
+![YAML](https://img.shields.io/badge/yaml-%23ffffff.svg?logo=yaml&logoColor=151515)
+[![JSON](https://img.shields.io/badge/JSON-000?logo=json&logoColor=fff)](#)
+![JWT](https://img.shields.io/badge/JWT-black?logo=JSON%20web%20tokens)
+
 [![FastAPI](https://img.shields.io/badge/FastAPI-009485.svg?logo=fastapi&logoColor=white)](#)
 [![Postgres](https://img.shields.io/badge/Postgres-%23316192.svg?logo=postgresql&logoColor=white)](#)
 ![Nginx](https://img.shields.io/badge/nginx-%23009639?logo=nginx)
@@ -10,6 +20,9 @@
 [![React](https://img.shields.io/badge/React-%2320232a.svg?logo=react&logoColor=%2361DAFB)](#)
 [![Bootstrap](https://img.shields.io/badge/Bootstrap-7952B3?logo=bootstrap&logoColor=fff)](#)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=fff)](#)
+![Docker](https://img.shields.io/badge/Docker_Compose-%230db7ed.svg?logo=docker&logoColor=white)
+![ElasticSearch](https://img.shields.io/badge/-ElasticSearch-005571?logo=elasticsearch)
+![Pytest](https://img.shields.io/badge/pytest-%23ffffff.svg?logo=pytest&logoColor=2f9fe3)
 [![GitHub Actions](https://img.shields.io/badge/GitHub_Actions-2088FF?logo=github-actions&logoColor=white)](#)
 
 ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues/magley/mocker-hub?cacheSeconds=3600) ![GitHub Issues or Pull Requests](https://img.shields.io/github/issues-pr/magley/mocker-hub?cacheSeconds=3600)
