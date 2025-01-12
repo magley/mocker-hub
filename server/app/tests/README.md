@@ -12,25 +12,15 @@ so instead I've created an `.env` in project root:
 RUN_TESTS=true
 ```
 
-And then `docker compose up --build`.
-
-When you're done testing, remove the ENV variable.
-
----
----
----
----
-## Old (TODO: Remove)
-
-1) Position yourself to the root of this repository. We need to do this because of ./volume-server-cfg.
+Build the container:
 
 ```sh
-user:.../mocker-hub/server/app/tests$ cd ../../../
-user:.../mocker-hub$
+# --abort-on-container-exit will exit as soon as backend exits
+# --exit-code-from backend will return backend's exit code
+#
+# We need this in CI/CD.
+
+docker compose up --build backend --abort-on-container-exit --exit-code-from backend
 ```
 
-2) Run the tests. `-s` is to show stdout from `print()`.
-
-```sh
-mocker_hub_TEST_ENV=1 pytest server/app/tests/ -s
-```
+When you're done testing and want to run MockerHub regularly, remove the ENV variable.
