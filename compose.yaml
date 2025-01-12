@@ -9,7 +9,10 @@ services:
     depends_on:
       - db
       - cache
+      - nginx
       - elasticsearch
+      - distribution
+      - log_collector
     environment:
       PYTHONUNBUFFERED: 1
       POSTGRES_USER: postgres
@@ -69,11 +72,8 @@ services:
     build: ./nginx/
     ports:
       - "80:80"
-    depends_on:
-      - backend
     volumes:
       - ./images:/usr/share/nginx/html/images
-
 
   cache:
     image: redis:alpine3.20
