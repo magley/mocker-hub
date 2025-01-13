@@ -23,6 +23,8 @@ services:
       SUPERADMIN_PASSWORD: admin123
       JWT_SECRET: secret
       JWT_ALGORITHM: HS256
+      ELASTICSEARCH_HOST: elasticsearch
+      ELASTICSEARCH_PORT: 9200
 
       # To run tests, do `RUN_TESTS=true docker compose up`.
       # However, I've been having issues with this on WSL,

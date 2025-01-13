@@ -23,7 +23,8 @@ polling_interval = 5
 
 logging.info("Connecting to ElasticSearch...")
 try:
-    connections.create_connection(hosts=["http://elasticsearch:9200"])
+    hostname = os.getenv("ES_HOST", "elasticsearch:9200")
+    connections.create_connection(hosts=[f"http://{hostname}"])
     Event.init()
     logging.info("Connected to ElasticSearch!")
 except Exception as e:
