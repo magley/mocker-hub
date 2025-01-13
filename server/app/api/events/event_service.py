@@ -49,7 +49,6 @@ class EventService:
         else:
             raise ValueError(f"Unknown event level: {event_level}")
 
-  
 
 def get_event_service() -> EventService:
     return EventService()
