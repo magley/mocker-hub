@@ -4,6 +4,7 @@ from fastapi import APIRouter
 from app.api.events.event_dto import EventDTO
 from app.api.events.event_service import EventService
 from app.api.events.event_model import EventLevel
+from app.api.config.exception_handler import InvalidInputException
 
 router = APIRouter(prefix="/events", tags=["events"])
 
@@ -11,6 +12,11 @@ router = APIRouter(prefix="/events", tags=["events"])
 async def search_events_route(log_level: str, start_date: str = None, end_date: str = None):
     event_service = EventService()
 
-    log_level = EventLevel(log_level)
+    try:
+        log_level = EventLevel(log_level)
+    except ValueError:
+        possible_values = [lvl.value for lvl in EventLevel]
+        raise InvalidInputException(f"Unknown log level '{log_level}', supported values are {possible_values}")
+
     events = event_service.search(log_level, start_date, end_date)
     return events
