@@ -27,8 +27,10 @@ class EventService:
         
         if start_date and end_date:
             s = s.filter("range", date_time={"gte": start_date, "lte": end_date})
-
-        s = s.sort({"date_time": {"order": "desc"}})
+        elif start_date:
+            s = s.filter("range", date_time={"gte": start_date})
+        elif end_date:
+            s = s.filter("range", date_time={"lte": end_date})
         
         response = s.execute()
         return [{
