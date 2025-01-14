@@ -1,3 +1,4 @@
+from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends
 
@@ -11,6 +12,8 @@ from app.api.org.org_service import OrganizationService, get_org_service
 from app.api.config.exception_handler import NotFoundException, AccessDeniedException
 from app.api.repo.repo_model import Repository
 from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
+from app.api.events.event_service import EventService, get_event_service
+from app.api.events.event_model import EventLevel
 
 router = APIRouter(prefix="/repositories", tags=["repositories"])
 
@@ -51,10 +54,14 @@ def get_repo_by_canonical_name(
     jwt: JWTDepOptional, 
     repo_canonical_name: str, 
     repo_service: RepositoryService = Depends(get_repo_service),
-    access_control_service: AccessControlService = Depends(get_access_control_service)):
+    access_control_service: AccessControlService = Depends(get_access_control_service),
+    event_service: EventService = Depends(get_event_service)
+    ):
 
     user_id = get_id_from_jwt_optional(jwt)
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
+
+    event_service.log_read(user_id, Repository, repo_canonical_name)
 
     if not access_control_service.has_read_access(user_id, repo.id):
         raise NotFoundException(Repository, repo_canonical_name)

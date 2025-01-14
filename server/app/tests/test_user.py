@@ -242,9 +242,7 @@ def test_add_admin___integration():
         assert response.status_code == 400
         
 def test_add___integration():
-
     with TestClient(app) as client:
-
         def add_user(username: str | None, status_code: int | None) -> dict:
             data = {
                 "username": username,

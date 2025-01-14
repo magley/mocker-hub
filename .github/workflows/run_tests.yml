@@ -24,8 +24,13 @@ jobs:
         python -m pip install --upgrade pip
         pip install -r server/requirements.txt
 
-    - name: Run the tests
-      env:
-        mocker_hub_TEST_ENV: 1
+    - name: Create .env file
       run: |
-        pytest server/app/tests/
+        echo "RUN_TESTS=true" > .env
+
+    - name: Run the tests
+      # Specify that we're bulding `backend` => `--abort-on-container-exit` will only work for `backend`
+      # But we must be careful about `depends-on` in `compose.yaml`.
+      # https://stackoverflow.com/a/76049965
+      run: |
+        sudo docker compose up --build backend --abort-on-container-exit --exit-code-from backend
