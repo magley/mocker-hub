@@ -1,6 +1,5 @@
 import { NavLink } from "react-router";
 import "./Navbar.css";
-import { getJwtRole } from "../util/localstorage";
 import { useAuthStore } from "../util/store";
 
 export function Navbar() {

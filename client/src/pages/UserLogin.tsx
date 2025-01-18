@@ -4,7 +4,7 @@ import './UserLogin.css';
 import { TokenDTO, UserLoginDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { getJwtId, getJwtMustChangePassword, getJwtRole, getJwtUsername, setJWT } from '../util/localstorage';
+import { getJwtMustChangePassword, getJwtRole, getJwtUsername, setJWT } from '../util/localstorage';
 import { useAuthStore } from '../util/store';
 
 export const UserLogin = () => {
