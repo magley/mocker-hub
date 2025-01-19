@@ -1,6 +1,5 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance } from "../util/http";
-import { getJWTStringOrNull } from "../util/localstorage";
 
 export interface UserRegisterDTO {
     email: string,

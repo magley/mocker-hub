@@ -35,6 +35,12 @@
 
 3) Use debug data while developing. On the first run, while the database is empty, visit [localhost:8000/api/v1/dummy](localhost:8000/api/v1/dummy) (do this just once).
 
+### Nginx and the web app
+
+During development, run the `client/` app locally using `npm run dev`.
+
+In production, you should use nginx as the web app server. To do this, comment in the test environment and comment out the production environment in the root Dockerfile.
+
 ## Access points
 
 You can access the server at [localhost:8000](http://localhost:8000/docs).
