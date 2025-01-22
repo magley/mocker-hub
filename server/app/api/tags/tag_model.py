@@ -7,7 +7,7 @@ if TYPE_CHECKING:
 
 class Tag(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
-    name: str = Field()
+    name: Optional[str] = Field(default=None)
     last_push: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     repository_id: int = Field(foreign_key="repository.id")
