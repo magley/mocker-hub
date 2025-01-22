@@ -6,6 +6,7 @@ from app.api.registry.registry_utils import parse_scope, build_jwt_for_docker_re
 from app.api.user.user_service import UserService
 from app.api.repo.repo_service import RepositoryService
 from app.api.registry.registry_dto import RegistryActionOperation
+from app.api.tags.tag_service import TagService
 
 class RegistryService:
     def __init__(self, session: Session):
@@ -25,7 +26,19 @@ class RegistryService:
 
         self.user_service = UserService(session)
         self.repo_service = RepositoryService(session)
+        self.tag_service = TagService(session)
         self.access_control_service = AccessControlService(session)
+
+    def on_notification(self, username: str, action: str, repo_name: str, tag: str | None):
+        if action == 'push':
+            user = self.user_service.find_by_username(username)
+            repo = self.repo_service.find_by_canonical_name(repo_name)
+
+            tag = self.tag_service.create_or_touch(user.id, repo.id, tag)
+            print(f"Pushed tag {tag}")
+
+        print(f"User '{username}' completed '{action}' of repository '{repo_name}' with tag '{tag}'")
+
 
     def handle_registry_request(self, username: str, password: str, scope: str | None, service: str | None):
         # User with the provided credentials must exist.
@@ -42,12 +55,12 @@ class RegistryService:
             user = self.user_service.find_by_username(username)
             repo = self.repo_service.find_by_canonical_name(action.repo_canonical_name)
 
-            # Case 1 - User requested push/pull operations on the repo.
+            # Case 1 - User requested push operation on the repo.
 
             if RegistryActionOperation.push in action.operations:
                 can_write = self.access_control_service.has_write_access(user.id, repo.id)
                 if not can_write:
-                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")
+                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")       
                 
             # Case 2 - User requested pull operation on the repo.
 

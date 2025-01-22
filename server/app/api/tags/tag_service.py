@@ -17,7 +17,14 @@ class TagService:
         self.repo_repo = RepositoryRepo(session)
         self.tag_repo = TagRepo(session)  
 
-    def create_tag(self, user_id: int | None, repo_id: int, tag_name: str) -> Tag:
+    def create_or_touch(self, user_id: int | None, repo_id: int, tag_name: str | None) -> Tag:
+        existing_tag = self.tag_repo.find_by_name_and_repo_id(tag_name, repo_id)
+        if existing_tag is None:
+            return self._create_tag(user_id, repo_id, tag_name)
+        else:
+            return self._touch_tag(user_id, existing_tag.id)
+
+    def _create_tag(self, user_id: int | None, repo_id: int, tag_name: str) -> Tag:
         # Fetch the repository.
 
         repo = self.repo_repo.find_by_id(repo_id)
@@ -55,7 +62,7 @@ class TagService:
 
         self.tag_repo.remove(tag)
 
-    def touch_tag(self, user_id: int | None, tag_id: int) -> None:
+    def _touch_tag(self, user_id: int | None, tag_id: int) -> Tag:
         # Fetch the tag.
 
         tag = self.tag_repo.find_by_id(tag_id)
@@ -69,7 +76,7 @@ class TagService:
           
         # Touch the tag.
 
-        self.tag_repo.update_last_push(tag)        
+        return self.tag_repo.update_last_push(tag)        
 
     def get_tags_for_repository(self, repo_id: int) -> List[Tag]:
         return self.tag_repo.get_all_by_repo_id(repo_id)
