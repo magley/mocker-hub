@@ -56,20 +56,24 @@ class TagRepo:
         """
         Returns a list of tags after filtering and the total number of elements (for pagination).
         """
-        query = select(Tag).where(Repository.canonical_name == repo_canonical_name)
 
+        # Filter
+        query = select(Tag).where(Repository.canonical_name == repo_canonical_name)
         if search_query:
             query = query.where(Tag.name.ilike(f"%{search_query}%"))
 
+        # Count. This must go before order.
+        total_count_query = query.with_only_columns(func.count(Tag.id))
+        total_count = self.session.exec(total_count_query).all()[0]
+ 
+        # Order
         if params.sort_by:
             if params.sort_by == "name":
                 query = query.order_by(Tag.name.asc() if params.sort_order == "asc" else Tag.name.desc())
             elif params.sort_by == "last_push":
                 query = query.order_by(Tag.last_push.asc() if params.sort_order == "asc" else Tag.id.desc())
 
-        total_count_query = query.with_only_columns(func.count(Tag.id))
-        total_count = self.session.exec(total_count_query).all()[0]
- 
+        # Limit
         query = query.offset(params.skip).limit(params.limit)
         tags = self.session.exec(query).all()
 
