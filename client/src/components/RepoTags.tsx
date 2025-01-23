@@ -18,15 +18,26 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
         }
     }, [props.isActive]);
 
+    const orderByOptionToQueryParams = (orderByValue: string) => {
+        switch (orderByValue) {
+            case "Newest": return ['last_push', 'desc'];
+            case "Oldest": return ['last_push', 'asc'];
+            case "Name A-Z": return ['name', 'asc'];
+            case "Name Z-A": return ['name', 'desc'];
+            default: return [null, 'asc'];
+        }
+    }
+
     const filter = () => {
-        const pagination = new PaginationParams(1, 10, "", "asc");
+        const [sort_by, sort_order] = orderByOptionToQueryParams(orderBy);
+        const pagination = new PaginationParams(1, 10, sort_by, sort_order);
+
         TagsService.FilterTagsOfRepo(props.repo.canonical_name, filterText, pagination).then((res) => {
             console.log(res.data);
         }).catch((err: AxiosError) => {
             console.error(err);
         });
     }
-
 
     return (
         <div className="tab-pane fade show active" id="tags">
@@ -36,10 +47,10 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
                 <select
                     id="orgSelect"
                     className="form-select d-inline ms-2 w-auto"
-                    value={orderBy || ''}
+                    value={orderBy}
                     onChange={e => setOrderBy(e.target.value)}>
                     {Array.from(orderByOptions!.entries()).map(([id, name]) => (
-                        <option key={id} value={id}>
+                        <option key={id} value={name}>
                             {name}
                         </option>
                     ))}
