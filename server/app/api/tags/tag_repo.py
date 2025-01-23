@@ -1,9 +1,10 @@
 from datetime import datetime, timezone
-from typing import List, Optional
+from typing import List, Optional, Tuple
+from sqlalchemy import func
 from sqlmodel import Session, select
 from app.api.repo.repo_model import Repository
 from app.api.tags.tag_model import Tag
-from app.api.config.pagination_params import PaginationParams
+from app.api.config.pagination import PaginationParams
 
 class TagRepo:
     def __init__(self, session: Session):
@@ -51,18 +52,25 @@ class TagRepo:
         query = select(Tag).where(Tag.repository_id == repo_id, Tag.name.ilike(f"%{text}%"))
         return self.session.exec(query).all()
     
-    def filter(self, repo_canonical_name: str, search_query: str, params: PaginationParams) -> List[Tag]:
+    def filter(self, repo_canonical_name: str, search_query: str, params: PaginationParams) -> Tuple[List[Tag], int]:
+        """
+        Returns a list of tags after filtering and the total number of elements (for pagination).
+        """
         query = select(Tag).where(Repository.canonical_name == repo_canonical_name)
 
         if search_query:
             query = query.where(Tag.name.ilike(f"%{search_query}%"))
-        
+
         if params.sort_by:
             if params.sort_by == "name":
                 query = query.order_by(Tag.name.asc() if params.sort_order == "asc" else Tag.name.desc())
             elif params.sort_by == "last_push":
                 query = query.order_by(Tag.last_push.asc() if params.sort_order == "asc" else Tag.id.desc())
 
+        total_count_query = query.with_only_columns(func.count(Tag.id))
+        total_count = self.session.exec(total_count_query).all()[0]
+ 
         query = query.offset(params.skip).limit(params.limit)
-        
-        return self.session.exec(query).all()
+        tags = self.session.exec(query).all()
+
+        return tags, total_count

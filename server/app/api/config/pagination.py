@@ -1,4 +1,4 @@
-from typing import Optional
+from typing import Generic, List, Optional, TypeVar
 from fastapi import Query
 from pydantic import BaseModel
 
@@ -12,3 +12,9 @@ class PaginationParams(BaseModel):
     @property
     def skip(self) -> int:
         return (self.page - 1) * self.limit
+
+
+T = TypeVar('T')
+class PaginatedDTO(BaseModel, Generic[T]):
+    items: List[T]
+    total_count: int
