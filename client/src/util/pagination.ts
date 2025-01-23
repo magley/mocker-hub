@@ -16,3 +16,8 @@ export class PaginationParams {
         return queryParams;
     }
 }
+
+export interface PaginationDTO<T> {
+    items: T[],
+    total_count: number,
+}

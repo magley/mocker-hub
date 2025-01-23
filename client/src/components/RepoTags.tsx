@@ -5,6 +5,7 @@ import { RepoExtDTO } from '../api/repo.api';
 import { PaginationParams } from '../util/pagination';
 import { AxiosError } from 'axios';
 import { formatDistanceToNow } from 'date-fns';
+import ResponsivePagination from 'react-responsive-pagination';
 
 export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (props) => {
     const orderByOptions = [
@@ -14,6 +15,10 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
     const [orderBy, setOrderBy] = useState<string>(orderByOptions[0]);
     const [tags, setTags] = useState<TagDTO[]>([]);
     const [error, setError] = useState<string | null>(null);
+
+    const [itemsPerPage, setItemsPerPage] = useState<number>(10);
+    const [currentPage, setCurrentPage] = useState<number>(1);
+    const [totalPages, setTotalPages] = useState<number>(1);
 
     useEffect(() => {
         if (props.isActive) {
@@ -31,13 +36,23 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
         }
     }
 
+    const handlePageChange = (newPage: number) => {
+        setCurrentPage(newPage);
+        filterWithPage(newPage);
+    }
+
     const filter = () => {
+        filterWithPage(currentPage);
+    }
+
+    const filterWithPage = (page: number) => {
         const [sort_by, sort_order] = orderByOptionToQueryParams(orderBy);
-        const pagination = new PaginationParams(1, 10, sort_by, sort_order);
+        const pagination = new PaginationParams(page, itemsPerPage, sort_by, sort_order);
 
         TagsService.FilterTagsOfRepo(props.repo.canonical_name, filterText, pagination).then((res) => {
             setError(null);
-            setTags(res.data);
+            setTags(res.data.items);
+            setTotalPages(Math.ceil(res.data.total_count / itemsPerPage));
         }).catch((err: AxiosError) => {
             setError(`${err}`);
             setTags([]);
@@ -47,10 +62,9 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
     return (
         <div className="tab-pane fade show active m-5" id="tags">
             {/* Error? */}
-            {error && <div className='text-red-500'>{error}</div>}
+            {error && <div className='error'>{error}</div>}
 
             {/* Filtering */}
-
             <div className="d-flex align-items-center mb-5">
                 {/* Order by */}
                 <span>Order by</span>
@@ -113,6 +127,13 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
                     </Col>
                 ))
             }
+
+            { /* Pagination */}
+            <ResponsivePagination
+                total={totalPages}
+                current={currentPage}
+                onPageChange={page => handlePageChange(page)}
+            />
         </div>
     );
 };

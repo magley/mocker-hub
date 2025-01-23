@@ -1,6 +1,6 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance } from "../util/http";
-import { PaginationParams } from "../util/pagination";
+import { PaginationDTO, PaginationParams } from "../util/pagination";
 
 export interface TagDTO {
     id: number,
@@ -13,7 +13,7 @@ export class TagsService {
         return await axiosInstance.get(`/tags/?repo_name=${repo_canonical_name}`);
     }
 
-    static async FilterTagsOfRepo(repo_canonical_name: string, search_query: string, pagination: PaginationParams): Promise<AxiosResponse<TagDTO[]>> {
+    static async FilterTagsOfRepo(repo_canonical_name: string, search_query: string, pagination: PaginationParams): Promise<AxiosResponse<PaginationDTO<TagDTO>>> {
         const queryParams = pagination.toQueryParams();
         queryParams.append('repo_name', repo_canonical_name);
         queryParams.append('search_query', search_query);
