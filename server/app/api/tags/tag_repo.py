@@ -3,6 +3,7 @@ from typing import List, Optional
 from sqlmodel import Session, select
 from app.api.repo.repo_model import Repository
 from app.api.tags.tag_model import Tag
+from app.api.config.pagination_params import PaginationParams
 
 class TagRepo:
     def __init__(self, session: Session):
@@ -48,4 +49,20 @@ class TagRepo:
     
     def find_by_text(self, repo_id: int, text: str) -> List[Tag]:
         query = select(Tag).where(Tag.repository_id == repo_id, Tag.name.ilike(f"%{text}%"))
+        return self.session.exec(query).all()
+    
+    def filter(self, repo_canonical_name: str, search_query: str, params: PaginationParams) -> List[Tag]:
+        query = select(Tag).where(Repository.canonical_name == repo_canonical_name)
+
+        if search_query:
+            query = query.where(Tag.name.ilike(f"%{search_query}%"))
+        
+        if params.sort_by:
+            if params.sort_by == "name":
+                query = query.order_by(Tag.name.asc() if params.sort_order == "asc" else Tag.name.desc())
+            elif params.sort_by == "last_push":
+                query = query.order_by(Tag.last_push.asc() if params.sort_order == "asc" else Tag.id.desc())
+
+        query = query.offset(params.skip).limit(params.limit)
+        
         return self.session.exec(query).all()

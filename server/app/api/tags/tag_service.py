@@ -8,6 +8,7 @@ from app.api.access_control.access_control_service import AccessControlService
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.tags.tag_repo import TagRepo
 from app.api.tags.tag_model import Tag
+from app.api.config.pagination_params import PaginationParams
 
 class TagService:
     def __init__(self, session: Session):
@@ -86,6 +87,9 @@ class TagService:
     
     def search_tags(self, repo_id: int, text: str) -> List[Tag]:
         return self.tag_repo.find_by_text(repo_id, text)
+    
+    def filter(self, repo_name: str, search_query: str, params: PaginationParams) -> List[Tag]:
+        return self.tag_repo.filter(repo_name, search_query, params)
 
 
 def get_tag_service(session: Session = Depends(get_database)) -> TagService:
