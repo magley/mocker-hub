@@ -19,6 +19,12 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
     }, [props.isActive]);
 
     const filter = () => {
+        const pagination = new PaginationParams(1, 10, "", "asc");
+        TagsService.FilterTagsOfRepo(props.repo.canonical_name, filterText, pagination).then((res) => {
+            console.log(res.data);
+        }).catch((err: AxiosError) => {
+            console.error(err);
+        });
     }
 
 
