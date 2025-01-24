@@ -178,6 +178,59 @@ class TestSearchTags:
         assert result == []
         tag_service.tag_repo.find_by_text.assert_called_once_with(repo_id, text)
 
+    def test_search_tags__integration(self):
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@gmail.com",
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+            
+            def log_in(username):
+                data = {
+                    "username": username,
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/login", json=data)
+                jwt = response.json()["token"]
+                return jwt
+            
+            def add_repo(username, repo_name):
+                data = {
+                    "name": repo_name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": None,
+                }
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+
+                return client.post("/api/v1/repositories/", json=data, headers=header).json()
+            
+            def add_tag(user_id, repo_id, tag_name):
+                # You can't add tags through the API, so we either insert into
+                # the DB _or_ we somehow user the docker api.
+
+                from app.api.tags.tag_service import TagService
+                session = next(get_database())
+                tag_service = TagService(session)
+
+                return tag_service.create_or_touch(user_id, repo_id, tag_name)
+            
+            def search_tags(repo_canonical_name):
+                return client.get(f"/api/v1/tags/?repo_name={repo_canonical_name}").json()
+
+            u1 = add_user("u1")
+            r1 = add_repo("u1", "r1")
+            add_tag(u1['id'], r1['id'], 't1')
+            add_tag(u1['id'], r1['id'], 't2')
+            add_tag(u1['id'], r1['id'], 't3')
+            add_tag(u1['id'], r1['id'], 't4')
+
+            tags = search_tags(r1['canonical_name'])
+            assert len(tags) == 4
 
 class TestFilterTags:
     def test_filter_tags_success(self, tag_service: "TagService"):
@@ -207,3 +260,68 @@ class TestFilterTags:
         assert total_count == 0
         tag_service.tag_repo.filter.assert_called_once_with(repo_name, search_query, params)
 
+    def test_filter_tags__integration(self):
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@gmail.com",
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+            
+            def log_in(username):
+                data = {
+                    "username": username,
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/login", json=data)
+                jwt = response.json()["token"]
+                return jwt
+            
+            def add_repo(username, repo_name):
+                data = {
+                    "name": repo_name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": None,
+                }
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+
+                return client.post("/api/v1/repositories/", json=data, headers=header).json()
+            
+            def add_tag(user_id, repo_id, tag_name):
+                # You can't add tags through the API, so we either insert into
+                # the DB _or_ we somehow user the docker api.
+
+                from app.api.tags.tag_service import TagService
+                session = next(get_database())
+                tag_service = TagService(session)
+
+                return tag_service.create_or_touch(user_id, repo_id, tag_name)
+            
+            def filter_tags(repo_canonical_name, search_query):
+                query_params = {
+                    "repo_name": repo_canonical_name,
+                    "search_query": search_query,
+                    "sort_by": "",
+                    "sort_order": "asc",
+                    "page": 1,
+                    "limit": 10,
+                }
+                query_params_str = ','.join(f"{k}={v}" for k, v in query_params.items())
+                return client.get(f"/api/v1/tags/filter", params=query_params).json()['items']
+
+            u1 = add_user("u1")
+            r1 = add_repo("u1", "r1")
+            add_tag(u1['id'], r1['id'], 'aaabbb')
+            add_tag(u1['id'], r1['id'], 'aaa')
+            add_tag(u1['id'], r1['id'], 'bbb')
+            add_tag(u1['id'], r1['id'], 'ccc')
+
+            assert len(filter_tags(r1['canonical_name'], '')) == 4
+            assert len(filter_tags(r1['canonical_name'], 'a')) == 2
+            assert len(filter_tags(r1['canonical_name'], 'b')) == 2
+            assert len(filter_tags(r1['canonical_name'], 'ab')) == 1
+            assert len(filter_tags(r1['canonical_name'], 'd')) == 0
