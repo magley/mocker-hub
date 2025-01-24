@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Card, Row, Col, Spinner, Button } from 'react-bootstrap';
+import { Card, Row, Col, Spinner, Button, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { RepoDTO, RepositoryBadge, RepositoryService, ReposOfUserDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import './RepoOfUser.css';
@@ -282,7 +282,11 @@ export const RepositoriesOfUser: React.FC = () => {
                                 {/* Last update */}
                                 {repo.last_updated && (
                                     <Card.Text style={{ fontSize: '0.8rem' }}>
-                                        Updated {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
+                                        Updated <OverlayTrigger
+                                            placement="top"
+                                            overlay={<Tooltip>{new Date(repo.last_updated).toLocaleString()}</Tooltip>}>
+                                            <span>{formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}</span>
+                                        </OverlayTrigger>
                                     </Card.Text>
                                 )}
 

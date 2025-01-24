@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Nav, Spinner, Tab } from 'react-bootstrap';
+import { Nav, OverlayTrigger, Spinner, Tab, Tooltip } from 'react-bootstrap';
 import { RepoOverview } from '../components/RepoOverview';
 import { RepoTags } from '../components/RepoTags';
 import { RepoSettings } from '../components/RepoSettings';
@@ -93,7 +93,11 @@ export const RepositoryPage: React.FC = () => {
                     {/* Last update */}
                     {repo && repo.last_updated && (
                         <>
-                            Updated {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
+                            <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{new Date(repo.last_updated).toLocaleString()}</Tooltip>}>
+                                <span>{formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}</span>
+                            </OverlayTrigger>
                         </>
                     )}
                 </h5>

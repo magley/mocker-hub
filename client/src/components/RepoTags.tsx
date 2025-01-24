@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Button, Card, Col } from 'react-bootstrap';
+import { Button, Card, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { TagDTO, TagsService } from '../api/tags.api';
 import { RepoExtDTO } from '../api/repo.api';
 import { PaginationParams } from '../util/pagination';
@@ -116,7 +116,11 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
 
                                 {/* Last pushed */}
                                 <Card.Text className="mt-1 mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
-                                    Last pushed <b>{formatDistanceToNow(new Date(tag.last_push), { addSuffix: true })}</b>
+                                    Last pushed <OverlayTrigger
+                                        placement="top"
+                                        overlay={<Tooltip>{new Date(tag.last_push).toLocaleString()}</Tooltip>}>
+                                        <b>{formatDistanceToNow(new Date(tag.last_push), { addSuffix: true })}</b>
+                                    </OverlayTrigger>
                                 </Card.Text>
 
                                 {/* ... */}
