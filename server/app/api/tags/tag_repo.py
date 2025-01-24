@@ -58,7 +58,10 @@ class TagRepo:
         """
 
         # Filter
-        query = select(Tag).where(Repository.canonical_name == repo_canonical_name)
+        query = select(Tag) \
+            .join(Repository, Repository.id == Tag.repository_id) \
+            .where(Repository.canonical_name == repo_canonical_name)
+    
         if search_query:
             query = query.where(Tag.name.ilike(f"%{search_query}%"))
 
