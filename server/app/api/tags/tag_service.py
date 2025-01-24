@@ -29,7 +29,7 @@ class TagService:
         # Fetch the repository.
 
         repo = self.repo_repo.find_by_id(repo_id)
-        if not repo:
+        if repo is None:
             raise NotFoundException(Repository, repo_id)
         
         # Access control.
@@ -51,7 +51,7 @@ class TagService:
         # Fetch the tag.
 
         tag = self.tag_repo.find_by_id(tag_id)
-        if not tag:
+        if tag is None:
             raise NotFoundException(Tag, tag_id)
         
         # Access control.
@@ -67,7 +67,7 @@ class TagService:
         # Fetch the tag.
 
         tag = self.tag_repo.find_by_id(tag_id)
-        if not tag:
+        if tag is None:
             raise NotFoundException(Tag, tag_id)
         
         # Access control.
