@@ -40,6 +40,8 @@ export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
     can_update: boolean,
+    can_star: boolean,
+    starred: boolean | null,
 }
 
 export interface RepositoryVisibilityUpdateDTO {
@@ -103,5 +105,9 @@ export class RepositoryService {
 
     static async UpdateRepoDescById(repoId: number, dto: RepositoryDescUpdateDTO) : Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.put(`/repositories/${repoId}/desc`, dto)
+    }
+
+    static async ToggleRepositoryStar(repoId: number) : Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.put(`/repositories/star/${repoId}`)
     }
 }
