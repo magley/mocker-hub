@@ -3,6 +3,7 @@ from typing import List
 from fastapi import APIRouter, Depends
 
 from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, StarredReposOfUserDTO
+from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, StarredReposOfUserDTO, ToggleStarRepoDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
 from app.api.user.user_model import UserRole
@@ -106,6 +107,21 @@ def update_repo_visibility_by_id(
     
     repo = repo_service.update_repo_by_id(repo_id, dto)
     return repo
+
+    jwt: JWTDep, 
+    repo_id: int, 
+    repo_service:RepositoryService = Depends(get_repo_service),
+    access_control_service: AccessControlService = Depends(get_access_control_service)):
+
+    user_id = get_id_from_jwt(jwt)
+    
+    can_star = access_control_service.has_read_access(user_id, repo_id) and not access_control_service.has_write_access(user_id, repo_id)
+    if can_star == False:
+        raise AccessDeniedException(f"User {user_id} cannot star or unstar repository with identifier {repo_id}")
+    
+    repo, starred = repo_service.toggle_repo_star(user_id, repo_id)
+    
+    return ToggleStarRepoDTO(**repo.model_dump(), starred=starred)
 
 @router.get("/starred/u/{username}", response_model=StarredReposOfUserDTO, status_code=200, summary="Get starred repositories of user")
 def get_starred_repositories_of_user(

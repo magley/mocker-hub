@@ -1,6 +1,6 @@
 from typing import List
 from sqlmodel import Session, or_, select
-from app.api.repo.repo_model import Repository
+from app.api.repo.repo_model import Repository, RepositoryStar
 from app.api.user.user_model import User
 from app.api.org.org_model import Organization, OrganizationMembers
 
@@ -46,3 +46,31 @@ class RepositoryRepo:
         self.session.commit()
         self.session.refresh(repo)
         return repo
+    
+    def set_stars(self, repo: Repository, stars: int) -> Repository:
+        repo.sqlmodel_update({"stars": stars})
+        self.session.add(repo)
+        self.session.commit()
+        self.session.refresh(repo)
+        return repo
+
+    def unstar_repo(self, repo: Repository, user: User) -> Repository | None:
+        repo_star = self.session.exec(
+            select(RepositoryStar)
+            .where(RepositoryStar.repository_id == repo.id)
+            .where(RepositoryStar.starrer_id == user.id)
+        ).first()
+        
+        if repo_star is None:
+            return None
+        
+        self.session.delete(repo_star)
+        self.session.commit()
+        return self.set_stars(repo, repo.stars - 1)
+    
+    def star_repo(self, star: RepositoryStar, repo: Repository) -> Repository:
+        self.session.add(star)
+        self.session.commit()
+        self.session.refresh(star)
+        return self.set_stars(repo, repo.stars + 1)    
+    

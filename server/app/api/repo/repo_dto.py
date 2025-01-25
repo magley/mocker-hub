@@ -15,7 +15,7 @@ class RepositoryDTO(BaseModel):
     badge: RepositoryBadge
     last_updated: datetime
     downloads: int
-
+    stars: int
 
 class RepositoryCreateDTO(BaseModel):
     name: str
@@ -39,6 +39,12 @@ class RepositoryExtDTO(RepositoryDTO):
     owner_name: str
     org_name: str | None
     can_update: bool
+    can_star: bool
+    # Non-none only for a regular user
+    starred: bool | None
+
+class ToggleStarRepoDTO(RepositoryDTO):
+    starred: bool | None
 
 class RepositoryDescUpdateDTO(BaseModel):
     desc: str

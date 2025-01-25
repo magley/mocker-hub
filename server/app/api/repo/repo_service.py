@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from fastapi import Depends
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
@@ -6,7 +6,7 @@ from app.api.config.database import get_database
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
-from app.api.repo.repo_model import Repository, RepositoryBadge
+from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
 from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.org.org_repo import OrganizationRepo
 from app.api.team.team_repo import TeamRepo
@@ -107,6 +107,31 @@ class RepositoryService:
         repo = self.find_by_id(repo_id)
         repo = self._update_repo_attribute(repo, dto)
         return repo
+
+    def toggle_repo_star(self, user_id: int, repo_id: int) -> Tuple[Repository, bool]:
+        repo = self.repo_repo.find_by_id(repo_id)
+        if repo is None:
+            raise NotFoundException(Repository, repo_id)
+        
+        user = self.user_repo.find_by_id(user_id)
+        if user is None:
+            raise NotFoundException(User, user_id)
+        
+        repo_is_starred = False
+        for star in user.stars:
+            if star.repository.id == repo_id:
+                repo_is_starred = True
+
+        if repo_is_starred == False:
+            new_star = RepositoryStar(starrer_id=user_id, repository_id=repo_id)
+            return self.repo_repo.star_repo(new_star, repo), True
+
+        self.logger.info("usao u repo_is_starred if")
+        repo = self.repo_repo.unstar_repo(repo, user)
+        if repo is None:
+            raise NotFoundException(RepositoryStar, f"user_id, repo_id: {user_id}, {repo_id}")
+        
+        return repo, False
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)
