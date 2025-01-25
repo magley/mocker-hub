@@ -302,16 +302,17 @@ export const RepositoriesOfUser: React.FC = () => {
                                         </span>
                                     }
 
-                                    <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
 
-                                    {/* Star Count [TODO] */}
-                                    {/*repo.stars > 0*/ true && (
-                                        <span className="align-items-center">
-                                            <i className="bi bi-moon moon"></i>
-                                            <span>{17}</span>
-                                            {/* <span>{repo.stars}</span> */}
-                                        </span>
-                                    )}
+                                    {/* Star Count */}
+                                    {
+                                        <div>
+                                            <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
+                                            <span className="align-items-center">
+                                                <i className="bi bi-star"></i>
+                                                <span> {repo.stars}</span>
+                                            </span>
+                                        </div>
+                                    }
                                 </div>
                             </Card.Body>
                         </Card>

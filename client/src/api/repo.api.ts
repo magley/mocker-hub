@@ -26,6 +26,7 @@ export interface RepoDTO {
     badge: RepositoryBadge,
     last_updated: string, // Encoded Date() object.
     downloads: number,
+    stars: number
 }
 
 export interface ReposOfUserDTO {
