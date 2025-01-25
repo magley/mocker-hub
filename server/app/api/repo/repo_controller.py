@@ -1,8 +1,6 @@
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends
-
-from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, StarredReposOfUserDTO
 from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, StarredReposOfUserDTO, ToggleStarRepoDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
@@ -55,11 +53,13 @@ def get_repo_by_canonical_name(
     jwt: JWTDepOptional, 
     repo_canonical_name: str, 
     repo_service: RepositoryService = Depends(get_repo_service),
+    user_service: UserService = Depends(get_user_service),
     access_control_service: AccessControlService = Depends(get_access_control_service),
     event_service: EventService = Depends(get_event_service)
     ):
 
     user_id = get_id_from_jwt_optional(jwt)
+    user = None if user_id is None else user_service.find_by_id(user_id) 
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
 
     event_service.log_read(user_id, Repository, repo_canonical_name)
@@ -71,8 +71,15 @@ def get_repo_by_canonical_name(
     result["owner_name"] = repo.owner.username
     result["org_name"] = None if (repo.organization is None) else repo.organization.name
     result["can_update"] = access_control_service.has_write_access(user_id, repo.id)
-    result = RepositoryExtDTO.model_validate(result)
+    
+    result["can_star"] = False
+    result["starred"] = None
 
+    if user is not None and user.role == UserRole.user:
+        result["can_star"] = not result["can_update"]
+        result["starred"] = any(star.repository.id == repo.id for star in user.stars)
+
+    result = RepositoryExtDTO.model_validate(result)
     return result
 
 @router.put("/{repo_id}/desc", response_model=RepositoryDTO, status_code=200, summary="Update repository description by its id")
@@ -108,6 +115,9 @@ def update_repo_visibility_by_id(
     repo = repo_service.update_repo_by_id(repo_id, dto)
     return repo
 
+@router.put("/star/{repo_id}", response_model=ToggleStarRepoDTO, status_code=200, summary="Star or unstar a repository by its ID")
+@pre_authorize([UserRole.user])
+def toggle_repo_star(
     jwt: JWTDep, 
     repo_id: int, 
     repo_service:RepositoryService = Depends(get_repo_service),
