@@ -126,7 +126,6 @@ class RepositoryService:
             new_star = RepositoryStar(starrer_id=user_id, repository_id=repo_id)
             return self.repo_repo.star_repo(new_star, repo), True
 
-        self.logger.info("usao u repo_is_starred if")
         repo = self.repo_repo.unstar_repo(repo, user)
         if repo is None:
             raise NotFoundException(RepositoryStar, f"user_id, repo_id: {user_id}, {repo_id}")
