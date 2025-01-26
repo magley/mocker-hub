@@ -18,34 +18,26 @@ class TagService:
         self.repo_repo = RepositoryRepo(session)
         self.tag_repo = TagRepo(session)  
 
-    def create_or_touch(self, user_id: int | None, repo_id: int, tag_name: str | None) -> Tag:
+    def on_push(self, user_id: int | None, repo_id: int, tag_name: str | None) -> Tag:
+        """
+        #### PRE-CONDITION:
+        Tag was pushed onto Distribution.
+        This implies that user and repo exist, and 
+        the user has been granted access to push tags.
+
+        In other words, this method should never fail
+        unless there are issues with the database.
+        """
+ 
+        repo = self.repo_repo.find_by_id(repo_id)
+        assert repo is not None
+
         existing_tag = self.tag_repo.find_by_name_and_repo_id(tag_name, repo_id)
         if existing_tag is None:
-            return self._create_tag(user_id, repo_id, tag_name)
+            new_tag = Tag(name=tag_name, repository_id=repo.id, last_pushed_by_id=user_id)
+            return self.tag_repo.add(new_tag)
         else:
-            return self._touch_tag(user_id, existing_tag.id)
-
-    def _create_tag(self, user_id: int | None, repo_id: int, tag_name: str) -> Tag:
-        # Fetch the repository.
-
-        repo = self.repo_repo.find_by_id(repo_id)
-        if repo is None:
-            raise NotFoundException(Repository, repo_id)
-        
-        # Access control.
-        
-        if not self.access_control_service.has_write_access(user_id, repo_id):
-            raise AccessDeniedException(f"User {user_id} cannot push tag {tag_name} to repo {repo.canonical_name}")
-        
-        # Check if tag already exists for the repo.
-
-        existing_tag = self.tag_repo.find_by_name_and_repo_id(tag_name, repo_id)
-        if existing_tag:
-            raise UserException(f"Tag '{tag_name}' already exists for repository {repo.name}.")
-
-        # Create and add the new tag
-        new_tag = Tag(name=tag_name, repository_id=repo.id, last_pushed_by_id=user_id)
-        return self.tag_repo.add(new_tag)
+            return self.tag_repo.update_last_push(existing_tag, user_id)
 
     def remove_tag(self, user_id: int | None, tag_id: int) -> None:
         # Fetch the tag.
@@ -62,22 +54,6 @@ class TagService:
         # Delete the tag.
 
         self.tag_repo.remove(tag)
-
-    def _touch_tag(self, user_id: int | None, tag_id: int) -> Tag:
-        # Fetch the tag.
-
-        tag = self.tag_repo.find_by_id(tag_id)
-        if tag is None:
-            raise NotFoundException(Tag, tag_id)
-        
-        # Access control.
-        
-        if not self.access_control_service.has_write_access(user_id, tag.repository_id):
-            raise AccessDeniedException(f"User {user_id} cannot update tag {tag.name} of repo {tag.repository.canonical_name}")
-          
-        # Touch the tag.
-
-        return self.tag_repo.update_last_push(tag, user_id)        
 
     def get_tags_for_repository(self, repo_id: int) -> List[Tag]:
         return self.tag_repo.get_all_by_repo_id(repo_id)

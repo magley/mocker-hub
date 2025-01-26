@@ -34,7 +34,7 @@ class RegistryService:
             user = self.user_service.find_by_username(username)
             repo = self.repo_service.find_by_canonical_name(repo_name)
 
-            tag = self.tag_service.create_or_touch(user.id, repo.id, tag)
+            tag = self.tag_service.on_push(user.id, repo.id, tag)
             print(f"Pushed tag {tag}")
 
         print(f"User '{username}' completed '{action}' of repository '{repo_name}' with tag '{tag}'")
@@ -58,9 +58,15 @@ class RegistryService:
             # Case 1 - User requested push operation on the repo.
 
             if RegistryActionOperation.push in action.operations:
+                # This will cover all the neccessary cases:
+                #  - repo doesn't exist
+                #  - user doesn't exist
+                #  - user doesn't have access
+                #  - etc.
+
                 can_write = self.access_control_service.has_write_access(user.id, repo.id)
                 if not can_write:
-                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")       
+                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")      
                 
             # Case 2 - User requested pull operation on the repo.
 

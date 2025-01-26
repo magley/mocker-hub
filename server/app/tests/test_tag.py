@@ -45,7 +45,7 @@ class TestCreateOrTouch:
         new_tag = Tag(name=tag_name, repository_id=repo_id)
         tag_service.tag_repo.add = MagicMock(return_value=new_tag)
 
-        result = tag_service.create_or_touch(user_id, repo_id, tag_name)
+        result = tag_service.on_push(user_id, repo_id, tag_name)
 
         assert result == new_tag
         tag_service.tag_repo.find_by_name_and_repo_id.assert_called_with(tag_name, repo_id)
@@ -60,7 +60,7 @@ class TestCreateOrTouch:
         tag_service.access_control_service.has_write_access.return_value = False
 
         with pytest.raises(AccessDeniedException):
-            tag_service.create_or_touch(user_id, repo_id, tag_name)
+            tag_service.on_push(user_id, repo_id, tag_name)
 
     def test_create_tag_repo_not_found(self, tag_service: "TagService"):
         user_id = 1
@@ -71,7 +71,7 @@ class TestCreateOrTouch:
         tag_service.tag_repo.find_by_name_and_repo_id.return_value = None
 
         with pytest.raises(NotFoundException):
-            tag_service.create_or_touch(user_id, repo_id, tag_name)
+            tag_service.on_push(user_id, repo_id, tag_name)
 
 class TestRemoveTag:
     def test_remove_tag_success(self, tag_service: "TagService"):
@@ -217,7 +217,7 @@ class TestSearchTags:
                 session = next(get_database())
                 tag_service = TagService(session)
 
-                return tag_service.create_or_touch(user_id, repo_id, tag_name)
+                return tag_service.on_push(user_id, repo_id, tag_name)
             
             def search_tags(repo_canonical_name):
                 return client.get(f"/api/v1/tags/?repo_name={repo_canonical_name}").json()
@@ -299,7 +299,7 @@ class TestFilterTags:
                 session = next(get_database())
                 tag_service = TagService(session)
 
-                return tag_service.create_or_touch(user_id, repo_id, tag_name)
+                return tag_service.on_push(user_id, repo_id, tag_name)
             
             def filter_tags(repo_canonical_name, search_query):
                 query_params = {
