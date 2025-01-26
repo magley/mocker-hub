@@ -39,7 +39,7 @@ export const RepositoryPage: React.FC = () => {
                 ...repo,
                 ...res.data,
             });
-            addToast(`Updated the stars count of ${repo.name}.`, ToastType.success);
+            addToast(`${repo.name} is ${repo.starred ? "starred" : "unstarred"}.`, ToastType.success)
         }).catch((err: AxiosError) => {
             addToast((err.response?.data as any)["detail"]["message"], ToastType.error);
         });
@@ -127,13 +127,13 @@ export const RepositoryPage: React.FC = () => {
                         </span>
                     }
 
+                    <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
+
                     {/* Star Count */}
                     { repo && (
                         <div>
-                            <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
                             <span className="align-items-center">
                                     <OverlayTrigger
-                                        delay={{ show: 250, hide: 400 }}
                                         overlay={ (props) => 
                                             renderTooltip(
                                                 props, 
@@ -145,7 +145,6 @@ export const RepositoryPage: React.FC = () => {
                                             )
                                         }
                                         placement="bottom"
-                                        
                                     >
                                         <button 
                                             className={`bi ${!repo.can_star || !repo.starred ? "bi-star" : "bi-star-fill"}`} 
