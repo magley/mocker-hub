@@ -118,7 +118,7 @@ export const RepositoryPage: React.FC = () => {
                     )}
                 </h5>
 
-                <p className="d-flex">
+                <p className="d-flex align-items-center">
                     {/* Download Count */}
                     {
                         <span className="align-items-center">
