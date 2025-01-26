@@ -6,6 +6,7 @@ import { PaginationParams } from '../util/pagination';
 import { AxiosError } from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import ResponsivePagination from 'react-responsive-pagination';
+import { Link, NavLink } from 'react-router-dom';
 
 export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (props) => {
     const orderByOptions = [
@@ -120,7 +121,7 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
                                         placement="top"
                                         overlay={<Tooltip>{new Date(tag.last_push).toLocaleString()}</Tooltip>}>
                                         <b>{formatDistanceToNow(new Date(tag.last_push), { addSuffix: true })}</b>
-                                    </OverlayTrigger>
+                                    </OverlayTrigger> by <NavLink to={`/u/${tag.last_pushed_by_username}/repos`}>{tag.last_pushed_by_username}</NavLink>
                                 </Card.Text>
 
                                 {/* ... */}
