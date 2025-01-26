@@ -86,12 +86,14 @@ class TagService:
         return self.tag_repo.get_all_by_repo_name(repo_name)
     
     def search_tags(self, repo_id: int, text: str) -> List[Tag]:
+        text = text.strip()
         return self.tag_repo.find_by_text(repo_id, text)
     
     def filter(self, repo_name: str, search_query: str, params: PaginationParams) -> tuple[List[Tag], int]:
         """
         Returns list of tags after filtering and total number of tags for pagination.
         """
+        search_query = search_query.strip()
         return self.tag_repo.filter(repo_name, search_query, params)
 
 
