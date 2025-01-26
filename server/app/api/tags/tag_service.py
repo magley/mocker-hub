@@ -44,7 +44,7 @@ class TagService:
             raise UserException(f"Tag '{tag_name}' already exists for repository {repo.name}.")
 
         # Create and add the new tag
-        new_tag = Tag(name=tag_name, repository_id=repo.id)
+        new_tag = Tag(name=tag_name, repository_id=repo.id, last_pushed_by_id=user_id)
         return self.tag_repo.add(new_tag)
 
     def remove_tag(self, user_id: int | None, tag_id: int) -> None:
@@ -77,7 +77,7 @@ class TagService:
           
         # Touch the tag.
 
-        return self.tag_repo.update_last_push(tag)        
+        return self.tag_repo.update_last_push(tag, user_id)        
 
     def get_tags_for_repository(self, repo_id: int) -> List[Tag]:
         return self.tag_repo.get_all_by_repo_id(repo_id)

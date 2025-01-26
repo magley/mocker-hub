@@ -6,6 +6,7 @@ export interface TagDTO {
     id: number,
     name: string | null,
     last_push: string, // Encoded Date() object.
+    last_pushed_by_username: string,
 }
 
 export class TagsService {

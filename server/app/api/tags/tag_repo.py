@@ -42,8 +42,9 @@ class TagRepo:
             ).first()
         )
     
-    def update_last_push(self, tag: Tag) -> Tag:
+    def update_last_push(self, tag: Tag, user_id: int) -> Tag:
         tag.last_push = datetime.now(timezone.utc)
+        tag.last_pushed_by_id = user_id
         self.session.commit()
         self.session.refresh(tag)
         return tag
