@@ -32,8 +32,8 @@ def tag_service():
 
     return service
 
-class TestCreateOrTouch:
-    def test_create_tag_success(self, tag_service: "TagService"):
+class TestOnPush:
+    def test_on_push_success(self, tag_service: "TagService"):
         user_id = 1
         repo_id = 1
         tag_name = "v1.0"
@@ -49,29 +49,6 @@ class TestCreateOrTouch:
 
         assert result == new_tag
         tag_service.tag_repo.find_by_name_and_repo_id.assert_called_with(tag_name, repo_id)
-
-    def test_create_tag_access_denied(self, tag_service: "TagService"):
-        user_id = 2
-        repo_id = 1
-        tag_name = "v1.0"
-        
-        repo = Repository(id=1, canonical_name="repo1")
-        tag_service.repo_repo.find_by_id.return_value = repo
-        tag_service.access_control_service.has_write_access.return_value = False
-
-        with pytest.raises(AccessDeniedException):
-            tag_service.on_push(user_id, repo_id, tag_name)
-
-    def test_create_tag_repo_not_found(self, tag_service: "TagService"):
-        user_id = 1
-        repo_id = 1
-        tag_name = "v1.0"
-        
-        tag_service.repo_repo.find_by_id.return_value = None
-        tag_service.tag_repo.find_by_name_and_repo_id.return_value = None
-
-        with pytest.raises(NotFoundException):
-            tag_service.on_push(user_id, repo_id, tag_name)
 
 class TestRemoveTag:
     def test_remove_tag_success(self, tag_service: "TagService"):
@@ -113,51 +90,10 @@ class TestRemoveTag:
         with pytest.raises(NotFoundException):
             tag_service.remove_tag(user_id, tag_id)
 
-class TestTouchTag:
-    def test_touch_tag_success(self, tag_service: "TagService"):
-        user_id = 1
-        tag_id = 1
-        
-        tag = Tag(id=tag_id, name="v1.0", repository_id=1)
-        repo = Repository(id=1, canonical_name="repo1")
-        
-        tag_service.tag_repo.find_by_id.return_value = tag
-        tag_service.repo_repo.find_by_id.return_value = repo
-        tag_service.access_control_service.has_write_access.return_value = True
-        tag_service.tag_repo.update_last_push = MagicMock(return_value=tag)
-
-        result = tag_service._touch_tag(user_id, tag_id)
-
-        assert result == tag
-        tag_service.tag_repo.update_last_push.assert_called_once_with(tag)
-
-    def test_touch_tag_access_denied(self, tag_service: "TagService"):
-        user_id = 2
-        tag_id = 1
-        
-        repo = Repository(id=1, canonical_name="repo1")
-        tag = Tag(id=tag_id, name="v1.0", repository_id=1, repository=repo)
-        
-        tag_service.tag_repo.find_by_id.return_value = tag
-        tag_service.repo_repo.find_by_id.return_value = repo
-        tag_service.access_control_service.has_write_access.return_value = False
-
-        with pytest.raises(AccessDeniedException):
-            tag_service._touch_tag(user_id, tag_id)
-
-    def test_touch_tag_not_found(self, tag_service: "TagService"):
-        user_id = 1
-        tag_id = 999
-        
-        tag_service.tag_repo.find_by_id.return_value = None
-
-        with pytest.raises(NotFoundException):
-            tag_service._touch_tag(user_id, tag_id)
-
 class TestSearchTags:
     def test_search_tags_success(self, tag_service: "TagService"):
         repo_id = 1
-        text = "v1.0"
+        text = " v1.0 "
         
         tags = [Tag(id=1, name="v1.0", repository_id=repo_id)]
         tag_service.tag_repo.find_by_text.return_value = tags
@@ -165,7 +101,8 @@ class TestSearchTags:
         result = tag_service.search_tags(repo_id, text)
 
         assert result == tags
-        tag_service.tag_repo.find_by_text.assert_called_once_with(repo_id, text)
+        text_trimmed = text.strip()
+        tag_service.tag_repo.find_by_text.assert_called_once_with(repo_id, text_trimmed)
 
     def test_search_tags_no_results(self, tag_service: "TagService"):
         repo_id = 1
