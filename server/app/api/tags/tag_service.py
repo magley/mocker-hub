@@ -73,7 +73,7 @@ class TagService:
         # Access control.
         
         if not self.access_control_service.has_write_access(user_id, tag.repository_id):
-            raise AccessDeniedException(f"User {user_id} cannot remove tag {tag.name} to repo {tag.repository.canonical_name}")
+            raise AccessDeniedException(f"User {user_id} cannot update tag {tag.name} of repo {tag.repository.canonical_name}")
           
         # Touch the tag.
 
