@@ -124,12 +124,14 @@ class RepositoryService:
 
         if repo_is_starred == False:
             new_star = RepositoryStar(starrer_id=user_id, repository_id=repo_id)
+            # `True` indicates the repo is now starred
             return self.repo_repo.star_repo(new_star, repo), True
 
         repo = self.repo_repo.unstar_repo(repo, user)
         if repo is None:
             raise NotFoundException(RepositoryStar, f"user_id, repo_id: {user_id}, {repo_id}")
         
+        # `False` indicates the repo is no longer starred
         return repo, False
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
