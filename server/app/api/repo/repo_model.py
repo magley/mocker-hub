@@ -3,7 +3,8 @@ import enum
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.api.org.org_model import Organization
-from typing import TYPE_CHECKING, Optional
+from app.api.tags.tag_model import Tag
+from typing import TYPE_CHECKING, List, Optional
 if TYPE_CHECKING:
     from app.api.user.user_model import User
 
@@ -50,6 +51,8 @@ class Repository(SQLModel, table=True):
     badge: RepositoryBadge = Field(default=RepositoryBadge.none)
     last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     downloads: int = Field(default=0)
+
+    tags: List["Tag"] = Relationship(back_populates="repository")
 
     @staticmethod
     def compute_canonical_name(name: str, user: str, official: bool, org: str | None) -> str:

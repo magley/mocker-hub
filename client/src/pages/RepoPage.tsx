@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { Nav, Spinner, Tab } from 'react-bootstrap';
+import { Nav, OverlayTrigger, Spinner, Tab, Tooltip } from 'react-bootstrap';
 import { RepoOverview } from '../components/RepoOverview';
 import { RepoTags } from '../components/RepoTags';
 import { RepoSettings } from '../components/RepoSettings';
@@ -83,7 +83,7 @@ export const RepositoryPage: React.FC = () => {
                             Private
                         </span>
                     }
-                </h1>   
+                </h1>
                 <h5>
                     {repoOwner.isUser ? <>By </> : <>Part of </>}
                     <NavLink to={repoOwner.linkURL}>{repoOwner.name}</NavLink>
@@ -93,7 +93,11 @@ export const RepositoryPage: React.FC = () => {
                     {/* Last update */}
                     {repo && repo.last_updated && (
                         <>
-                            Updated {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
+                            <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{new Date(repo.last_updated).toLocaleString()}</Tooltip>}>
+                                <span>{formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}</span>
+                            </OverlayTrigger>
                         </>
                     )}
                 </h5>
@@ -124,7 +128,7 @@ export const RepositoryPage: React.FC = () => {
                 <Nav variant="tabs" className="mb-3">
                     <Nav.Item>
                         <Nav.Link eventKey="overview" className={key === 'overview' ? 'active' : ''}>
-                            <i className="bi bi-list"> </i>                            
+                            <i className="bi bi-list"> </i>
                             Overview
                         </Nav.Link>
                     </Nav.Item>
@@ -147,7 +151,7 @@ export const RepositoryPage: React.FC = () => {
                         {repo && <RepoOverview isActive={key === 'overview'} repo={repo} setRepo={setRepo} />}
                     </Tab.Pane>
                     <Tab.Pane eventKey="tags">
-                        <RepoTags isActive={key === 'tags'} />
+                        {repo && <RepoTags isActive={key === 'tags'} repo={repo} />}
                     </Tab.Pane>
                     <Tab.Pane eventKey="settings">
                         {repo && <RepoSettings isActive={key === 'settings'} repo={repo} setRepo={setRepo} />}

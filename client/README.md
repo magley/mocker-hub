@@ -12,6 +12,7 @@ npm i react-router-dom
 npm i jwt-decode
 npm i buffer
 npm i date-fns
+npm i react-responsive-pagination
 npm run dev
 ```
 
