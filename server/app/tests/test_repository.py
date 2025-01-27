@@ -14,7 +14,7 @@ from app.api.config.exception_handler import InvalidInputException, FieldTakenEx
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
 from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
-from app.api.repo.repo_model import Repository, RepositoryBadge
+from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
 from app.api.main import app
 from app.api.org.org_repo import OrganizationRepo
 from app.api.org.org_model import OrganizationMembers
@@ -700,3 +700,108 @@ def test_update_repo_by_id___integration(user_type, update_type):
         assert update("user_2", repo_2["id"], attribute).status_code == 400
         # User who is a team member with read write permissions against repo
         assert update("user_2", repo_3["id"], attribute).status_code == 200
+
+class TestToggleRepoStar:
+
+    def test_missing_repo(self, repo_service):
+        """ Test case for when the user requests an update for a missing repository. """   
+        user_id = 1
+        repo_id = 1
+
+        repo_service.repo_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+    def test_missing_user(self, repo_service):
+        """ Test case for when the request is made by a guest or a missing user. """   
+        user_id = None
+        repo_id = 1
+        repo = mock.MagicMock(spec=Repository)
+
+        repo_service.repo_repo.find_by_id.return_value = repo
+        repo_service.user_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+        user_id = 1
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+    def test_when_repo_becomes_starred(self, repo_service):
+        """ Test case for when the repo is unstarred and then becomes starred. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 0
+        start_repo.id = repo_id
+
+        end_repo = mock.MagicMock(spec=Repository)
+        end_repo.stars = 1
+        end_repo.id = repo_id
+
+        user = mock.MagicMock(spec=User)
+        user.stars = []
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.star_repo.return_value = end_repo
+
+        res_repo, starred = repo_service.toggle_repo_star(user_id, repo_id)
+
+        assert res_repo.id == repo_id
+        assert res_repo.stars == end_repo.stars
+        assert starred is True
+
+    def test_when_repo_becomes_unstarred(self, repo_service):
+        """ Test case for when the repo is starred and then becomes unstarred. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 1
+        start_repo.id = repo_id
+
+        end_repo = mock.MagicMock(spec=Repository)
+        end_repo.stars = 0
+        end_repo.id = repo_id
+
+        repo_star = mock.MagicMock(spec=RepositoryStar)
+        repo_star.repository = start_repo
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [repo_star]
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.unstar_repo.return_value = end_repo
+
+        res_repo, starred = repo_service.toggle_repo_star(user_id, repo_id)
+
+        assert res_repo.id == repo_id
+        assert res_repo.stars == end_repo.stars
+        assert starred is False
+
+    def test_when_repo_star_suddenly_missing(self, repo_service):
+        """ Test case for when the repo star becomes missing during runtime. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 1
+        start_repo.id = repo_id
+
+        repo_star = mock.MagicMock(spec=RepositoryStar)
+        repo_star.repository = start_repo
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [repo_star]
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.unstar_repo.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
