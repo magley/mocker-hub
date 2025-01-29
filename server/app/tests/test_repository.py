@@ -805,3 +805,173 @@ class TestToggleRepoStar:
 
         with pytest.raises(NotFoundException):
             repo_service.toggle_repo_star(user_id, repo_id)
+
+def test_toggle_repo_star___integration():
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            return response.json()
+        
+        def log_in(username: str, password: str = "12345678"):
+            data = {
+                "username": username,
+                "password": password
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            if response.status_code == 400:
+                assert response.json() == False
+            jwt = response.json()["token"]
+            return jwt
+        
+        def change_superadmin_password():
+            # [1] Loading the super admin credentials
+            config_file = "./volume-server-cfg/superadmin_password.txt"
+
+            with open(config_file, "r") as f:
+                old_password = f.readline()
+
+            jwt = log_in("admin", old_password)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            # [2] Changing the super admin password
+            data = {
+                "old_password": old_password,
+                "new_password": "12345678"
+            }
+            response = client.post("/api/v1/users/password", json=data, headers=header)
+            assert response.is_success
+
+        def toggle_repo_star(username: str, repo_id: int) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+            return response
+
+        def add_admin(admin_username: str) -> dict:
+            jwt = log_in("admin", "12345678")
+            header = {"Authorization": f"Bearer {jwt}"}
+            data = {
+                "username": admin_username,
+                "email": f"{admin_username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+            created_admin = response.json()
+
+            return created_admin
+
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+            # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+            from app.api.config.database import engine
+            from app.api.org.org_repo import OrganizationRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            org_repo = OrganizationRepo(session)
+            return org_repo.add_user_to_org(org_id, user_id)
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "organization_id": org_id,
+                "name": name,
+                "desc": desc,
+            }
+            return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+        def add_team_member(user_id: int, team_id: int) -> TeamMember:
+            # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_member(team_id, user_id)
+        
+        def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+            # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_permission(team_id, repo_id, kind)
+
+        change_superadmin_password()
+
+        user_1 = add_user("user_1")
+        user_2 = add_user("user_2")
+        user_3 = add_user("user_3")
+        user_4 = add_admin("user_4")
+        
+        org_1 = add_org("user_2", "org_1")
+
+        repo_1 = add_repo("user_1", "repo_1", True, None)
+        repo_2 = add_repo("user_1", "repo_2", False, None)
+        repo_3 = add_repo("user_2", "repo_3", True, org_1["id"])
+        repo_4 = add_repo("user_2", "repo_4", True, org_1["id"])
+        repo_5 = add_repo("user_2", "repo_5", True, org_1["id"])
+
+        add_user_to_org(user_3["id"], org_1["id"])
+        
+        team_1 = add_team("user_2", org_1["id"], "team_1")
+        add_team_member(user_3["id"], team_1["id"])
+        
+        add_team_permission(team_1["id"], repo_3["id"], TeamPermissionKind.admin)
+        add_team_permission(team_1["id"], repo_4["id"], TeamPermissionKind.read)
+        add_team_permission(team_1["id"], repo_5["id"], TeamPermissionKind.read_write)
+
+        # A regular user who is the owner of the repo
+        assert toggle_repo_star("user_1", repo_1["id"]).status_code == 400
+        # A regular user who is attempting to update a non-existent repo
+        assert toggle_repo_star("user_1", -1).status_code == 400
+        # A regular user without any special relations to the repo
+        assert toggle_repo_star("user_2", repo_1["id"]).is_success
+        # A regular user who is attempting to star a private repo
+        assert toggle_repo_star("user_2", repo_2["id"]).status_code == 400
+        # A regular user who is a member of the repo's organization
+        assert toggle_repo_star("user_2", repo_3["id"]).status_code == 400
+        # A regular user who is a team member with admin permissions on the repo
+        assert toggle_repo_star("user_3", repo_3["id"]).status_code == 400
+        # A regular user who is a team member with read permissions on the repo
+        assert toggle_repo_star("user_3", repo_4["id"]).status_code == 400
+        # A regular user who is a team member with read write permissions on the repo
+        assert toggle_repo_star("user_3", repo_5["id"]).status_code == 400
+        # An admin who is attempting to star a repo
+        assert toggle_repo_star("user_4", repo_1["id"]).status_code == 403
+        # A super admin who is attempting to star a repo
+        assert toggle_repo_star("admin", repo_1["id"]).status_code == 403
