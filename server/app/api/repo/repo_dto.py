@@ -40,12 +40,11 @@ class RepositoryExtDTO(RepositoryDTO):
     org_name: str | None
     can_update: bool
     can_star: bool
-    # Non-none values are allowed only for a regular user
-    starred: bool | None
+    starred: bool
 
 class ToggleStarRepoDTO(RepositoryDTO):
-    starred: bool | None
-
+    starred: bool
+    
 class RepositoryDescUpdateDTO(BaseModel):
     desc: str
 
