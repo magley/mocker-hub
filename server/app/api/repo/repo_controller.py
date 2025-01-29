@@ -4,7 +4,7 @@ from fastapi import APIRouter, Depends
 from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, StarredReposOfUserDTO, ToggleStarRepoDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
-from app.api.user.user_model import UserRole
+from app.api.user.user_model import User, UserRole
 from app.api.config.auth import JWTBearer, JWTDep, JWTDepOptional
 from app.api.user.user_service import UserService, get_user_service
 from app.api.org.org_service import OrganizationService, get_org_service
@@ -59,9 +59,10 @@ def get_repo_by_canonical_name(
     ):
 
     user_id = get_id_from_jwt_optional(jwt)
-    user = None if user_id is None else user_service.find_by_id(user_id) 
+    user = None if (user_id is None) else user_service.find_by_id(user_id) 
     repo = repo_service.find_by_canonical_name(repo_canonical_name)
 
+    event_service.log_read(user_id, User, user_id)
     event_service.log_read(user_id, Repository, repo_canonical_name)
 
     if not access_control_service.has_read_access(user_id, repo.id):
@@ -71,15 +72,10 @@ def get_repo_by_canonical_name(
     result["owner_name"] = repo.owner.username
     result["org_name"] = None if (repo.organization is None) else repo.organization.name
     result["can_update"] = access_control_service.has_write_access(user_id, repo.id)
-    
-    result["can_star"] = False
-    result["starred"] = None
-
-    if user is not None and user.role == UserRole.user:
-        result["can_star"] = not result["can_update"]
-        result["starred"] = any(star.repository.id == repo.id for star in user.stars)
-
+    result["can_star"] = access_control_service.has_star_access(user_id, repo.id)
+    result["starred"] = any(star.repository.id == repo.id for star in user.stars) if (result["can_star"]) else False
     result = RepositoryExtDTO.model_validate(result)
+    
     return result
 
 @router.put("/{repo_id}/desc", response_model=RepositoryDTO, status_code=200, summary="Update repository description by its id")
@@ -125,7 +121,7 @@ def toggle_repo_star(
 
     user_id = get_id_from_jwt(jwt)
     
-    can_star = access_control_service.has_read_access(user_id, repo_id) and not access_control_service.has_write_access(user_id, repo_id)
+    can_star = access_control_service.has_star_access(user_id, repo_id)
     if can_star == False:
         raise AccessDeniedException(f"User {user_id} cannot star or unstar repository with identifier {repo_id}")
     
@@ -142,8 +138,7 @@ def get_starred_repositories_of_user(
     user = user_service.find_by_username(username)
     user_id = user.id
 
-    stars = user.stars
-    repos = [RepositoryDTO.model_validate(repo_star.repository.model_dump()) for repo_star in stars]
+    repos = [RepositoryDTO.model_validate(repo_star.repository.model_dump()) for repo_star in user.stars]
 
     org_names = org_service.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
 
