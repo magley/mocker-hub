@@ -417,8 +417,24 @@ def test_get_repo_by_canonical_name___integration():
             else:
                 response = client.get(f"/api/v1/repositories/name/{repo_canonical_name}")
                 return response
-
         
+        def toggle_repo_star(username: str, repo_id: int) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+            return response
+        
+        def can_star(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["can_star"]
+
+        def can_update(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["can_update"]
+
+        def starred(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["starred"]
+
         add_user("u1")
         add_user("u2")
         add_user("u3")
@@ -427,13 +443,16 @@ def test_get_repo_by_canonical_name___integration():
         org1 = add_org("u1", "o1")
         org2 = add_org("u2", "o2")
 
-        add_repo("u1", "u1_public", True, None)
-        add_repo("u1", "u1_private", False, None)
-        add_repo("u1", "o1_public", True, org1["id"])
-        add_repo("u1", "o1_private", False, org1["id"])
+        r1 = add_repo("u1", "u1_public", True, None)
+        r2 = add_repo("u1", "u1_private", False, None)
+        r3 = add_repo("u1", "o1_public", True, org1["id"])
+        r4 = add_repo("u1", "o1_private", False, org1["id"])
 
         add_repo("u2", "u2_private", False, None)
 
+        toggle_repo_star("u3", r1["id"])
+        toggle_repo_star("u4", r3["id"])
+        
         assert get_repo_by_canonical_name("u1", "u1/u1_public").is_success
         assert get_repo_by_canonical_name("u1", "u1/u1_private").is_success
         assert get_repo_by_canonical_name("u1", "o1/o1_public").is_success
@@ -449,6 +468,27 @@ def test_get_repo_by_canonical_name___integration():
         assert get_repo_by_canonical_name("u2", "u1/o1_public").status_code == 404
         assert get_repo_by_canonical_name("u2", "u1/o1_private").status_code == 404
         assert get_repo_by_canonical_name("u2", "u2/u2_private").is_success
+
+        assert can_update("u1", "u1/u1_public") is True
+        assert can_update("u1", "u1/u1_private") is True
+        assert can_update("u1", "o1/o1_public") is True
+        assert can_update("u1", "o1/o1_private") is True
+        assert can_update("u3", "u1/u1_public") is False
+        assert can_update("u4", "o1/o1_public") is False
+        
+        assert can_star("u1", "u1/u1_public") is False
+        assert can_star("u1", "u1/u1_private") is False
+        assert can_star("u1", "o1/o1_public") is False
+        assert can_star("u1", "o1/o1_private") is False
+        assert can_star("u3", "u1/u1_public") is True
+        assert can_star("u4", "o1/o1_public") is True
+
+        assert starred("u1", "u1/u1_public") is False
+        assert starred("u1", "u1/u1_private") is False
+        assert starred("u1", "o1/o1_public") is False
+        assert starred("u1", "o1/o1_private") is False
+        assert starred("u3", "u1/u1_public") is True
+        assert starred("u4", "o1/o1_public") is True
 
 @pytest.mark.parametrize(
     "dto_class, a_name, a_value", [
