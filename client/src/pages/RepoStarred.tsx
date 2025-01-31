@@ -37,7 +37,8 @@ export const RepoStarred: React.FC = () => {
             setOrgNames(orgNamesMap);
 
         }).catch((err: AxiosError) => {
-            setError(`${err}`);
+            setLoading(false);
+            setError((err.response?.data as any)["detail"]["message"]);
         })
     }
 

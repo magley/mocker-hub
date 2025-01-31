@@ -1,11 +1,10 @@
 import React, { useEffect, useState } from 'react';
-import { Link, useNavigate, useParams } from 'react-router-dom';
-import { Card, Row, Col, Spinner, Button } from 'react-bootstrap';
+import { useNavigate, useParams } from 'react-router-dom';
+import { Row, Spinner, Button } from 'react-bootstrap';
 import { RepoDTO, RepositoryBadge, RepositoryService, ReposOfUserDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import './RepoOfUser.css';
 import { getJwtId } from '../util/localstorage';
-import { formatDistanceToNow } from 'date-fns';
 import { RepoPreview } from '../components/RepoPreview';
 
 export const RepositoriesOfUser: React.FC = () => {
@@ -54,7 +53,8 @@ export const RepositoriesOfUser: React.FC = () => {
             setRepositories(res.data.repos);
             setFilteredRepos(res.data.repos);
         }).catch((err: AxiosError) => {
-            setError(`${err}`);
+            setLoading(false);
+            setError((err.response?.data as any)["detail"]["message"]);
         })
     }
 
