@@ -157,9 +157,8 @@ class AccessControlService:
 
         # Case 8: Repo is in org and user is a member of that org.
 
-        for org_member in repo.organization.members:
-            if org_member.user.id == user_id:
-                return False
+        if self.org_repo.user_is_in_org(user_id, repo.organization.id):
+            return False
 
         return True
 
