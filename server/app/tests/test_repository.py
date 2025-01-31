@@ -975,3 +975,138 @@ def test_toggle_repo_star___integration():
         assert toggle_repo_star("user_4", repo_1["id"]).status_code == 403
         # A super admin who is attempting to star a repo
         assert toggle_repo_star("admin", repo_1["id"]).status_code == 403
+
+def test_get_starred_repositories_of_user___integration():
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            return response.json()
+        
+        def log_in(username: str, password: str = "12345678"):
+            data = {
+                "username": username,
+                "password": password
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            if response.status_code == 400:
+                assert response.json() == False
+            jwt = response.json()["token"]
+            return jwt
+        
+        def change_superadmin_password():
+            # [1] Loading the super admin credentials
+            config_file = "./volume-server-cfg/superadmin_password.txt"
+
+            with open(config_file, "r") as f:
+                old_password = f.readline()
+
+            jwt = log_in("admin", old_password)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            # [2] Changing the super admin password
+            data = {
+                "old_password": old_password,
+                "new_password": "12345678"
+            }
+            response = client.post("/api/v1/users/password", json=data, headers=header)
+            assert response.is_success
+
+        def add_admin(admin_username: str) -> dict:
+            jwt = log_in("admin", "12345678")
+            header = {"Authorization": f"Bearer {jwt}"}
+            data = {
+                "username": admin_username,
+                "email": f"{admin_username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+            created_admin = response.json()
+
+            return created_admin
+
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def toggle_repo_star(username: str, repo_id: int) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+            return response
+
+        def add_repo(username, name: str, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": True,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def get_starred_repos(requester: str | None, target_user: str) -> dict:
+            if requester is not None:
+                jwt = log_in(requester)
+                header = {"Authorization": f"Bearer {jwt}"}
+                response = client.get(f"/api/v1/repositories/starred/u/{target_user}", headers=header)
+            else:
+                response = client.get(f"/api/v1/repositories/starred/u/{target_user}")
+
+            return response
+
+        change_superadmin_password()
+
+        add_user("u1")
+        add_user("u2")
+        add_user("u3")
+        add_admin("a1")
+
+        org1 = add_org("u1", "o1")
+
+        r1 = add_repo("u1", "r1", org1["id"])
+        r2 = add_repo("u1", "r2", None)
+        r3 = add_repo("u1", "r3", None)
+
+        toggle_repo_star("u2", r2["id"])
+        toggle_repo_star("u2", r3["id"])
+        toggle_repo_star("u3", r1["id"])
+        toggle_repo_star("u3", r2["id"])
+
+        # Target user is missing
+        assert get_starred_repos(None, "invalid").status_code == 404
+        # Target user has zero starred repos
+        assert len(get_starred_repos(None, "u1").json()["repos"]) == 0
+        # Target user has some starred repos while none belongs to org
+        assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+        assert len(get_starred_repos(None, "u2").json()["organization_names"]) == 0
+        # Target user has some starred repos while some belongs to org
+        assert len(get_starred_repos(None, "u3").json()["repos"]) == 2
+        assert len(get_starred_repos(None, "u3").json()["organization_names"]) == 1
+        # Requester doesn't need to be logged in
+        assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+        assert len(get_starred_repos("u1", "u2").json()["repos"]) == 2
+        assert len(get_starred_repos("a1", "u2").json()["repos"]) == 2
+        assert len(get_starred_repos("admin", "u2").json()["repos"]) == 2
+        # Admin doesn't have starred repos        
+        assert get_starred_repos(None, "a1").status_code == 400
+        # Super admin doesn't have starred repos        
+        assert get_starred_repos(None, "admin").status_code == 400
+
