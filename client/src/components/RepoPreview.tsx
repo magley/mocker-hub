@@ -1,6 +1,6 @@
 import React from 'react';
 import { RepoDTO, RepositoryBadge } from '../api/repo.api';
-import { Card, Col } from 'react-bootstrap';
+import { Card, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { RepositoryService } from '../api/repo.api';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
@@ -44,7 +44,11 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                     {/* Last update */}
                     {repo.last_updated && (
                         <Card.Text style={{ fontSize: '0.8rem' }}>
-                            Updated {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
+                            Updated <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{new Date(repo.last_updated).toLocaleString()}</Tooltip>}>
+                                <span>{formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}</span>
+                            </OverlayTrigger>
                         </Card.Text>
                     )}
 
