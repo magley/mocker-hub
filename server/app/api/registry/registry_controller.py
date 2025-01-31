@@ -2,6 +2,7 @@ from fastapi import APIRouter, Depends, HTTPException, Request
 
 from app.api.registry.registry_utils import decode_auth_header
 from app.api.registry.registry_service import RegistryService, get_registry_service
+from app.api.config.logutil import LOGGER
 
 router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
 
@@ -24,13 +25,16 @@ def registry_endpoint(
     return registry_service.handle_registry_request(username, password, scope, service)
 
 @router.api_route("/notifications", methods=["POST", "PUT"], summary="Webhook for Docker Registry")
-def registry_notification_endpoint(data: dict):
+def registry_notification_endpoint(data: dict, registry_service: RegistryService = Depends(get_registry_service)):
     for event in data["events"]:
         action = event.get("action", None)
         username = event.get("actor", {}).get("name", None)
         repository = event.get("target", {}).get("repository", None)
         tag = event.get("target", {}).get("tag", None)
         
-        print(f"User '{username}' completed '{action}' of repository '{repository}' with tag '{tag}'")
+        try:
+            registry_service.on_notification(username, action, repository, tag)
+        except Exception as e:
+            LOGGER.error(f"Couldn't handle Distribution webhook: {e}")
 
     return {}
