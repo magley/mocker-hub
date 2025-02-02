@@ -108,6 +108,9 @@ class RepositoryService:
         repo = self._update_repo_attribute(repo, dto)
         return repo
 
+    def is_repo_starred_by(self, repo: Repository, user: User) -> bool:
+        return any(star.repository.id == repo.id for star in user.stars)
+    
     def toggle_repo_star(self, user_id: int, repo_id: int) -> Tuple[Repository, bool]:
         repo = self.repo_repo.find_by_id(repo_id)
         if repo is None:
@@ -117,10 +120,7 @@ class RepositoryService:
         if user is None:
             raise NotFoundException(User, user_id)
         
-        repo_is_starred = False
-        for star in user.stars:
-            if star.repository.id == repo_id:
-                repo_is_starred = True
+        repo_is_starred = self.is_repo_starred_by(repo, user)
 
         if repo_is_starred == False:
             new_star = RepositoryStar(starrer_id=user_id, repository_id=repo_id)
@@ -134,5 +134,9 @@ class RepositoryService:
         # `False` indicates the repo is no longer starred
         return repo, False
 
+    def get_starred_repositories_of_user(self, user_id: int) -> List[Repository]:
+        user_repos = self.repo_repo.find_user_starred_repos(user_id)
+        return user_repos
+    
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)

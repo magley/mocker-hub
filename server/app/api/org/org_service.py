@@ -7,6 +7,7 @@ from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.org.org_repo import OrganizationRepo
 from app.api.config.exception_handler import FieldTakenException
 from app.api.config.images import generate_inline_image, save_image
+from app.api.repo.repo_model import Repository
  
 class OrganizationService:
     def __init__(self, session: Session):
@@ -81,8 +82,9 @@ class OrganizationService:
     
     def is_user_member_of_org(self, org_id: int, user_id: int) -> bool:
         return self.org_repo.user_is_in_org(user_id, org_id)
-    
 
+    def get_org_names_from_repos(self, repos: List[Repository]) -> Dict[int, str]:
+        return self.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
     return OrganizationService(session)

@@ -74,3 +74,11 @@ class RepositoryRepo:
         self.session.refresh(star)
         return self.set_stars(repo, repo.stars + 1)    
     
+    def find_user_starred_repos(self, user_id: int) -> List[Repository] | None:
+        query = (
+            select(Repository)
+            .join(RepositoryStar, Repository.id == RepositoryStar.repository_id, isouter=False)
+            .where(RepositoryStar.starrer_id == user_id)
+        )
+
+        return self.session.exec(query).all()

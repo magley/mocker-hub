@@ -16,6 +16,9 @@ from app.api.events.event_model import EventLevel
 
 router = APIRouter(prefix="/repositories", tags=["repositories"])
 
+def _repo_model_to_dto(r: Repository) -> RepositoryDTO:
+    return RepositoryDTO.model_validate(r.model_dump())
+
 @router.post("/", response_model=RepositoryDTO, status_code=200, summary="Create a new repository")
 @pre_authorize([UserRole.user, UserRole.admin])
 def register_repo(jwt: JWTDep, dto: RepositoryCreateDTO, repo_service: RepositoryService = Depends(get_repo_service)):
@@ -41,10 +44,9 @@ def get_repositories_of_user(
     # response_model (@router.get(..., response_model=...)). If the DTO
     # is nested, it won't work.
     repos = repo_service.get_repositories_of_user(user_id, me_id)
-    repos = [RepositoryDTO.model_validate(repo.model_dump()) for repo in repos]
+    repos = [_repo_model_to_dto(repo) for repo in repos]
 
-    user = user_service.find_by_id(user_id)
-    org_names = org_service.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
+    org_names = org_service.get_org_names_from_repos(repos)
 
     return ReposOfUserDTO(user_id=user_id, user_name=user.username, repos=repos, organization_names=org_names)
 
@@ -73,7 +75,7 @@ def get_repo_by_canonical_name(
     result["org_name"] = None if (repo.organization is None) else repo.organization.name
     result["can_update"] = access_control_service.has_write_access(user_id, repo.id)
     result["can_star"] = access_control_service.has_star_access(user_id, repo.id)
-    result["starred"] = any(star.repository.id == repo.id for star in user.stars) if (result["can_star"]) else False
+    result["starred"] = repo_service.is_repo_starred_by(repo, user) if (result["can_star"]) else False
     result = RepositoryExtDTO.model_validate(result)
     
     return result
@@ -133,16 +135,17 @@ def toggle_repo_star(
 def get_starred_repositories_of_user(
     username: str, 
     user_service: UserService = Depends(get_user_service),
+    repo_service: RepositoryService = Depends(get_repo_service), 
     org_service: OrganizationService = Depends(get_org_service)):
     
     user = user_service.find_by_username(username)
-    user_id = user.id
 
     if (user.role != UserRole.user):
         raise AccessDeniedException(f"User {username} cannot star or unstar repositories")
 
-    repos = [RepositoryDTO.model_validate(repo_star.repository.model_dump()) for repo_star in user.stars]
+    repos = repo_service.get_starred_repositories_of_user(user.id)
+    repos = [_repo_model_to_dto(repo) for repo in repos]
 
-    org_names = org_service.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
+    org_names = org_service.get_org_names_from_repos(repos)
 
     return ReposOfUserDTO(user_id=user.id, user_name=user.username, repos=repos, organization_names=org_names)
