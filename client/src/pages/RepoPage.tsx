@@ -39,7 +39,7 @@ export const RepositoryPage: React.FC = () => {
                 ...repo,
                 ...res.data,
             });
-            addToast(`${repo.name} is ${repo.starred ? "starred" : "unstarred"}.`, ToastType.success)
+            addToast(`${repo.name} is ${res.data.starred ? "starred" : "unstarred"}.`, ToastType.success)
         }).catch((err: AxiosError) => {
             addToast((err.response?.data as any)["detail"]["message"], ToastType.error);
         });
