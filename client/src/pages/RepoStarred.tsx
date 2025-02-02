@@ -57,13 +57,13 @@ export const RepoStarred: React.FC = () => {
     return (
         <Row className="g-4 repo-of-user">
             {/* Page Title */}
-            {fullResult?.user_id == myId ? (<h1>Your starred repositories</h1>) : (<h1>{fullResult!.user_name}'s starred repositories</h1>)}
-            
-            {
-                fullResult?.repos.map((repo) => (
+            {fullResult!.user_id == myId ? (<h1>Your starred repositories</h1>) : (<h1>{fullResult!.user_name}'s starred repositories</h1>)}
+
+            { fullResult!.repos.length >= 1 ? (
+                fullResult!.repos.map((repo) => (
                     <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} />
                 ))
-            }
+            ) : ( <div>No repositories starred yet.</div> ) }
         </Row >
     );
 };

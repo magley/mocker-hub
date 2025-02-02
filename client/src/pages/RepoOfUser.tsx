@@ -158,98 +158,102 @@ export const RepositoriesOfUser: React.FC = () => {
             {/* Page Title */}
             {fullResult?.user_id == myId ? (<h1>Your repositories</h1>) : (<h1>{fullResult!.user_name}'s repositories</h1>)}
 
-            <div className="d-flex justify-content-between">
-                {/* Search Bar */}
-                <input
-                    type="text"
-                    className="form-control me-2"
-                    placeholder="Search repositories"
-                    value={searchTerm}
-                    onChange={handleSearchChange}
-                />
-                {/* Advanced Search Button */}
-                <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
-                    {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
-                </Button>
-            </div>
-
-            {/* Advanced Search Section */}
-            {showAdvancedSearch && (
-                <div className="advanced-search">
-                    <div className="mb-1">
-                        <select
-                            id="orgSelect"
-                            className="form-select"
-                            value={selectedOrg || ''}
-                            onChange={handleOrgChange}
-                        >
-                            <option value="">All Organizations</option>
-                            {Array.from(orgNames!.entries()).map(([id, name]) => (
-                                <option key={id} value={id}>
-                                    {name}
-                                </option>
-                            ))}
-                        </select>
-                    </div>
-
-                    {/* Visibility Filter - Public/Private Checkboxes */}
-                    <div className="mb-3">
-                        <div className="form-check ms-2 d-flex align-items-center">
-                            <input
-                                type="checkbox"
-                                className="form-check-input form-check-lg"
-                                checked={showPublic}
-                                onChange={handlePublicChange}
-                                id="publicCheckbox"
-                            />
-                            <label className="form-check-label fs-5 ms-2" htmlFor="publicCheckbox">
-                                <i className="bi bi-journal-bookmark"></i> <b>Public</b>
-                            </label>
+            { fullResult!.repos.length >= 1 ? (
+                <>
+                <div className="d-flex justify-content-between">
+                    {/* Search Bar */}
+                    <input
+                        type="text"
+                        className="form-control me-2"
+                        placeholder="Search repositories"
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                    />
+                    {/* Advanced Search Button */}
+                    <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
+                        {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
+                    </Button>
+                </div>
+        
+                {/* Advanced Search Section */}
+                {showAdvancedSearch && (
+                    <div className="advanced-search">
+                        <div className="mb-1">
+                            <select
+                                id="orgSelect"
+                                className="form-select"
+                                value={selectedOrg || ''}
+                                onChange={handleOrgChange}
+                            >
+                                <option value="">All Organizations</option>
+                                {Array.from(orgNames!.entries()).map(([id, name]) => (
+                                    <option key={id} value={id}>
+                                        {name}
+                                    </option>
+                                ))}
+                            </select>
                         </div>
-                        <div className="form-check ms-2 d-flex align-items-center">
-                            <input
-                                type="checkbox"
-                                className="form-check-input form-check-lg"
-                                checked={showPrivate}
-                                onChange={handlePrivateChange}
-                                id="privateCheckbox"
-                            />
-                            <label className="form-check-label fs-5 ms-2" htmlFor="privateCheckbox">
-                                <i className="bi bi-lock"></i> <b>Private</b>
-                            </label>
-                        </div>
-                    </div>
 
-                    {/* Badges - Checkbox for each badge type. */}
-                    {badgeDataBundle.map((badge) => (
+                        {/* Visibility Filter - Public/Private Checkboxes */}
                         <div className="mb-3">
                             <div className="form-check ms-2 d-flex align-items-center">
                                 <input
                                     type="checkbox"
                                     className="form-check-input form-check-lg"
-                                    checked={badge.checked}
-                                    onChange={badge.onChange}
-                                    id={badge.id}
+                                    checked={showPublic}
+                                    onChange={handlePublicChange}
+                                    id="publicCheckbox"
                                 />
-                                <label className="form-check-label fs-5 ms-2" htmlFor={badge.id}>
-                                    <span className={`badge rounded-pill ${RepositoryService.BadgeToBootstrapColor(badge.type)}`}>
-                                        <i className={`bi ${RepositoryService.BadgeToHumanBootstrapIcon(badge.type)}`}> </i>
-                                        {RepositoryService.BadgeToHumanText(badge.type)}
-                                    </span>
+                                <label className="form-check-label fs-5 ms-2" htmlFor="publicCheckbox">
+                                    <i className="bi bi-journal-bookmark"></i> <b>Public</b>
+                                </label>
+                            </div>
+                            <div className="form-check ms-2 d-flex align-items-center">
+                                <input
+                                    type="checkbox"
+                                    className="form-check-input form-check-lg"
+                                    checked={showPrivate}
+                                    onChange={handlePrivateChange}
+                                    id="privateCheckbox"
+                                />
+                                <label className="form-check-label fs-5 ms-2" htmlFor="privateCheckbox">
+                                    <i className="bi bi-lock"></i> <b>Private</b>
                                 </label>
                             </div>
                         </div>
-                    ))}
-                </div >
-            )
-            }
 
-            {
-                filteredRepos.map((repo) => (
-                    <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} />
-                ))
-            }
+                        {/* Badges - Checkbox for each badge type. */}
+                        {badgeDataBundle.map((badge) => (
+                            <div className="mb-3">
+                                <div className="form-check ms-2 d-flex align-items-center">
+                                    <input
+                                        type="checkbox"
+                                        className="form-check-input form-check-lg"
+                                        checked={badge.checked}
+                                        onChange={badge.onChange}
+                                        id={badge.id}
+                                    />
+                                    <label className="form-check-label fs-5 ms-2" htmlFor={badge.id}>
+                                        <span className={`badge rounded-pill ${RepositoryService.BadgeToBootstrapColor(badge.type)}`}>
+                                            <i className={`bi ${RepositoryService.BadgeToHumanBootstrapIcon(badge.type)}`}> </i>
+                                            {RepositoryService.BadgeToHumanText(badge.type)}
+                                        </span>
+                                    </label>
+                                </div>
+                            </div>
+                        ))}
+                    </div >
+                )
+                }
 
-        </Row >
+                {
+                    filteredRepos.map((repo) => (
+                        <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} />
+                    ))
+                }
+                </>
+            ) : ( <div>No repositories created yet.</div> ) }
+
+        </Row>
     );
 };
