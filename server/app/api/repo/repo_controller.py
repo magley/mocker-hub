@@ -1,7 +1,7 @@
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends
-from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, StarredReposOfUserDTO, ToggleStarRepoDTO
+from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, ToggleStarRepoDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
 from app.api.user.user_model import User, UserRole
@@ -129,7 +129,7 @@ def toggle_repo_star(
     
     return ToggleStarRepoDTO(**repo.model_dump(), starred=starred)
 
-@router.get("/starred/u/{username}", response_model=StarredReposOfUserDTO, status_code=200, summary="Get starred repositories of user")
+@router.get("/starred/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get starred repositories of user")
 def get_starred_repositories_of_user(
     username: str, 
     user_service: UserService = Depends(get_user_service),
@@ -145,4 +145,4 @@ def get_starred_repositories_of_user(
 
     org_names = org_service.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
 
-    return StarredReposOfUserDTO(user_id=user_id, user_name=user.username, repos=repos, organization_names=org_names)
+    return ReposOfUserDTO(user_id=user.id, user_name=user.username, repos=repos, organization_names=org_names)

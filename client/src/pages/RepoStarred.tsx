@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate, useParams } from 'react-router-dom';
 import { Row, Spinner } from 'react-bootstrap';
-import { RepositoryService, ReposOfUserDTO, StarredReposOfUserDTO } from '../api/repo.api';
+import { RepositoryService, ReposOfUserDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import './RepoOfUser.css';
 import { getJwtId } from '../util/localstorage';
@@ -29,7 +29,7 @@ export const RepoStarred: React.FC = () => {
             return;
         }
 
-        RepositoryService.GetStarredRepositories(username).then((res: AxiosResponse<StarredReposOfUserDTO>) => {
+        RepositoryService.GetStarredRepositories(username).then((res: AxiosResponse<ReposOfUserDTO>) => {
             setLoading(false);
             setFullResult(res.data);
 

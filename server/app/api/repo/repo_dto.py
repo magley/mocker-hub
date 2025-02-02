@@ -29,12 +29,6 @@ class ReposOfUserDTO(BaseModel):
     repos: List[RepositoryDTO]
     organization_names: Dict[int, str]
 
-class StarredReposOfUserDTO(BaseModel):
-    user_id: int
-    user_name: str
-    repos: List[RepositoryDTO]
-    organization_names: Dict[int, str]
-
 class RepositoryExtDTO(RepositoryDTO):
     owner_name: str
     org_name: str | None

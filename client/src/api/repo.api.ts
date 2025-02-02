@@ -36,13 +36,6 @@ export interface ReposOfUserDTO {
     organization_names: { [key: number]: string };
 }
 
-export interface StarredReposOfUserDTO {
-    user_id: number,
-    user_name: string,
-    repos: RepoDTO[],
-    organization_names: { [key: number]: string };
-}
-
 export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
@@ -102,7 +95,7 @@ export class RepositoryService {
         return await axiosInstance.get(`/repositories/u/${username}`);
     }
 
-    static async GetStarredRepositories(username: string): Promise<AxiosResponse<StarredReposOfUserDTO>> {
+    static async GetStarredRepositories(username: string): Promise<AxiosResponse<ReposOfUserDTO>> {
         return await axiosInstance.get(`/repositories/starred/u/${username}`);
     }
 
