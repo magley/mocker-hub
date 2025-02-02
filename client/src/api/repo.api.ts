@@ -52,6 +52,10 @@ export interface RepositoryDescUpdateDTO {
     desc: string,
 }
 
+export interface ToggleStarRepoDTO extends RepoDTO {
+    starred: boolean,
+}
+
 export class RepositoryService {
     static BadgeToHumanText(badge: RepositoryBadge): string {
         switch (badge) {
@@ -111,7 +115,7 @@ export class RepositoryService {
         return await axiosInstance.put(`/repositories/${repoId}/desc`, dto)
     }
 
-    static async ToggleRepositoryStar(repoId: number) : Promise<AxiosResponse<RepoDTO>> {
+    static async ToggleRepositoryStar(repoId: number) : Promise<AxiosResponse<ToggleStarRepoDTO>> {
         return await axiosInstance.put(`/repositories/star/${repoId}`)
     }
 }

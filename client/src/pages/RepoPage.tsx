@@ -4,7 +4,7 @@ import { RepoOverview } from '../components/RepoOverview';
 import { RepoTags } from '../components/RepoTags';
 import { RepoSettings } from '../components/RepoSettings';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { RepoExtDTO, RepositoryBadge, RepositoryService } from '../api/repo.api';
+import { RepoExtDTO, RepositoryBadge, RepositoryService, ToggleStarRepoDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import "./RepoPage.css";
 import { formatDistanceToNow } from 'date-fns';
@@ -34,7 +34,7 @@ export const RepositoryPage: React.FC = () => {
     });
 
     const toggleRepoStar = (repo: RepoExtDTO) => {
-        RepositoryService.ToggleRepositoryStar(repo.id).then((res) => {
+        RepositoryService.ToggleRepositoryStar(repo.id).then((res: AxiosResponse<ToggleStarRepoDTO>) => {
             setRepo({
                 ...repo,
                 ...res.data,
