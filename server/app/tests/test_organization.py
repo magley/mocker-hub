@@ -6,6 +6,8 @@ from app.api.org.org_dto import OrganizationCreateDTO
 from app.api.config.exception_handler import FieldTakenException
 from app.api.config.exception_handler import FieldTakenException
 from app.api.main import app
+from app.api.repo.repo_model import Repository
+from app.api.org.org_model import Organization
 
 
 @pytest.fixture
@@ -133,3 +135,43 @@ def test_find_org_names_by_ids_no_matches(org_service):
 
     assert result == expected_output
     org_service.org_repo.find_orgs_by_ids.assert_called_once_with(ids)
+
+class TestGetOrgNamesFromRepos:
+    ''' 
+    The following tests for `get_org_names_from_repos` are trivial,
+    since the observed method is mostly dependent on `find_org_names_by_ids`
+    which is already tested in various cases. 
+    '''
+
+    def test_repos_is_empty(self, org_service):
+        """Test case for when repos is emtpy."""
+        expected_output = {}
+        org_service.org_repo.find_orgs_by_ids.return_value = expected_output
+        repos = []
+        result = org_service.get_org_names_from_repos(repos)
+        assert result == expected_output
+        org_service.org_repo.find_orgs_by_ids.assert_called_once_with([])
+
+    def test_repos_is_not_empty(self, org_service):
+        """Test case for when repos is not emtpy."""
+        o1 = MagicMock(spec=Organization)
+        o2 = MagicMock(spec=Organization)
+        o1.name = "org1"
+        o2.name = "org2"
+        o1.id = 1
+        o2.id = 2
+        r1 = MagicMock(spec=Repository)
+        r2 = MagicMock(spec=Repository)
+        r1.organization_id = o1.id
+        r2.organization_id = o2.id
+
+        ids = [o1.id, o2.id]
+        expected_output = {o1.id: o1.name, o2.id: o2.name}
+        org_service.org_repo.find_orgs_by_ids.return_value = expected_output
+
+        repos = [r1, r2]
+
+        result = org_service.get_org_names_from_repos(repos)
+        assert result[o1.id] == o1.name
+        assert result[o2.id] == o2.name
+        org_service.org_repo.find_orgs_by_ids.assert_called_once_with(ids)

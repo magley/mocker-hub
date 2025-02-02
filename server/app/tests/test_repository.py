@@ -1016,137 +1016,206 @@ def test_toggle_repo_star___integration():
         # A super admin who is attempting to star a repo
         assert toggle_repo_star("admin", repo_1["id"]).status_code == 403
 
-def test_get_starred_repositories_of_user___integration():
-    with TestClient(app) as client:
-        def add_user(username):
-            data = {
-                "username": username,
-                "email": f"{username}@gmail.com",
-                "password": "12345678"
-            }
-            response = client.post("/api/v1/users/", json=data)
-            return response.json()
-        
-        def log_in(username: str, password: str = "12345678"):
-            data = {
-                "username": username,
-                "password": password
-            }
-            response = client.post("/api/v1/users/login", json=data)
-            if response.status_code == 400:
-                assert response.json() == False
-            jwt = response.json()["token"]
-            return jwt
-        
-        def change_superadmin_password():
-            # [1] Loading the super admin credentials
-            config_file = "./volume-server-cfg/superadmin_password.txt"
+class TestGetStarredRepositoriesOfUser:
+    '''
+    The following unit tests are trivial, since the logic of the method 
+    is only about obtaining repositories from database.
+    '''
 
-            with open(config_file, "r") as f:
-                old_password = f.readline()
+    def test_have_no_starred_repos(self, repo_service):
+        """ Test case for when there is no starred repos of user. """   
+        user_id = 1
+        repo_service.repo_repo.find_user_starred_repos.return_value = None
+        result = repo_service.get_starred_repositories_of_user(user_id)
+        assert result is None
+        repo_service.repo_repo.find_user_starred_repos.assert_called_once_with(user_id)
 
-            jwt = log_in("admin", old_password)
-            header = {"Authorization": f"Bearer {jwt}"}
+    def test_have_starred_repos(self, repo_service):
+        """ Test case for when there is starred repos of user. """   
+        user_id = 1
+        r = mock.MagicMock(spec=Repository)
+        repo_service.repo_repo.find_user_starred_repos.return_value = r
+        result = repo_service.get_starred_repositories_of_user(user_id)
+        assert result is r
+        repo_service.repo_repo.find_user_starred_repos.assert_called_once_with(user_id)
 
-            # [2] Changing the super admin password
-            data = {
-                "old_password": old_password,
-                "new_password": "12345678"
-            }
-            response = client.post("/api/v1/users/password", json=data, headers=header)
-            assert response.is_success
+    def test_integration(self):
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+            
+            def log_in(username: str, password: str = "12345678"):
+                data = {
+                    "username": username,
+                    "password": password
+                }
+                response = client.post("/api/v1/users/login", json=data)
+                if response.status_code == 400:
+                    assert response.json() == False
+                jwt = response.json()["token"]
+                return jwt
+            
+            def change_superadmin_password():
+                # [1] Loading the super admin credentials
+                config_file = "./volume-server-cfg/superadmin_password.txt"
 
-        def add_admin(admin_username: str) -> dict:
-            jwt = log_in("admin", "12345678")
-            header = {"Authorization": f"Bearer {jwt}"}
-            data = {
-                "username": admin_username,
-                "email": f"{admin_username}@gmail.com",
-                "password": "12345678"
-            }
-            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
-            created_admin = response.json()
+                with open(config_file, "r") as f:
+                    old_password = f.readline()
 
-            return created_admin
-
-        def add_org(username, name: str) -> dict:
-            jwt = log_in(username)
-            header = {"Authorization": f"Bearer {jwt}"}
-
-            dto1 = {
-                "name": name,
-                "desc": "",
-                "image": None
-            }
-            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
-
-        def toggle_repo_star(username: str, repo_id: int) -> dict:
-            jwt = log_in(username)
-            header = {"Authorization": f"Bearer {jwt}"}
-
-            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
-
-            return response
-
-        def add_repo(username, name: str, org_id: int | None) -> dict:
-            jwt = log_in(username)
-            header = {"Authorization": f"Bearer {jwt}"}
-
-            data = {
-                "name": name,
-                "desc": "",
-                "public": True,
-                "organization_id": org_id,
-            }
-
-            response = client.post("/api/v1/repositories/", json=data, headers=header)
-            return response.json()
-        
-        def get_starred_repos(requester: str | None, target_user: str) -> dict:
-            if requester is not None:
-                jwt = log_in(requester)
+                jwt = log_in("admin", old_password)
                 header = {"Authorization": f"Bearer {jwt}"}
-                response = client.get(f"/api/v1/repositories/starred/u/{target_user}", headers=header)
-            else:
-                response = client.get(f"/api/v1/repositories/starred/u/{target_user}")
 
-            return response
+                # [2] Changing the super admin password
+                data = {
+                    "old_password": old_password,
+                    "new_password": "12345678"
+                }
+                response = client.post("/api/v1/users/password", json=data, headers=header)
+                assert response.is_success
 
-        change_superadmin_password()
+            def add_admin(admin_username: str) -> dict:
+                jwt = log_in("admin", "12345678")
+                header = {"Authorization": f"Bearer {jwt}"}
+                data = {
+                    "username": admin_username,
+                    "email": f"{admin_username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+                created_admin = response.json()
 
-        add_user("u1")
-        add_user("u2")
-        add_user("u3")
-        add_admin("a1")
+                return created_admin
 
-        org1 = add_org("u1", "o1")
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
 
-        r1 = add_repo("u1", "r1", org1["id"])
-        r2 = add_repo("u1", "r2", None)
-        r3 = add_repo("u1", "r3", None)
+                dto1 = {
+                    "name": name,
+                    "desc": "",
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto1, headers=header).json()
 
-        toggle_repo_star("u2", r2["id"])
-        toggle_repo_star("u2", r3["id"])
-        toggle_repo_star("u3", r1["id"])
-        toggle_repo_star("u3", r2["id"])
+            def toggle_repo_star(username: str, repo_id: int) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
 
-        # Target user is missing
-        assert get_starred_repos(None, "invalid").status_code == 404
-        # Target user has zero starred repos
-        assert len(get_starred_repos(None, "u1").json()["repos"]) == 0
-        # Target user has some starred repos while none belongs to org
-        assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
-        assert len(get_starred_repos(None, "u2").json()["organization_names"]) == 0
-        # Target user has some starred repos while some belongs to org
-        assert len(get_starred_repos(None, "u3").json()["repos"]) == 2
-        assert len(get_starred_repos(None, "u3").json()["organization_names"]) == 1
-        # Requester doesn't need to be logged in
-        assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
-        assert len(get_starred_repos("u1", "u2").json()["repos"]) == 2
-        assert len(get_starred_repos("a1", "u2").json()["repos"]) == 2
-        assert len(get_starred_repos("admin", "u2").json()["repos"]) == 2
-        # Admin doesn't have starred repos        
-        assert get_starred_repos(None, "a1").status_code == 400
-        # Super admin doesn't have starred repos        
-        assert get_starred_repos(None, "admin").status_code == 400
+                response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
 
+                return response
+
+            def add_repo(username, name: str, org_id: int | None) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                data = {
+                    "name": name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": org_id,
+                }
+
+                response = client.post("/api/v1/repositories/", json=data, headers=header)
+                return response.json()
+            
+            def get_starred_repos(requester: str | None, target_user: str) -> dict:
+                if requester is not None:
+                    jwt = log_in(requester)
+                    header = {"Authorization": f"Bearer {jwt}"}
+                    response = client.get(f"/api/v1/repositories/starred/u/{target_user}", headers=header)
+                else:
+                    response = client.get(f"/api/v1/repositories/starred/u/{target_user}")
+
+                return response
+
+            change_superadmin_password()
+
+            add_user("u1")
+            add_user("u2")
+            add_user("u3")
+            add_admin("a1")
+
+            org1 = add_org("u1", "o1")
+
+            r1 = add_repo("u1", "r1", org1["id"])
+            r2 = add_repo("u1", "r2", None)
+            r3 = add_repo("u1", "r3", None)
+
+            toggle_repo_star("u2", r2["id"])
+            toggle_repo_star("u2", r3["id"])
+            toggle_repo_star("u3", r1["id"])
+            toggle_repo_star("u3", r2["id"])
+
+            # Target user is missing
+            assert get_starred_repos(None, "invalid").status_code == 404
+            # Target user has zero starred repos
+            assert len(get_starred_repos(None, "u1").json()["repos"]) == 0
+            # Target user has some starred repos while none belongs to org
+            assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+            assert len(get_starred_repos(None, "u2").json()["organization_names"]) == 0
+            # Target user has some starred repos while some belongs to org
+            assert len(get_starred_repos(None, "u3").json()["repos"]) == 2
+            assert len(get_starred_repos(None, "u3").json()["organization_names"]) == 1
+            # Requester doesn't need to be logged in
+            assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("u1", "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("a1", "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("admin", "u2").json()["repos"]) == 2
+            # Admin doesn't have starred repos        
+            assert get_starred_repos(None, "a1").status_code == 400
+            # Super admin doesn't have starred repos        
+            assert get_starred_repos(None, "admin").status_code == 400
+
+class TestIsRepoStarredBy:
+
+    def test_user_has_no_stars(self, repo_service):
+        """ Test case for when user has no stars. """   
+        repo = mock.MagicMock(spec=Repository)
+        user = mock.MagicMock(spec=User)
+        user.stars = []
+
+        result = repo_service.is_repo_starred_by(repo, user)
+        assert result is False
+
+    def test_user_has_stars_and_didnt_star_repo(self, repo_service):
+        """ Test case for when user has stars, but didn't star repo. """   
+        r1 = mock.MagicMock(spec=Repository)
+        r2 = mock.MagicMock(spec=Repository)
+        r3 = mock.MagicMock(spec=Repository)
+        r1.id = 1
+        r2.id = 2
+        r3.id = 99
+        s1 = mock.MagicMock(spec=RepositoryStar)
+        s2 = mock.MagicMock(spec=RepositoryStar)
+        s1.repository_id = r1.id
+        s2.repository_id = r2.id
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [s1, s2]
+
+        result = repo_service.is_repo_starred_by(r3, user)
+        assert result is False
+
+    def test_user_has_stars_and_did_star_repo(self, repo_service):
+        """ Test case for when user has stars and did star repo. """   
+        r1 = mock.MagicMock(spec=Repository)
+        r2 = mock.MagicMock(spec=Repository)
+        r1.id = 1
+        r2.id = 2
+        s1 = mock.MagicMock(spec=RepositoryStar)
+        s2 = mock.MagicMock(spec=RepositoryStar)
+        s1.repository = r1
+        s2.repository = r2
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [s1, s2]
+
+        result = repo_service.is_repo_starred_by(r1, user)
+        assert result is True
