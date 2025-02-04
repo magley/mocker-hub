@@ -26,6 +26,7 @@ export interface RepoDTO {
     badge: RepositoryBadge,
     last_updated: string, // Encoded Date() object.
     downloads: number,
+    stars: number
 }
 
 export interface ReposOfUserDTO {
@@ -39,6 +40,8 @@ export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
     can_update: boolean,
+    can_star: boolean,
+    starred: boolean | null,
 }
 
 export interface RepositoryVisibilityUpdateDTO {
@@ -47,6 +50,10 @@ export interface RepositoryVisibilityUpdateDTO {
 
 export interface RepositoryDescUpdateDTO {
     desc: string,
+}
+
+export interface ToggleStarRepoDTO extends RepoDTO {
+    starred: boolean,
 }
 
 export class RepositoryService {
@@ -92,6 +99,10 @@ export class RepositoryService {
         return await axiosInstance.get(`/repositories/u/${username}`);
     }
 
+    static async GetStarredRepositories(username: string): Promise<AxiosResponse<ReposOfUserDTO>> {
+        return await axiosInstance.get(`/repositories/starred/u/${username}`);
+    }
+
     static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoExtDTO>> {
         return await axiosInstance.get(`/repositories/name/${name}`);
     }
@@ -102,5 +113,9 @@ export class RepositoryService {
 
     static async UpdateRepoDescById(repoId: number, dto: RepositoryDescUpdateDTO) : Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.put(`/repositories/${repoId}/desc`, dto)
+    }
+
+    static async ToggleRepositoryStar(repoId: number) : Promise<AxiosResponse<ToggleStarRepoDTO>> {
+        return await axiosInstance.put(`/repositories/star/${repoId}`)
     }
 }

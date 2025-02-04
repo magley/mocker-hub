@@ -14,7 +14,7 @@ from app.api.config.exception_handler import InvalidInputException, FieldTakenEx
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
 from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
-from app.api.repo.repo_model import Repository, RepositoryBadge
+from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
 from app.api.main import app
 from app.api.org.org_repo import OrganizationRepo
 from app.api.org.org_model import OrganizationMembers
@@ -417,8 +417,24 @@ def test_get_repo_by_canonical_name___integration():
             else:
                 response = client.get(f"/api/v1/repositories/name/{repo_canonical_name}")
                 return response
-
         
+        def toggle_repo_star(username: str, repo_id: int) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+            return response
+        
+        def can_star(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["can_star"]
+
+        def can_update(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["can_update"]
+
+        def starred(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["starred"]
+
         add_user("u1")
         add_user("u2")
         add_user("u3")
@@ -427,13 +443,16 @@ def test_get_repo_by_canonical_name___integration():
         org1 = add_org("u1", "o1")
         org2 = add_org("u2", "o2")
 
-        add_repo("u1", "u1_public", True, None)
-        add_repo("u1", "u1_private", False, None)
-        add_repo("u1", "o1_public", True, org1["id"])
-        add_repo("u1", "o1_private", False, org1["id"])
+        r1 = add_repo("u1", "u1_public", True, None)
+        r2 = add_repo("u1", "u1_private", False, None)
+        r3 = add_repo("u1", "o1_public", True, org1["id"])
+        r4 = add_repo("u1", "o1_private", False, org1["id"])
 
         add_repo("u2", "u2_private", False, None)
 
+        toggle_repo_star("u3", r1["id"])
+        toggle_repo_star("u4", r3["id"])
+        
         assert get_repo_by_canonical_name("u1", "u1/u1_public").is_success
         assert get_repo_by_canonical_name("u1", "u1/u1_private").is_success
         assert get_repo_by_canonical_name("u1", "o1/o1_public").is_success
@@ -449,6 +468,27 @@ def test_get_repo_by_canonical_name___integration():
         assert get_repo_by_canonical_name("u2", "u1/o1_public").status_code == 404
         assert get_repo_by_canonical_name("u2", "u1/o1_private").status_code == 404
         assert get_repo_by_canonical_name("u2", "u2/u2_private").is_success
+
+        assert can_update("u1", "u1/u1_public") is True
+        assert can_update("u1", "u1/u1_private") is True
+        assert can_update("u1", "o1/o1_public") is True
+        assert can_update("u1", "o1/o1_private") is True
+        assert can_update("u3", "u1/u1_public") is False
+        assert can_update("u4", "o1/o1_public") is False
+        
+        assert can_star("u1", "u1/u1_public") is False
+        assert can_star("u1", "u1/u1_private") is False
+        assert can_star("u1", "o1/o1_public") is False
+        assert can_star("u1", "o1/o1_private") is False
+        assert can_star("u3", "u1/u1_public") is True
+        assert can_star("u4", "o1/o1_public") is True
+
+        assert starred("u1", "u1/u1_public") is False
+        assert starred("u1", "u1/u1_private") is False
+        assert starred("u1", "o1/o1_public") is False
+        assert starred("u1", "o1/o1_private") is False
+        assert starred("u3", "u1/u1_public") is True
+        assert starred("u4", "o1/o1_public") is True
 
 @pytest.mark.parametrize(
     "dto_class, a_name, a_value", [
@@ -700,3 +740,482 @@ def test_update_repo_by_id___integration(user_type, update_type):
         assert update("user_2", repo_2["id"], attribute).status_code == 400
         # User who is a team member with read write permissions against repo
         assert update("user_2", repo_3["id"], attribute).status_code == 200
+
+class TestToggleRepoStar:
+
+    def test_missing_repo(self, repo_service):
+        """ Test case for when the user requests an update for a missing repository. """   
+        user_id = 1
+        repo_id = 1
+
+        repo_service.repo_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+    def test_missing_user(self, repo_service):
+        """ Test case for when the request is made by a guest or a missing user. """   
+        user_id = None
+        repo_id = 1
+        repo = mock.MagicMock(spec=Repository)
+
+        repo_service.repo_repo.find_by_id.return_value = repo
+        repo_service.user_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+        user_id = 1
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+    def test_when_repo_becomes_starred(self, repo_service):
+        """ Test case for when the repo is unstarred and then becomes starred. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 0
+        start_repo.id = repo_id
+
+        end_repo = mock.MagicMock(spec=Repository)
+        end_repo.stars = 1
+        end_repo.id = repo_id
+
+        user = mock.MagicMock(spec=User)
+        user.stars = []
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.star_repo.return_value = end_repo
+
+        res_repo, starred = repo_service.toggle_repo_star(user_id, repo_id)
+
+        assert res_repo.id == repo_id
+        assert res_repo.stars == end_repo.stars
+        assert starred is True
+
+    def test_when_repo_becomes_unstarred(self, repo_service):
+        """ Test case for when the repo is starred and then becomes unstarred. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 1
+        start_repo.id = repo_id
+
+        end_repo = mock.MagicMock(spec=Repository)
+        end_repo.stars = 0
+        end_repo.id = repo_id
+
+        repo_star = mock.MagicMock(spec=RepositoryStar)
+        repo_star.repository = start_repo
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [repo_star]
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.unstar_repo.return_value = end_repo
+
+        res_repo, starred = repo_service.toggle_repo_star(user_id, repo_id)
+
+        assert res_repo.id == repo_id
+        assert res_repo.stars == end_repo.stars
+        assert starred is False
+
+    def test_when_repo_star_suddenly_missing(self, repo_service):
+        """ Test case for when the repo star becomes missing during runtime. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 1
+        start_repo.id = repo_id
+
+        repo_star = mock.MagicMock(spec=RepositoryStar)
+        repo_star.repository = start_repo
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [repo_star]
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.unstar_repo.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+def test_toggle_repo_star___integration():
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            return response.json()
+        
+        def log_in(username: str, password: str = "12345678"):
+            data = {
+                "username": username,
+                "password": password
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            if response.status_code == 400:
+                assert response.json() == False
+            jwt = response.json()["token"]
+            return jwt
+        
+        def change_superadmin_password():
+            # [1] Loading the super admin credentials
+            config_file = "./volume-server-cfg/superadmin_password.txt"
+
+            with open(config_file, "r") as f:
+                old_password = f.readline()
+
+            jwt = log_in("admin", old_password)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            # [2] Changing the super admin password
+            data = {
+                "old_password": old_password,
+                "new_password": "12345678"
+            }
+            response = client.post("/api/v1/users/password", json=data, headers=header)
+            assert response.is_success
+
+        def toggle_repo_star(username: str, repo_id: int) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+            return response
+
+        def add_admin(admin_username: str) -> dict:
+            jwt = log_in("admin", "12345678")
+            header = {"Authorization": f"Bearer {jwt}"}
+            data = {
+                "username": admin_username,
+                "email": f"{admin_username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+            created_admin = response.json()
+
+            return created_admin
+
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+            # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+            from app.api.config.database import engine
+            from app.api.org.org_repo import OrganizationRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            org_repo = OrganizationRepo(session)
+            return org_repo.add_user_to_org(org_id, user_id)
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "organization_id": org_id,
+                "name": name,
+                "desc": desc,
+            }
+            return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+        def add_team_member(user_id: int, team_id: int) -> TeamMember:
+            # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_member(team_id, user_id)
+        
+        def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+            # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_permission(team_id, repo_id, kind)
+
+        change_superadmin_password()
+
+        user_1 = add_user("user_1")
+        user_2 = add_user("user_2")
+        user_3 = add_user("user_3")
+        user_4 = add_admin("user_4")
+        
+        org_1 = add_org("user_2", "org_1")
+
+        repo_1 = add_repo("user_1", "repo_1", True, None)
+        repo_2 = add_repo("user_1", "repo_2", False, None)
+        repo_3 = add_repo("user_2", "repo_3", True, org_1["id"])
+        repo_4 = add_repo("user_2", "repo_4", True, org_1["id"])
+        repo_5 = add_repo("user_2", "repo_5", True, org_1["id"])
+
+        add_user_to_org(user_3["id"], org_1["id"])
+        
+        team_1 = add_team("user_2", org_1["id"], "team_1")
+        add_team_member(user_3["id"], team_1["id"])
+        
+        add_team_permission(team_1["id"], repo_3["id"], TeamPermissionKind.admin)
+        add_team_permission(team_1["id"], repo_4["id"], TeamPermissionKind.read)
+        add_team_permission(team_1["id"], repo_5["id"], TeamPermissionKind.read_write)
+
+        # A regular user who is the owner of the repo
+        assert toggle_repo_star("user_1", repo_1["id"]).status_code == 400
+        # A regular user who is attempting to update a non-existent repo
+        assert toggle_repo_star("user_1", -1).status_code == 400
+        # A regular user without any special relations to the repo
+        assert toggle_repo_star("user_2", repo_1["id"]).is_success
+        # A regular user who is attempting to star a private repo
+        assert toggle_repo_star("user_2", repo_2["id"]).status_code == 400
+        # A regular user who is a member of the repo's organization
+        assert toggle_repo_star("user_2", repo_3["id"]).status_code == 400
+        # A regular user who is a team member with admin permissions on the repo
+        assert toggle_repo_star("user_3", repo_3["id"]).status_code == 400
+        # A regular user who is a team member with read permissions on the repo
+        assert toggle_repo_star("user_3", repo_4["id"]).status_code == 400
+        # A regular user who is a team member with read write permissions on the repo
+        assert toggle_repo_star("user_3", repo_5["id"]).status_code == 400
+        # An admin who is attempting to star a repo
+        assert toggle_repo_star("user_4", repo_1["id"]).status_code == 403
+        # A super admin who is attempting to star a repo
+        assert toggle_repo_star("admin", repo_1["id"]).status_code == 403
+
+class TestGetStarredRepositoriesOfUser:
+    '''
+    The following unit tests are trivial, since the logic of the method 
+    is only about obtaining repositories from database.
+    '''
+
+    def test_have_no_starred_repos(self, repo_service):
+        """ Test case for when there is no starred repos of user. """   
+        user_id = 1
+        repo_service.repo_repo.find_user_starred_repos.return_value = None
+        result = repo_service.get_starred_repositories_of_user(user_id)
+        assert result is None
+        repo_service.repo_repo.find_user_starred_repos.assert_called_once_with(user_id)
+
+    def test_have_starred_repos(self, repo_service):
+        """ Test case for when there is starred repos of user. """   
+        user_id = 1
+        r = mock.MagicMock(spec=Repository)
+        repo_service.repo_repo.find_user_starred_repos.return_value = r
+        result = repo_service.get_starred_repositories_of_user(user_id)
+        assert result is r
+        repo_service.repo_repo.find_user_starred_repos.assert_called_once_with(user_id)
+
+    def test_integration(self):
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+            
+            def log_in(username: str, password: str = "12345678"):
+                data = {
+                    "username": username,
+                    "password": password
+                }
+                response = client.post("/api/v1/users/login", json=data)
+                if response.status_code == 400:
+                    assert response.json() == False
+                jwt = response.json()["token"]
+                return jwt
+            
+            def change_superadmin_password():
+                # [1] Loading the super admin credentials
+                config_file = "./volume-server-cfg/superadmin_password.txt"
+
+                with open(config_file, "r") as f:
+                    old_password = f.readline()
+
+                jwt = log_in("admin", old_password)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                # [2] Changing the super admin password
+                data = {
+                    "old_password": old_password,
+                    "new_password": "12345678"
+                }
+                response = client.post("/api/v1/users/password", json=data, headers=header)
+                assert response.is_success
+
+            def add_admin(admin_username: str) -> dict:
+                jwt = log_in("admin", "12345678")
+                header = {"Authorization": f"Bearer {jwt}"}
+                data = {
+                    "username": admin_username,
+                    "email": f"{admin_username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+                created_admin = response.json()
+
+                return created_admin
+
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto1 = {
+                    "name": name,
+                    "desc": "",
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+            def toggle_repo_star(username: str, repo_id: int) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+                return response
+
+            def add_repo(username, name: str, org_id: int | None) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                data = {
+                    "name": name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": org_id,
+                }
+
+                response = client.post("/api/v1/repositories/", json=data, headers=header)
+                return response.json()
+            
+            def get_starred_repos(requester: str | None, target_user: str) -> dict:
+                if requester is not None:
+                    jwt = log_in(requester)
+                    header = {"Authorization": f"Bearer {jwt}"}
+                    response = client.get(f"/api/v1/repositories/starred/u/{target_user}", headers=header)
+                else:
+                    response = client.get(f"/api/v1/repositories/starred/u/{target_user}")
+
+                return response
+
+            change_superadmin_password()
+
+            add_user("u1")
+            add_user("u2")
+            add_user("u3")
+            add_admin("a1")
+
+            org1 = add_org("u1", "o1")
+
+            r1 = add_repo("u1", "r1", org1["id"])
+            r2 = add_repo("u1", "r2", None)
+            r3 = add_repo("u1", "r3", None)
+
+            toggle_repo_star("u2", r2["id"])
+            toggle_repo_star("u2", r3["id"])
+            toggle_repo_star("u3", r1["id"])
+            toggle_repo_star("u3", r2["id"])
+
+            # Target user is missing
+            assert get_starred_repos(None, "invalid").status_code == 404
+            # Target user has zero starred repos
+            assert len(get_starred_repos(None, "u1").json()["repos"]) == 0
+            # Target user has some starred repos while none belongs to org
+            assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+            assert len(get_starred_repos(None, "u2").json()["organization_names"]) == 0
+            # Target user has some starred repos while some belongs to org
+            assert len(get_starred_repos(None, "u3").json()["repos"]) == 2
+            assert len(get_starred_repos(None, "u3").json()["organization_names"]) == 1
+            # Requester doesn't need to be logged in
+            assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("u1", "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("a1", "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("admin", "u2").json()["repos"]) == 2
+            # Admin doesn't have starred repos        
+            assert get_starred_repos(None, "a1").status_code == 400
+            # Super admin doesn't have starred repos        
+            assert get_starred_repos(None, "admin").status_code == 400
+
+class TestIsRepoStarredBy:
+
+    def test_user_has_no_stars(self, repo_service):
+        """ Test case for when user has no stars. """   
+        repo = mock.MagicMock(spec=Repository)
+        user = mock.MagicMock(spec=User)
+        user.stars = []
+
+        result = repo_service.is_repo_starred_by(repo, user)
+        assert result is False
+
+    def test_user_has_stars_and_didnt_star_repo(self, repo_service):
+        """ Test case for when user has stars, but didn't star repo. """   
+        r1 = mock.MagicMock(spec=Repository)
+        r2 = mock.MagicMock(spec=Repository)
+        r3 = mock.MagicMock(spec=Repository)
+        r1.id = 1
+        r2.id = 2
+        r3.id = 99
+        s1 = mock.MagicMock(spec=RepositoryStar)
+        s2 = mock.MagicMock(spec=RepositoryStar)
+        s1.repository_id = r1.id
+        s2.repository_id = r2.id
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [s1, s2]
+
+        result = repo_service.is_repo_starred_by(r3, user)
+        assert result is False
+
+    def test_user_has_stars_and_did_star_repo(self, repo_service):
+        """ Test case for when user has stars and did star repo. """   
+        r1 = mock.MagicMock(spec=Repository)
+        r2 = mock.MagicMock(spec=Repository)
+        r1.id = 1
+        r2.id = 2
+        s1 = mock.MagicMock(spec=RepositoryStar)
+        s2 = mock.MagicMock(spec=RepositoryStar)
+        s1.repository = r1
+        s2.repository = r2
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [s1, s2]
+
+        result = repo_service.is_repo_starred_by(r1, user)
+        assert result is True

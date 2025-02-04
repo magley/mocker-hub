@@ -1,13 +1,14 @@
 import React, { useEffect, useState } from 'react';
-import { Nav, OverlayTrigger, Spinner, Tab, Tooltip } from 'react-bootstrap';
+import { Nav, Spinner, Tab, Tooltip, OverlayTrigger } from 'react-bootstrap';
 import { RepoOverview } from '../components/RepoOverview';
 import { RepoTags } from '../components/RepoTags';
 import { RepoSettings } from '../components/RepoSettings';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { RepoExtDTO, RepositoryBadge, RepositoryService } from '../api/repo.api';
+import { RepoExtDTO, RepositoryBadge, RepositoryService, ToggleStarRepoDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import "./RepoPage.css";
 import { formatDistanceToNow } from 'date-fns';
+import { ToastType, useToastStore } from '../util/toastStore';
 
 interface RepoOwner {
     name: string,
@@ -22,6 +23,7 @@ export const RepositoryPage: React.FC = () => {
     const [repo, setRepo] = useState<RepoExtDTO>();
     const [key, setKey] = useState<string>('overview');
     const [loading, setLoading] = useState<boolean>(true);
+    const addToast = useToastStore((state) => state.addToast);
     let navigate = useNavigate();
     const [repoOwner, setRepoOwner] = useState<RepoOwner>({
         name: '...',
@@ -30,6 +32,24 @@ export const RepositoryPage: React.FC = () => {
         badge: RepositoryBadge.none,
         linkURL: "."
     });
+
+    const toggleRepoStar = (repo: RepoExtDTO) => {
+        RepositoryService.ToggleRepositoryStar(repo.id).then((res: AxiosResponse<ToggleStarRepoDTO>) => {
+            setRepo({
+                ...repo,
+                ...res.data,
+            });
+            addToast(`${repo.name} is ${res.data.starred ? "starred" : "unstarred"}.`, ToastType.success)
+        }).catch((err: AxiosError) => {
+            addToast((err.response?.data as any)["detail"]["message"], ToastType.error);
+        });
+    }
+
+    const renderTooltip  = (props: any, msg: string) => {
+        return <Tooltip {...props}>
+            {msg}
+        </Tooltip>
+    }
 
     useEffect(() => {
         RepositoryService.GetRepoByCanonicalName(repoName!).then((res: AxiosResponse<RepoExtDTO>) => {
@@ -102,7 +122,7 @@ export const RepositoryPage: React.FC = () => {
                     )}
                 </h5>
 
-                <p className="d-flex">
+                <p className="d-flex align-items-center">
                     {/* Download Count */}
                     {
                         <span className="align-items-center">
@@ -113,13 +133,34 @@ export const RepositoryPage: React.FC = () => {
 
                     <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
 
-                    {/* Star Count [TODO] */}
-                    {/*repo.stars > 0*/ true && (
-                        <span className="align-items-center">
-                            <i className="bi bi-moon moon"></i>
-                            <span>{17}</span>
-                        </span>
+                    {/* Star Count */}
+                    { repo && (
+                        <div>
+                            <span className="align-items-center">
+                                    <OverlayTrigger
+                                        overlay={ (props) => 
+                                            renderTooltip(
+                                                props, 
+                                                repo.can_star
+                                                    ? (repo.starred
+                                                        ? "Unstar this repository"
+                                                        : "Star this repository")
+                                                    : "Cannot star this repository"
+                                            )
+                                        }
+                                        placement="bottom"
+                                    >
+                                        <button 
+                                            className={`bi ${!repo.can_star || !repo.starred ? "bi-star" : "bi-star-fill"}`} 
+                                            onClick={repo.can_star ? () => toggleRepoStar(repo) : undefined}
+                                            style={{ cursor: repo.can_star ? 'pointer' : "default", background: 'none', border: 'none'}}
+                                        ></button>
+                                    </OverlayTrigger>
+                                    <span>{repo.stars}</span>
+                            </span>
+                        </div>
                     )}
+                    
                 </p>
             </div>
 

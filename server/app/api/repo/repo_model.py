@@ -14,6 +14,14 @@ class RepositoryBadge(str, enum.Enum):
     verified = "verified"
     sponsored_oss = "sponsored_oss"
 
+class RepositoryStar(SQLModel, table=True):
+    __tablename__ = "repository_stars"
+
+    starrer_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    repository_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True)
+
+    starrer: "User" = Relationship(back_populates="stars")
+    repository: "Repository" = Relationship()
 
 class Repository(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -50,6 +58,7 @@ class Repository(SQLModel, table=True):
 
     badge: RepositoryBadge = Field(default=RepositoryBadge.none)
     last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    stars: int = Field(default=0)
     downloads: int = Field(default=0)
 
     tags: List["Tag"] = Relationship(back_populates="repository")

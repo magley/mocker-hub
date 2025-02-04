@@ -1,4 +1,4 @@
-from typing import List
+from typing import List, Tuple
 from fastapi import Depends
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
@@ -6,7 +6,7 @@ from app.api.config.database import get_database
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
-from app.api.repo.repo_model import Repository, RepositoryBadge
+from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
 from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
 from app.api.org.org_repo import OrganizationRepo
 from app.api.team.team_repo import TeamRepo
@@ -108,5 +108,33 @@ class RepositoryService:
         repo = self._update_repo_attribute(repo, dto)
         return repo
 
+    def is_repo_starred_by(self, repo: Repository, user: User) -> bool:
+        return any(star.repository.id == repo.id for star in user.stars)
+    
+    def toggle_repo_star(self, user_id: int, repo_id: int) -> Tuple[Repository, bool]:
+        repo = self.repo_repo.find_by_id(repo_id)
+        if repo is None:
+            raise NotFoundException(Repository, repo_id)
+        
+        user = self.user_repo.find_by_id(user_id)
+        if user is None:
+            raise NotFoundException(User, user_id)
+        
+        repo_is_starred = self.is_repo_starred_by(repo, user)
+
+        if repo_is_starred == False:
+            new_star = RepositoryStar(starrer_id=user_id, repository_id=repo_id)
+            # `True` indicates the repo is now starred
+            return self.repo_repo.star_repo(new_star, repo), True
+
+        repo = self.repo_repo.unstar_repo(repo, user)
+        
+        # `False` indicates the repo is no longer starred
+        return repo, False
+
+    def get_starred_repositories_of_user(self, user_id: int) -> List[Repository]:
+        user_repos = self.repo_repo.find_user_starred_repos(user_id)
+        return user_repos
+    
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)
