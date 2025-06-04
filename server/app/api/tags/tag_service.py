@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import Depends
-from app.api.config.exception_handler import AccessDeniedException, NotFoundException, UserException
+from app.api.config.exception_handler import AccessDeniedException, NotFoundException, NotInRelationshipException, UserException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.repo.repo_model import Repository

@@ -90,7 +90,7 @@ def build_jwt_for_docker_registry(username: str, service: str, scope: str) -> st
 
     ---
 
-    Returns a string representaiton of the encoded JWT.
+    Returns a string representation of the encoded JWT.
     """
     now = datetime.datetime.now()
 
