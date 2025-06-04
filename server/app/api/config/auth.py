@@ -21,7 +21,7 @@ from app.api.user.user_model import User, UserRole
 from typing import Annotated
 from functools import wraps
 from typing import List, Callable
-
+import inspect
 
 if os.getenv('mocker_hub_TEST_ENV') is not None:
     print("[!] Detected environment variable mocker_hub_TEST_ENV -> setting up unsafe JWT envirnoment")
@@ -163,12 +163,15 @@ def pre_authorize(roles: List[str] | List[UserRole] | None, ignore_password_chan
 
     def decorator(func: Callable):
         @wraps(func)
-        def wrapper(*args, **kwargs):
+        async def wrapper(*args, **kwargs):
             jwt_dep = kwargs.get('jwt')
             if not jwt_dep:
                 # TODO: Change error message in production.
                 raise Exception("Cannot perform authorization without a JWT. Your router endpoint function MUST have a parameter named `jwt: JWTDep`")
             validate_jwt_or_raise_exceptions(jwt_dep, roles, ignore_password_change_requirement)
-            return func(*args, **kwargs)
+            if inspect.iscoroutinefunction(func):
+                return await func(*args, **kwargs)
+            else:
+                return func(*args, **kwargs)
         return wrapper
     return decorator
