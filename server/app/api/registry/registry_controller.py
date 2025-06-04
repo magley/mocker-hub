@@ -4,10 +4,12 @@ from app.api.registry.registry_utils import decode_auth_header, build_delete_end
 from app.api.registry.registry_service import RegistryService, get_registry_service
 from app.api.config.logutil import LOGGER
 from app.api.user.user_model import UserRole
-from app.api.config.auth import JWTDep, get_username_from_jwt, pre_authorize
+from app.api.config.auth import JWTDep, get_id_from_jwt, get_username_from_jwt, pre_authorize
 from app.api.tags.tag_service import TagService, get_tag_service
 from app.api.registry.registry_dto import DeleteRepoTagDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
+from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
+from app.api.config.exception_handler import AccessDeniedException
 
 router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
 
@@ -66,18 +68,22 @@ async def delete_manifest(request: Request, repo_name: str, digest: str, token: 
     return await client.delete(url, headers=headers)
 
 @router.delete("/tag", status_code=200, summary="Delete a tag by its name")
-@pre_authorize([UserRole.user, UserRole.admin])                             # TODO: Access control service
+@pre_authorize([UserRole.user, UserRole.admin])                             
 async def delete_tag_endpoint(
     jwt: JWTDep,
     dto: DeleteRepoTagDTO,
     request: Request,
-    registry_service: RegistryService = Depends(get_registry_service),
     repo_service: RepositoryService = Depends(get_repo_service), 
-    tag_service: TagService = Depends(get_tag_service)
+    tag_service: TagService = Depends(get_tag_service),
+    access_control_service: AccessControlService = Depends(get_access_control_service)
 ):
     repo = repo_service.find_by_id(dto.repo_id)
     tag = tag_service.find_by_name_and_repo_id(dto.tag_name, dto.repo_id)
     username = get_username_from_jwt(jwt)
+    user_id = get_id_from_jwt(jwt)
+
+    if not access_control_service.has_delete_tag_access(user_id, repo.id):
+        raise AccessDeniedException(f"User {user_id} cannot delete a tag {tag.name} of repository with identifier {repo.id}")
 
     token = build_delete_endpoints_jwt(username, repo.name)
 
