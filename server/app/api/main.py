@@ -2,6 +2,8 @@ import asyncio
 import os
 from fastapi import APIRouter, FastAPI
 from contextlib import asynccontextmanager
+
+from httpx import AsyncClient
 from app.api.config.initialize import init_create_tables, configure_cors, init_dummy_data, init_superadmin
 from app.api.config.exception_handler import register_exception_handler
 import app.api.events
@@ -37,8 +39,10 @@ async def lifespan(app: FastAPI):
     init_create_tables()
     init_cache()
     init_superadmin()
+    app.client = AsyncClient(verify=False) # TODO: Insecure.
     asyncio.create_task(try_to_init_elasticsearch())
     yield
+    await app.client.aclose()
 
 app = FastAPI(lifespan=lifespan)
 app.include_router(the_router, prefix="/api/v1")

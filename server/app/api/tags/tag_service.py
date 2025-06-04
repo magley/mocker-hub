@@ -71,7 +71,12 @@ class TagService:
         """
         search_query = search_query.strip()
         return self.tag_repo.filter(repo_name, search_query, params)
-
+    
+    def find_by_name_and_repo_id(self, name: str, repo_id: int) -> Tag:
+        tag = self.tag_repo.find_by_name_and_repo_id(name, repo_id)
+        if tag is None:
+            raise NotInRelationshipException(Repository, repo_id, Tag, name)
+        return tag
 
 def get_tag_service(session: Session = Depends(get_database)) -> TagService:
     return TagService(session)

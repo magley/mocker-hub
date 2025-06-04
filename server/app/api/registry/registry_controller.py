@@ -1,8 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.api.registry.registry_utils import decode_auth_header
+from app.api.registry.registry_utils import decode_auth_header, build_delete_endpoints_jwt
 from app.api.registry.registry_service import RegistryService, get_registry_service
 from app.api.config.logutil import LOGGER
+from app.api.user.user_model import UserRole
+from app.api.config.auth import JWTDep, get_username_from_jwt, pre_authorize
+from app.api.tags.tag_service import TagService, get_tag_service
+from app.api.registry.registry_dto import DeleteRepoTagDTO
+from app.api.repo.repo_service import RepositoryService, get_repo_service
 
 router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
 
@@ -38,3 +43,60 @@ def registry_notification_endpoint(data: dict, registry_service: RegistryService
             LOGGER.error(f"Couldn't handle Distribution webhook: {e}")
 
     return {}
+
+def _create_manifest_path(repo_name: str, digest: str | None = None, tag_name: str | None = None) -> str:
+    ref = tag_name if digest is None else digest
+    return f"https://distribution:5000/v2/{repo_name}/manifests/{ref}"
+
+async def get_manifest(request: Request, repo_name: str, tag_name: str, token: str):
+    url = _create_manifest_path(repo_name, tag_name)
+    headers = {
+        "Authorization": f"Bearer {token}", 
+        "Accept": "application/vnd.docker.distribution.manifest.v2+json, "
+                  "application/vnd.oci.image.index.v1+json, "
+                  "application/vnd.oci.image.manifest.v1+json"
+    }
+    client = request.app.client
+    return await client.get(url, headers=headers)
+
+async def delete_manifest(request: Request, repo_name: str, digest: str, token: str):
+    url = _create_manifest_path(repo_name, digest)
+    headers = { "Authorization": f"Bearer {token}" }
+    client = request.app.client
+    return await client.delete(url, headers=headers)
+
+@router.delete("/tag", status_code=200, summary="Delete a tag by its name")
+@pre_authorize([UserRole.user, UserRole.admin])                             # TODO: Access control service
+async def delete_tag_endpoint(
+    jwt: JWTDep,
+    dto: DeleteRepoTagDTO,
+    request: Request,
+    registry_service: RegistryService = Depends(get_registry_service),
+    repo_service: RepositoryService = Depends(get_repo_service), 
+    tag_service: TagService = Depends(get_tag_service)
+):
+    repo = repo_service.find_by_id(dto.repo_id)
+    tag = tag_service.find_by_name_and_repo_id(dto.tag_name, dto.repo_id)
+    username = get_username_from_jwt(jwt)
+
+    token = build_delete_endpoints_jwt(username, repo.name)
+
+    response = await get_manifest(request, repo.name, tag.name, token)
+    if response.status_code == 404: 
+        # If the manifest for a certain tag can't be found,
+        # it means the manifest has already been deleted.
+        # Two tags can point to the same manifest.
+        # If a manifest pointed to by two tags is deleted,
+        # both tags are also removed from the distribution.
+        tag_service.remove_tag(tag.id)
+        return { "message": f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'." }
+    elif response.status_code != 200:
+        raise HTTPException(status_code=response.status_code, detail=response.json()) 
+    
+    manifest_digest = response.headers['Docker-Content-Digest']
+    response = await delete_manifest(request, repo.name, manifest_digest, token)
+    if response.status_code != 202:
+        raise HTTPException(status_code=response.status_code, detail=response.json())   
+
+    tag_service.remove_tag(tag.id) 
+    return {"message": f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'."}
