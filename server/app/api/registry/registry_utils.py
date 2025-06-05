@@ -120,7 +120,12 @@ def build_jwt_for_docker_registry(username: str, service: str, scope: str) -> st
 
     return jwt.encode(token_payload, SECRET_KEY, algorithm='RS256', headers=token_headers)    
 
-def build_delete_endpoints_jwt(username: str, repo_name: str) -> str:
-    service = os.getenv('REGISTRY_ADDR', 'localhost:5000')
-    scope = f"repository:{repo_name}:push,pull,delete"  # TODO
+def build_get_manifest_jwt(username: str, repo_name: str) -> str:
+    service = os.getenv('REGISTRY_ADDR', 'distribution:5000')
+    scope = f"repository:{repo_name}:pull"  
+    return build_jwt_for_docker_registry(username, service, scope)
+
+def build_delete_manifest_jwt(username: str, repo_name: str) -> str:
+    service = os.getenv('REGISTRY_ADDR', 'distribution:5000')
+    scope = f"repository:{repo_name}:delete"  
     return build_jwt_for_docker_registry(username, service, scope)

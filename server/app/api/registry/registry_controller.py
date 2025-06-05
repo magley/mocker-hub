@@ -1,6 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Request
 
-from app.api.registry.registry_utils import decode_auth_header, build_delete_endpoints_jwt
+from app.api.registry.registry_utils import build_get_manifest_jwt, decode_auth_header, build_delete_manifest_jwt
 from app.api.registry.registry_service import RegistryService, get_registry_service
 from app.api.config.logutil import LOGGER
 from app.api.user.user_model import UserRole
@@ -85,7 +85,7 @@ async def delete_tag_endpoint(
     if not access_control_service.has_delete_tag_access(user_id, repo.id):
         raise AccessDeniedException(f"User {user_id} cannot delete a tag {tag.name} of repository with identifier {repo.id}")
 
-    token = build_delete_endpoints_jwt(username, repo.name)
+    token = build_get_manifest_jwt(username, repo.name)
 
     response = await get_manifest(request, repo.name, tag.name, token)
     if response.status_code == 404: 
@@ -95,10 +95,11 @@ async def delete_tag_endpoint(
         # If a manifest pointed to by two tags is deleted,
         # both tags are also removed from the distribution.
         tag_service.remove_tag(tag.id)
-        return { "message": f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'." }
+        return {"message": f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'."}
     elif response.status_code != 200:
         raise HTTPException(status_code=response.status_code, detail=response.json()) 
-    
+
+    token = build_delete_manifest_jwt(username, repo.name)
     manifest_digest = response.headers['Docker-Content-Digest']
     response = await delete_manifest(request, repo.name, manifest_digest, token)
     if response.status_code != 202:
