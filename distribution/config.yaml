@@ -20,7 +20,7 @@ auth:
     # In this case, the issuer is the server host.
     issuer: localhost:8000
     # The service is the docker registry host.
-    service: localhost:5000
+    service: distribution:5000
     # You must specify the root certificate bundle. For self-signed
     # certificates, that's just the certificate file itself.
     rootcertbundle: /mnt/local/certs/cert.pem

@@ -39,7 +39,7 @@ async def lifespan(app: FastAPI):
     init_create_tables()
     init_cache()
     init_superadmin()
-    app.client = AsyncClient(verify=False) # TODO: Insecure.
+    app.client = AsyncClient(verify="/mnt/local/certs/cert.pem") 
     asyncio.create_task(try_to_init_elasticsearch())
     yield
     await app.client.aclose()
