@@ -39,20 +39,12 @@ class TagService:
         else:
             return self.tag_repo.update_last_push(existing_tag, user_id)
 
-    def remove_tag(self, user_id: int | None, tag_id: int) -> None:
-        # Fetch the tag.
+    def remove_tag(self, tag_id: int) -> None:
 
         tag = self.tag_repo.find_by_id(tag_id)
         if tag is None:
             raise NotFoundException(Tag, tag_id)
         
-        # Access control.
-        
-        if not self.access_control_service.has_write_access(user_id, tag.repository_id):
-            raise AccessDeniedException(f"User {user_id} cannot remove tag {tag.name} to repo {tag.repository.canonical_name}")
-          
-        # Delete the tag.
-
         self.tag_repo.remove(tag)
 
     def get_tags_for_repository(self, repo_id: int) -> List[Tag]:
