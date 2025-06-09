@@ -2,7 +2,7 @@ from fastapi import Depends, HTTPException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.access_control.access_control_service import AccessControlService
-from app.api.registry.registry_utils import build_get_manifest_jwt, build_delete_manifest_jwt, parse_scope, build_jwt_for_docker_registry
+from app.api.registry.registry_utils import build_manifest_jwt, parse_scope, build_jwt_for_docker_registry
 from app.api.user.user_service import UserService
 from app.api.repo.repo_service import RepositoryService
 from app.api.registry.registry_dto import DeleteTagResponseDTO, RegistryActionOperation
@@ -100,7 +100,7 @@ class RegistryService:
    
     async def _fetch_manifest_digest(self, client: RegistryClient, repo_name: str, tag_name: str, username: str) -> str | None:
 
-        jwt = build_get_manifest_jwt(username, repo_name)
+        jwt = build_manifest_jwt(username, repo_name, "GET")
         response = await client.get_manifest(repo_name, tag_name, jwt)
 
         if response.status_code == 404:
@@ -110,7 +110,7 @@ class RegistryService:
         return response.headers["Docker-Content-Digest"]
         
     async def _delete_manifest_by_digest(self, client: RegistryClient, repo_name: str, digest: str, username: str) -> None:
-        jwt = build_delete_manifest_jwt(username, repo_name)
+        jwt = build_manifest_jwt(username, repo_name, "DELETE")
         response = await client.delete_manifest(repo_name, digest, jwt)
         assert response.status_code == 202
 

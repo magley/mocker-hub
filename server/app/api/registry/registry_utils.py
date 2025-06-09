@@ -2,9 +2,9 @@ import base64
 import datetime
 import os
 import uuid
-
 import jwt
 
+from typing import Literal
 from app.api.registry.registry_dto import RegistryAction, RegistryActionOperation
 
 SECRET_KEY = ""
@@ -120,12 +120,13 @@ def build_jwt_for_docker_registry(username: str, service: str, scope: str) -> st
 
     return jwt.encode(token_payload, SECRET_KEY, algorithm='RS256', headers=token_headers)    
 
-def build_get_manifest_jwt(username: str, repo_name: str) -> str:
-    service = os.getenv('REGISTRY_ADDR', 'distribution:5000')
-    scope = f"repository:{repo_name}:pull"  
+def build_manifest_jwt(username: str, repo_name: str, method: Literal["GET", "DELETE"]) -> str: 
+
+    scope = f"repository:{repo_name}:"  
+    scope = scope + "pull" if method == "GET" else scope + "delete"
+    host = os.environ["DISTRIBUTION_HOST"]
+    port = os.environ["DISTRIBUTION_PORT"]
+    service = f"{host}:{port}"
+
     return build_jwt_for_docker_registry(username, service, scope)
 
-def build_delete_manifest_jwt(username: str, repo_name: str) -> str:
-    service = os.getenv('REGISTRY_ADDR', 'distribution:5000')
-    scope = f"repository:{repo_name}:delete"  
-    return build_jwt_for_docker_registry(username, service, scope)
