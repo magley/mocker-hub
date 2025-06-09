@@ -12,6 +12,9 @@ class RegistryAction(BaseModel):
     repo_canonical_name: str
     operations: List[RegistryActionOperation]
 
-class DeleteRepoTagDTO(BaseModel):
+class DeleteTagDTO(BaseModel):
     repo_id: int
     tag_name: str
+
+class DeleteTagResponseDTO(BaseModel):
+    message: str

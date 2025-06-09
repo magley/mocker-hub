@@ -1,6 +1,8 @@
 from typing import Literal
 from fastapi import Request, Response
-from httpx import AsyncClient
+from httpx import AsyncClient, HTTPError
+from app.api.config.exception_handler import RegistryException
+from app.api.config.logutil import LOGGER
 
 class RegistryClient:
 
@@ -23,7 +25,18 @@ class RegistryClient:
     async def _request(self, method: Literal["GET", "DELETE"], url: str, token: str, **kwargs) -> Response:
         headers = kwargs.pop('headers', {})
         headers["Authorization"] = f"Bearer {token}"
-        response = await self.client.request(method, url, headers=headers) 
+
+        try:
+            response = await self.client.request(method, url, headers=headers) 
+        except HTTPError as e:
+            LOGGER.error(f"HTTP error when calling Distribution (method={method} url={url} status=502): \n{e}")
+            raise RegistryException(502, str(e))    
+            
+        if response.status_code not in (200, 202, 404):
+            body = response.text()
+            LOGGER.error(f"Unexpected HTTP response when calling Distribution (method={method} url={url} status={response.status_code}): \n{body}")
+            raise RegistryException(response.status_code, body)
+
         return response
 
     async def get_manifest(self, repo_name: str, tag_name: str, token: str) -> Response:

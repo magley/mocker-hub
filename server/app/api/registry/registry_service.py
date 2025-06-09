@@ -2,11 +2,14 @@ from fastapi import Depends, HTTPException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.access_control.access_control_service import AccessControlService
-from app.api.registry.registry_utils import parse_scope, build_jwt_for_docker_registry
+from app.api.registry.registry_utils import build_get_manifest_jwt, build_delete_manifest_jwt, parse_scope, build_jwt_for_docker_registry
 from app.api.user.user_service import UserService
 from app.api.repo.repo_service import RepositoryService
-from app.api.registry.registry_dto import RegistryActionOperation
+from app.api.registry.registry_dto import DeleteTagResponseDTO, RegistryActionOperation
 from app.api.tags.tag_service import TagService
+from app.api.repo.repo_model import Repository
+from app.api.tags.tag_model import Tag
+from app.api.registry.registry_client import RegistryClient
 
 class RegistryService:
     def __init__(self, session: Session):
@@ -30,6 +33,7 @@ class RegistryService:
         self.access_control_service = AccessControlService(session)
 
     def on_notification(self, username: str, action: str, repo_name: str, tag: str | None):
+
         if action == 'push':
             user = self.user_service.find_by_username(username)
             repo = self.repo_service.find_by_canonical_name(repo_name)
@@ -37,8 +41,16 @@ class RegistryService:
             tag = self.tag_service.on_push(user.id, repo.id, tag)
             print(f"Pushed tag {tag}")
 
-        print(f"User '{username}' completed '{action}' of repository '{repo_name}' with tag '{tag}'")
+        # This type of action is triggered only by tag deletion, as it
+        # is the only type of delete action supported by Distribution.
+        elif action == 'delete':
+            repo = self.repo_service.find_by_canonical_name(repo_name)
+            tag = self.tag_service.find_by_name_and_repo_id(tag, repo.id)
 
+            tag = self.tag_service.remove_tag(tag.id)
+            print(f"Deleted tag {tag}")
+
+        print(f"User '{username}' completed '{action}' on repository '{repo_name}' with tag '{tag}'")  
 
     def handle_registry_request(self, username: str, password: str, scope: str | None, service: str | None):
         # User with the provided credentials must exist.
@@ -85,5 +97,39 @@ class RegistryService:
         jwt = build_jwt_for_docker_registry(username, service, scope)
         return {"token": jwt}
     
+   
+    async def _fetch_manifest_digest(self, client: RegistryClient, repo_name: str, tag_name: str, username: str) -> str | None:
+
+        jwt = build_get_manifest_jwt(username, repo_name)
+        response = await client.get_manifest(repo_name, tag_name, jwt)
+
+        if response.status_code == 404:
+            return None
+        
+        assert response.status_code == 200
+        return response.headers["Docker-Content-Digest"]
+        
+    async def _delete_manifest_by_digest(self, client: RegistryClient, repo_name: str, digest: str, username: str) -> None:
+        jwt = build_delete_manifest_jwt(username, repo_name)
+        response = await client.delete_manifest(repo_name, digest, jwt)
+        assert response.status_code == 202
+
+    async def delete_tag(self, client: RegistryClient, username: str, repo: Repository, tag: Tag) -> DeleteTagResponseDTO:
+        # If the manifest for a certain tag can't be found,
+        # it means the manifest has already been deleted.
+        # Two tags can point to the same manifest.
+        # If a manifest pointed to by two tags is deleted,
+        # both tags are also removed from the Distribution.
+        digest = await self._fetch_manifest_digest(client, repo.name, tag.name, username)   
+        if digest is None:
+            self.tag_service.remove_tag(tag.id)
+            return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
+
+        # Since deletion of the manifest is accepted by Distribution,
+        # it is a slightly better approach to delete it from
+        # the backend database afterward.
+        await self._delete_manifest_by_digest(client, repo.name, digest, username)
+        return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
+   
 def get_registry_service(session: Session = Depends(get_database)) -> RegistryService:
     return RegistryService(session)
