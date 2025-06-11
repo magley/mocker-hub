@@ -1,6 +1,9 @@
 import os
+from fastapi.testclient import TestClient
 import jwt
 import pytest
+from sqlmodel import SQLModel
+from app.api.main import app
 from unittest.mock import MagicMock, AsyncMock, patch
 from fastapi import HTTPException
 from app.api.registry.registry_service import RegistryService
@@ -14,6 +17,11 @@ from app.api.config.exception_handler import RegistryException
 from app.api.repo.repo_model import Repository
 from app.api.tags.tag_model import Tag
 from httpx import AsyncClient, Response, Request
+
+from app.api.config.database import get_database
+from app.api.tags.tag_service import TagService
+from app.api.team.team_model import TeamMember, TeamPermissionKind, TeamPermission
+from app.api.org.org_model import OrganizationMembers
 
 BUILD_MANIFEST_JWT_PATH = "app.api.registry.registry_service.build_manifest_jwt"
 
@@ -37,6 +45,12 @@ def mock_jwt_encode():
     yield mock_jwt_encode
 
     jwt.encode = original_jwt_encode
+
+@pytest.fixture(scope="function", autouse=True)
+def reset_db():
+    from app.api.config.database import engine
+    SQLModel.metadata.drop_all(bind=engine)
+    SQLModel.metadata.create_all(bind=engine)
 
 def test_handle_registry_request_push(registry_service: RegistryService, mock_jwt_encode):
     registry_service.user_service.exists_with_credentials.return_value = True
@@ -288,6 +302,197 @@ class TestDeleteTag:
         assert "Server is damaged" in e.value.message
         registry_service._fetch_manifest_digest.assert_awaited_once_with(client, "repo", "tag", "user")
         registry_service._delete_manifest_by_digest.assert_awaited_once_with(client, "repo", "sha256:abc", "user")
+    
+    @patch("app.api.registry.registry_service.build_manifest_jwt", return_value="fake-jwt")
+    def test_delete_tag__integration(self, mock_build_jwt):
+
+        # NOTE: We can’t add tags through the API, so we need
+        # to insert them directly into the backend database
+        # and use the distribution API to preserve the image
+        # there. This process is very complex. Therefore, this
+        # test will mock communication with the distribution API.
+        # An end-to-end test would be the ideal choice to fully
+        # cover this functionality.
+
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@email.com",
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+
+            def log_in(username):
+                data = {"username": username, "password": "1234"}
+                response = client.post("/api/v1/users/login", json=data)
+                return response.json()["token"]
+
+            def add_repo(username, repo_name, org_id = None):
+                data = {
+                    "name": repo_name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": org_id,
+                }
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+
+                return client.post("/api/v1/repositories/", json=data, headers=header).json()
+            
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto = {
+                    "name": name,
+                    "desc": "",
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto, headers=header).json()
+
+            def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+                # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+                from app.api.config.database import engine
+                from app.api.org.org_repo import OrganizationRepo
+                from app.api.config.database import get_database
+
+                session = next(get_database())
+                org_repo = OrganizationRepo(session)
+                return org_repo.add_user_to_org(org_id, user_id)
+
+            def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto1 = {
+                    "organization_id": org_id,
+                    "name": name,
+                    "desc": desc,
+                }
+                return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+            def add_team_member(user_id: int, team_id: int) -> TeamMember:
+                # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+                from app.api.team.team_repo import TeamRepo
+                from app.api.config.database import get_database
+
+                session = next(get_database())
+                team_repo = TeamRepo(session)
+                return team_repo.add_member(team_id, user_id)
+            
+            def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+                # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+                from app.api.team.team_repo import TeamRepo
+                from app.api.config.database import get_database
+
+                session = next(get_database())
+                team_repo = TeamRepo(session)
+                return team_repo.add_permission(team_id, repo_id, kind).model_dump()
+
+            def add_tag(user_id, repo_id, tag_name):
+                session = next(get_database())
+                tag_service = TagService(session)
+                return tag_service.on_push(user_id, repo_id, tag_name).model_dump()
+
+            def search_tags(repo_canonical_name):
+                return client.get(f"/api/v1/tags/?repo_name={repo_canonical_name}").json()
+        
+            def delete_tag(repo_id, tag_name, username):
+                data = {
+                    "repo_id": repo_id, 
+                    "tag_name": tag_name
+                }
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+                return client.request("DELETE", "/registry/tag", json=data, headers=header)
+
+            class MockResponse:
+                def __init__(self, status_code, headers = {}):
+                    self.status_code = status_code
+                    self.headers = headers
+
+            async def mock_get_manifest(self, repo_name, tag_name, token):
+                return MockResponse(200, {"Docker-Content-Digest": "sha256:abc"})
+            
+            async def mock_get_manifest_502(self, repo_name, tag_name, token):
+                raise RegistryException(502, "Error when calling Distribution")
+
+            async def mock_get_missing_manifest(self, repo_name, tag_name, token):
+                return MockResponse(404)
+
+            async def mock_delete_manifest(self, repo_name, digest, token):
+                return MockResponse(202)
+            
+            def patch_object(type):
+                if type == "get_manifest":
+                    return patch.object(RegistryClient, "get_manifest", new=mock_get_manifest)
+                elif type == "delete_manifest":
+                    return patch.object(RegistryClient, "delete_manifest", new=mock_delete_manifest)
+                elif type == "get_manifest_unresponsive":
+                    return patch.object(RegistryClient, "get_manifest", new=mock_get_manifest_502)
+                elif type == "get_missing_manifest":
+                    return patch.object(RegistryClient, "get_manifest", new=mock_get_missing_manifest)
+
+            u1 = add_user("u1")
+            u2 = add_user("u2")
+            o1 = add_org("u1", "o1")
+            r1 = add_repo("u1", "r1")
+            r2 = add_repo("u1", "r2", o1["id"])
+            r3 = add_repo("u1", "r3", o1["id"])
+            t1 = add_tag(u1["id"], r1["id"], "t1")
+            t2 = add_tag(u1["id"], r1["id"], "t2")
+            t3 = add_tag(u1["id"], r2["id"], "t3")
+            t4 = add_tag(u1["id"], r3["id"], "t4")
+
+            add_user_to_org(u2["id"], o1["id"])
+            tm1 = add_team("u1", o1["id"], "tm1")
+            add_team_member(u2["id"], tm1["id"])
+            add_team_permission(tm1["id"], r2["id"], TeamPermissionKind.admin)
+            add_team_permission(tm1["id"], r3["id"], TeamPermissionKind.read_write)
+
+            # 1) Repo doesn't exist.
+            with patch_object("get_manifest"), patch_object("delete_manifest"):
+                response = delete_tag(99, t1["name"], u1["username"])
+                assert response.status_code == 404
+
+            # 2) User is not authorized to delete tag.
+            with patch_object("get_manifest"), patch_object("delete_manifest"):
+                response = delete_tag(r1["id"], t2["name"], u2["username"])
+                assert response.status_code == 400
+
+            # 3) Tag and manifest exist, but the tag is not deleted from the backend DB  
+            #    because deletion is postponed until a notification is received Distribution.
+            def standard_deleting_test(repo, tag, user):
+                with patch_object("get_manifest"), patch_object("delete_manifest"):
+                    response = delete_tag(repo["id"], tag["name"], user["username"])
+                    assert response.status_code == 200
+            standard_deleting_test(r1, t1, u1)
+
+            # 4) Tag exists, but the manifest doesn't; two tags were pointing to the same image.
+            with patch_object("get_missing_manifest"):
+                response = delete_tag(r1["id"], t2["name"], u1["username"])
+                assert response.status_code == 200
+                tags = search_tags(r1['canonical_name'])
+                assert len(tags) == 1
+
+            # 5) Tag doesn't exist.
+            with patch_object("get_manifest"), patch_object("delete_manifest"):
+                response = delete_tag(r1["id"], t2["name"], u1["username"])
+                assert response.status_code == 400
+
+            # 6) Distribution is unresponsive.
+            with patch_object("get_manifest_unresponsive"):
+                response = delete_tag(r1["id"], t1["name"], u1["username"])
+                assert response.status_code == 502
+                payload = response.json()
+                assert "Error when calling Distribution" in payload["detail"]["message"]
+            
+            # 7) Delete tag as an organization member with `admin` permissions.
+            standard_deleting_test(r2, t3, u2)
+            
+            # 8) Delete tag as an organization member with `read_write` permissions.
+            standard_deleting_test(r3, t4, u2)
+
 # -----------------------------------
 # Util functions
 # -----------------------------------
