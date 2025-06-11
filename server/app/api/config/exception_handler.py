@@ -48,9 +48,9 @@ class InvalidInputException(UserException):
         return self.message
     
 class RegistryException(Exception): 
-    def __init__(self, status_code: int, msg: str):
+    def __init__(self, status_code: int, message: str):
         self.status_code = status_code
-        self.message = f"Registry error with status_code {status_code} and message: \n{msg}"
+        self.message = f"Registry error with status_code {status_code} and message: \n{message}"
 
     def __str__(self):
         return self.message    
