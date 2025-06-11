@@ -102,14 +102,14 @@ def test_handle_registry_request_unknown_operation(registry_service: RegistrySer
     registry_service.user_service.find_by_username.return_value = MagicMock(id=1, username="testuser")
     registry_service.repo_service.find_by_canonical_name.return_value = MagicMock(id=1, canonical_name="test/repo")
 
-    scope = "repository:test/repo:delete"
+    scope = "repository:test/repo:update"
     username = "testuser"
     password = "password"
     service = "docker-registry"
 
     with pytest.raises(ValueError) as ex:
         registry_service.handle_registry_request(username, password, scope, service)
-    assert "delete" in str(ex)
+    assert "update" in str(ex)
 
 def test_handle_registry_request_jwt_generation(registry_service: RegistryService, mock_jwt_encode):
     registry_service.user_service.exists_with_credentials.return_value = True
@@ -140,12 +140,12 @@ def test_parse_scope_valid_input():
     assert result.operations == [RegistryActionOperation.push, RegistryActionOperation.pull]
 
 def test_parse_scope_invalid_scope():
-    scope = "repository:test/repo:push,delete"
+    scope = "repository:test/repo:push,update"
     username = "testuser"
 
     with pytest.raises(ValueError) as ex:
         parse_scope(username, scope)
-    assert "delete" in str(ex)
+    assert "update" in str(ex)
 
 def test_build_jwt_for_docker_registry_with_scope(mock_jwt_encode):
     username = "testuser"
