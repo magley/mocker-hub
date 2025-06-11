@@ -47,27 +47,6 @@ def registry_notification_endpoint(data: dict, registry_service: RegistryService
 
     return {}
 
-def _create_manifest_path(repo_name: str, digest: str | None = None, tag_name: str | None = None) -> str:
-    ref = tag_name if digest is None else digest
-    return f"https://distribution:5000/v2/{repo_name}/manifests/{ref}"
-
-async def get_manifest(request: Request, repo_name: str, tag_name: str, token: str):
-    url = _create_manifest_path(repo_name, tag_name)
-    headers = {
-        "Authorization": f"Bearer {token}", 
-        "Accept": "application/vnd.docker.distribution.manifest.v2+json, "
-                  "application/vnd.oci.image.index.v1+json, "
-                  "application/vnd.oci.image.manifest.v1+json"
-    }
-    client = request.app.client
-    return await client.get(url, headers=headers)
-
-async def delete_manifest(request: Request, repo_name: str, digest: str, token: str):
-    url = _create_manifest_path(repo_name, digest)
-    headers = { "Authorization": f"Bearer {token}" }
-    client = request.app.client
-    return await client.delete(url, headers=headers)
-
 @router.delete("/tag", status_code=200, summary="Delete a tag by its name", response_model=DeleteTagResponseDTO)
 @pre_authorize([UserRole.user, UserRole.admin])                             
 async def delete_tag_endpoint(

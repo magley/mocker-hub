@@ -125,9 +125,9 @@ class RegistryService:
             self.tag_service.remove_tag(tag.id)
             return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
 
-        # Since deletion of the manifest is accepted by Distribution,
-        # it is a slightly better approach to delete it from
-        # the backend database afterward.
+        # Since deletion of the manifest is accepted (202) 
+        # by Distribution, it is a slightly better approach 
+        # to delete it from the backend database afterward.
         await self._delete_manifest_by_digest(client, repo.name, digest, username)
         return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
    
