@@ -1,6 +1,6 @@
 from typing import List, Tuple
 from fastapi import Depends
-from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, InvalidInputException
+from app.api.config.exception_handler import AccessDeniedException, ConflictException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.user.user_model import User, UserRole
@@ -129,6 +129,9 @@ class RepositoryService:
 
         repo = self.repo_repo.unstar_repo(repo, user)
         
+        if repo is None:
+            raise ConflictException("The repository star was removed (unstarred) by a different operation")
+
         # `False` indicates the repo is no longer starred
         return repo, False
 

@@ -55,6 +55,13 @@ class RegistryException(Exception):
     def __str__(self):
         return self.message    
 
+class ConflictException(Exception):
+    def __init__(self, msg: str):
+        self.message = f"{msg}"
+
+    def __str__(self):
+        return self.message
+
 def register_exception_handler(app: FastAPI):
     @app.exception_handler(NotFoundException)
     def _NotFoundException(r: Request, e: NotFoundException):
@@ -75,3 +82,7 @@ def register_exception_handler(app: FastAPI):
     @app.exception_handler(RegistryException)
     def _RegistryException(r: Request, e: RegistryException):
         raise HTTPException(status_code=e.status_code, detail={"message": e.message})
+    
+    @app.exception_handler(ConflictException)
+    def _ConflictException(r: Request, e: ConflictException):
+        raise HTTPException(409, detail={"message": str(e)})
