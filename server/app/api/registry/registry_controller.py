@@ -12,9 +12,10 @@ from app.api.access_control.access_control_service import AccessControlService, 
 from app.api.config.exception_handler import AccessDeniedException
 from app.api.registry.registry_client import RegistryClient, get_registry_client
 
-router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
+internal_router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
+external_router = APIRouter(prefix="/registry", tags=["dockerhub-registry-external"])
 
-@router.get("", summary="???")
+@internal_router.get("", summary="???")
 def registry_endpoint(
     request: Request, 
     registry_service: RegistryService = Depends(get_registry_service),
@@ -32,7 +33,7 @@ def registry_endpoint(
 
     return registry_service.handle_registry_request(username, password, scope, service)
 
-@router.api_route("/notifications", methods=["POST", "PUT"], summary="Webhook for Docker Registry")
+@internal_router.api_route("/notifications", methods=["POST", "PUT"], summary="Webhook for Docker Registry")
 def registry_notification_endpoint(data: dict, registry_service: RegistryService = Depends(get_registry_service)):
     for event in data["events"]:
         action = event.get("action", None)
@@ -47,7 +48,7 @@ def registry_notification_endpoint(data: dict, registry_service: RegistryService
 
     return {}
 
-@router.delete("/tag", status_code=200, summary="Delete a tag by its name", response_model=DeleteTagResponseDTO)
+@external_router.delete("/tag", status_code=200, summary="Delete a tag by its name", response_model=DeleteTagResponseDTO)
 @pre_authorize([UserRole.user, UserRole.admin])                             
 async def delete_tag_endpoint(
     jwt: JWTDep,

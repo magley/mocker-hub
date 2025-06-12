@@ -24,9 +24,10 @@ the_router.include_router(app.api.org.org_controller.router)
 the_router.include_router(app.api.team.team_controller.router)
 the_router.include_router(app.api.events.event_controller.router)
 the_router.include_router(app.api.tags.tag_controller.router)
+the_router.include_router(app.api.registry.registry_controller.external_router)
 
 internal_registry_router = APIRouter()
-internal_registry_router.include_router(app.api.registry.registry_controller.router)
+internal_registry_router.include_router(app.api.registry.registry_controller.internal_router)
 
 # TODO: Remove in production, this is for development purposes only.
 # This is slightly easier to deal with than environment variables.

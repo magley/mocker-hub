@@ -404,7 +404,7 @@ class TestDeleteTag:
                     "tag_name": tag_name
                 }
                 header = {"Authorization": f"Bearer {log_in(username)}"}
-                return client.request("DELETE", "/registry/tag", json=data, headers=header)
+                return client.request("DELETE", "/api/v1/registry/tag", json=data, headers=header)
 
             class MockResponse:
                 def __init__(self, status_code, headers = {}):
