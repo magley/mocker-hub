@@ -97,6 +97,10 @@ services:
     volumes:
       - "./distribution/config.yaml:/etc/docker/registry/config.yml"
       - "./distribution/certs:/mnt/local/certs"
+      - "./distribution/entrypoint.sh:/entrypoint.sh"
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    environment:
+      RUN_REGISTRY_GC: "true"
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
