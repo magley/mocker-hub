@@ -32,23 +32,23 @@ class RegistryService:
         self.tag_service = TagService(session)
         self.access_control_service = AccessControlService(session)
 
-    def on_notification(self, username: str, action: str, repo_name: str, tag: str | None):
+    def on_notification(self, username: str, action: str, repo_name: str, tag_name: str | None):
 
         if action == 'push':
             user = self.user_service.find_by_username(username)
             repo = self.repo_service.find_by_canonical_name(repo_name)
 
-            tag = self.tag_service.on_push(user.id, repo.id, tag)
+            tag = self.tag_service.on_push(user.id, repo.id, tag_name)
             print(f"Pushed tag {tag}")
 
         # This type of action is triggered only by tag deletion, as it
         # is the only type of delete action supported by Distribution.
         elif action == 'delete':
             repo = self.repo_service.find_by_canonical_name(repo_name)
-            tag = self.tag_service.find_by_name_and_repo_id(tag, repo.id)
+            tag = self.tag_service.find_by_name_and_repo_id(tag_name, repo.id)
 
-            tag = self.tag_service.remove_tag(tag.id)
-            print(f"Deleted tag {tag}")
+            self.tag_service.remove_tag(tag.id)
+            print(f"Deleted tag {tag_name}")
 
         print(f"User '{username}' completed '{action}' on repository '{repo_name}' with tag '{tag}'")  
 
