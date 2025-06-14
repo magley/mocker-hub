@@ -120,7 +120,8 @@ class RegistryService:
         # Two tags can point to the same manifest.
         # If a manifest pointed to by two tags is deleted,
         # both tags are also removed from the Distribution.
-        digest = await self._fetch_manifest_digest(client, repo.name, tag.name, username)   
+        digest = await self._fetch_manifest_digest(client, repo.canonical_name, tag.name, username)   
+        print(f"Digest in registry_service {digest}")
         if digest is None:
             self.tag_service.remove_tag(tag.id)
             return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
@@ -128,7 +129,7 @@ class RegistryService:
         # Since deletion of the manifest is accepted (202) 
         # by Distribution, it is a slightly better approach 
         # to delete it from the backend database afterward.
-        await self._delete_manifest_by_digest(client, repo.name, digest, username)
+        await self._delete_manifest_by_digest(client, repo.canonical_name, digest, username)
         return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
    
 def get_registry_service(session: Session = Depends(get_database)) -> RegistryService:
