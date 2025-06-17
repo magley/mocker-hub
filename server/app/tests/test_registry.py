@@ -553,6 +553,92 @@ def test_build_manifest_jwt_calls_build_jwt_correctly(mock_build_jwt, method, ex
     assert token == "fake-jwt-token"
     mock_build_jwt.assert_called_once_with(username, service, expected_scope)
 
+class TestFormatRegistryEvent:
+
+    def test_layer_action(self, registry_service: RegistryService):
+        msg = registry_service._format_registry_event(
+            username="user",
+            action="push",
+            repo_name="repo",
+            tag_name=None,
+            digest="sha:123",
+            method="PUT",
+            url="/v2/repo/blobs/sha:123"
+        )
+        assert "user" in msg
+        assert "push" in msg
+        assert "repo" in msg
+        assert "PUT" in msg
+
+        assert "sha:123" in msg
+        assert "layer" in msg
+
+    def test_tag_action(self, registry_service: RegistryService):
+        msg = registry_service._format_registry_event(
+            username="user",
+            action="delete",
+            repo_name="repo",
+            tag_name="v1",
+            digest="sha:123",
+            method="DELETE",
+            url="/v2/repo/manifests/sha:123"
+        )
+        assert "user" in msg
+        assert "delete" in msg
+        assert "DELETE" in msg
+        assert "repo" in msg
+
+        assert "v1" in msg
+        assert "tag" in msg
+
+    def test_manifest_action(self, registry_service: RegistryService):
+        msg = registry_service._format_registry_event(
+            username="user",
+            action="pull",
+            repo_name="repo",
+            tag_name=None,
+            digest="sha:123",
+            method="GET",
+            url="/v2/repo/manifests/sha:123"
+        )
+        assert "user" in msg
+        assert "pull" in msg
+        assert "repo" in msg
+        assert "GET" in msg
+
+        assert "manifest" in msg
+        assert "sha:123" in msg
+
+    def test_referrers_action(self, registry_service: RegistryService):
+        msg = registry_service._format_registry_event(
+            username="user",
+            action="pull",
+            repo_name="repo",
+            tag_name=None,
+            digest="sha:123",
+            method="GET",
+            url="/v2/repo/referrers/sha:123"
+        )
+        assert "user" in msg
+        assert "pull" in msg
+        assert "repo" in msg
+        assert "GET" in msg
+
+        assert "referrers" in msg
+        assert "sha:123" in msg
+
+    def test_unsupported_event_raises(self, registry_service: RegistryService):
+        with pytest.raises(ValueError):
+            registry_service._format_registry_event(
+                username="user",
+                action="unknown",
+                repo_name="repo",
+                tag_name=None,
+                digest="sha:123",
+                method="POST",
+                url=None
+            )
+
 # -----------------------------------
 # Client functions
 # -----------------------------------
