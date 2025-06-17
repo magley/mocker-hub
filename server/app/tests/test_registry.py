@@ -47,6 +47,7 @@ def test_handle_registry_request_push(registry_service: RegistryService, mock_jw
     registry_service.user_service.exists_with_credentials.assert_called_once_with(username, password)
     registry_service.repo_service.find_by_canonical_name.assert_called_once_with("test/repo")
     registry_service.access_control_service.has_write_access.assert_called_once_with(1, 1)
+    registry_service.access_control_service.has_read_access.assert_called_once_with(1, 1)
 
 def test_handle_registry_request_invalid_credentials(registry_service: RegistryService):
     registry_service.user_service.exists_with_credentials.return_value = False
@@ -114,6 +115,7 @@ def test_handle_registry_request_unknown_operation(registry_service: RegistrySer
 def test_handle_registry_request_jwt_generation(registry_service: RegistryService, mock_jwt_encode):
     registry_service.user_service.exists_with_credentials.return_value = True
     registry_service.user_service.find_by_username.return_value = MagicMock(id=1, username="testuser")
+    registry_service.repo_service.find_by_canonical_name.return_value = MagicMock(id=1, canonical_name="test/repo")
 
     scope = "repository:test/repo:push,pull"
     username = "testuser"
@@ -124,6 +126,8 @@ def test_handle_registry_request_jwt_generation(registry_service: RegistryServic
     
     assert response["token"] == "mocked.jwt.token"
     registry_service.user_service.exists_with_credentials.assert_called_once_with(username, password)
+    registry_service.access_control_service.has_write_access.assert_called_once_with(1, 1)
+    registry_service.access_control_service.has_read_access.assert_called_once_with(1, 1)
 
 # -----------------------------------
 # Util functions

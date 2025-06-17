@@ -55,30 +55,32 @@ class RegistryService:
             user = self.user_service.find_by_username(username)
             repo = self.repo_service.find_by_canonical_name(action.repo_canonical_name)
 
-            # Case 1 - User requested push operation on the repo.
+            for operation in action.operations:
 
-            if RegistryActionOperation.push in action.operations:
-                # This will cover all the neccessary cases:
-                #  - repo doesn't exist
-                #  - user doesn't exist
-                #  - user doesn't have access
-                #  - etc.
+                # Case 1 - User requested push operation on the repo.
 
-                can_write = self.access_control_service.has_write_access(user.id, repo.id)
-                if not can_write:
-                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")      
-                
-            # Case 2 - User requested pull operation on the repo.
+                if operation == RegistryActionOperation.push:
+                    # This will cover all the neccessary cases:
+                    #  - repo doesn't exist
+                    #  - user doesn't exist
+                    #  - user doesn't have access
+                    #  - etc.
 
-            elif RegistryActionOperation.pull in action.operations:
-                can_read = self.access_control_service.has_read_access(user.id, repo.id)
-                if not can_read:
-                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot pull from repo {repo.canonical_name}")
-                
-            # Case 3 - Unknown operation.
+                    can_write = self.access_control_service.has_write_access(user.id, repo.id)
+                    if not can_write:
+                        raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")      
+                    
+                # Case 2 - User requested pull operation on the repo.
 
-            else:
-                raise HTTPException(status_code=400, detail=f"Unknown operations {action.operations}")
+                elif operation == RegistryActionOperation.pull:
+                    can_read = self.access_control_service.has_read_access(user.id, repo.id)
+                    if not can_read:
+                        raise HTTPException(status_code=401, detail=f"User {user.username} cannot pull from repo {repo.canonical_name}")
+                    
+                # Case 3 - Unknown operation.
+
+                else:
+                    raise HTTPException(status_code=400, detail=f"Unknown operations {action.operations}")
             
         # Create the JWT.
             
