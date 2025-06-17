@@ -71,14 +71,15 @@ In case you still have issues, create a file `/etc/docker/daemon.json` and write
 Push an image into the registry:
 
 ```sh
-docker tag {image-name} localhost:5000/{image-name}
-docker push localhost:5000/{image-name}
+docker tag {image-name}[:{tag}] localhost:5000/{image-name}[:{tag}]
+docker push localhost:5000/{image-name}[:{tag}]
 ```
+If no `:tag` is provided, latest is used by default.
 
 Pull an image from the registry:
 
 ```sh
-docker pull localhost:5000/{image-name}
+docker pull localhost:5000/{image-name}[:{tag}]
 ```
 
 Log out:
