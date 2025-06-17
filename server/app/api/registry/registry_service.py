@@ -32,7 +32,35 @@ class RegistryService:
         self.tag_service = TagService(session)
         self.access_control_service = AccessControlService(session)
 
-    def on_notification(self, username: str, action: str, repo_name: str, tag_name: str | None):
+    def _format_registry_event(self, username: str, action: str, repo_name: str, tag_name: str | None, digest: str, method: str, url: str | None):
+
+        is_layer_action = url is not None and "blobs" in url
+        is_tag_action = tag_name is not None 
+        is_manifest_action = url is not None and "manifests" in url
+        is_referrers_action = url is not None and "referrers" in url
+
+        if is_layer_action:
+            target = "layer"
+            desc = digest
+                
+        elif is_tag_action:
+            target = "tag"
+            desc = tag_name
+
+        elif is_manifest_action: 
+            target = "manifest"
+            desc = digest
+
+        elif is_referrers_action: 
+            target = "referrers"
+            desc = digest
+
+        else: 
+            raise ValueError(f"Unsupported event: action='{action}', repo='{repo_name}', tag='{tag_name}', method='{method}', url='{url}'")
+    
+        return f"User '{username}' completed a {action} using method {method} on repo '{repo_name}' ({target}) [{desc}]"
+
+    def on_notification(self, username: str, action: str, repo_name: str, tag_name: str | None, digest: str, method: str, url: str | None):
 
         if action == 'push' and tag_name is not None:
             user = self.user_service.find_by_username(username)
@@ -46,7 +74,8 @@ class RegistryService:
             self.tag_service.remove_tag(tag.id)
             print(f"Deleted tag {tag_name}")
 
-        print(f"User '{username}' completed '{action}' on repository '{repo_name}' with tag '{tag}'")  
+        message = self._format_registry_event(username, action, repo_name, tag_name, digest, method, url)
+        print(message)
 
     def handle_registry_request(self, username: str, password: str, scope: str | None, service: str | None):
         # User with the provided credentials must exist.

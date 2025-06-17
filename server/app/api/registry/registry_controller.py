@@ -40,9 +40,12 @@ def registry_notification_endpoint(data: dict, registry_service: RegistryService
         username = event.get("actor", {}).get("name", None)
         repository = event.get("target", {}).get("repository", None)
         tag = event.get("target", {}).get("tag", None)
-        
+        digest = event.get("target", {}).get("digest", None)
+        method = event.get("request", {}).get("method", None)
+        url = event.get("target", {}).get("url", None)
+
         try:
-            registry_service.on_notification(username, action, repository, tag)
+            registry_service.on_notification(username, action, repository, tag, digest, method, url)
         except Exception as e:
             LOGGER.error(f"Couldn't handle Distribution webhook: {e}")
 
