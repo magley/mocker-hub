@@ -34,19 +34,15 @@ class RegistryService:
 
     def on_notification(self, username: str, action: str, repo_name: str, tag_name: str | None):
 
-        if action == 'push':
+        if action == 'push' and tag_name is not None:
             user = self.user_service.find_by_username(username)
             repo = self.repo_service.find_by_canonical_name(repo_name)
-
             tag = self.tag_service.on_push(user.id, repo.id, tag_name)
             print(f"Pushed tag {tag}")
 
-        # This type of action is triggered only by tag deletion, as it
-        # is the only type of delete action supported by Distribution.
-        elif action == 'delete':
+        elif action == 'delete' and tag_name is not None:
             repo = self.repo_service.find_by_canonical_name(repo_name)
             tag = self.tag_service.find_by_name_and_repo_id(tag_name, repo.id)
-
             self.tag_service.remove_tag(tag.id)
             print(f"Deleted tag {tag_name}")
 
