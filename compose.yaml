@@ -27,7 +27,7 @@ services:
       ELASTICSEARCH_PORT: 9200
       DISTRIBUTION_HOST: distribution
       DISTRIBUTION_PORT: 5000
-      PEM_CERT_PATH: /mnt/local/certs/cert.pem
+      PEM_CERT_PATH: /code/certs/cert.pem
 
       # To run tests, do `RUN_TESTS=true docker compose up`.
       # However, I've been having issues with this on WSL,
@@ -45,7 +45,7 @@ services:
     volumes:
       - backend_cfg:/code/volume-server-cfg/
       - ./images:/code/images
-      - "./distribution/certs:/mnt/local/certs"
+      - ./distribution/certs:/code/certs
       - ./logs:/code/logs
 
   db:

@@ -2,6 +2,19 @@
 
 echo "RUN_TESTS: $RUN_TESTS"  # Debugging line
 
+if [ ! -f "/code/certs/cert.pem" ]; then
+  echo "cert.pem not found..."
+
+  if [ -f "/code/certs/certs.zip" ]; then
+    echo "certs.zip found. Extracting certificates..."
+    7z e /code/certs/certs.zip -o/code/certs/ -y
+    echo "Certificates extracted."
+  else
+    echo "Neither cert.pem nor certs.zip found!"
+    exit 1
+  fi
+fi
+
 if [ "$RUN_TESTS" = "true" ]; then
   echo "Running tests..."
   ls -l

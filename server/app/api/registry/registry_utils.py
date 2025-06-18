@@ -10,7 +10,7 @@ from app.api.registry.registry_dto import RegistryAction, RegistryActionOperatio
 SECRET_KEY = ""
 if os.getenv('mocker_hub_TEST_ENV') is None:
     try:
-        with open("/mnt/local/certs/private_key.pem", "r") as f:
+        with open("/code/certs/private_key.pem", "r") as f:
             SECRET_KEY = f.read()
     except FileNotFoundError as e:
         print(e)
@@ -20,7 +20,7 @@ if os.getenv('mocker_hub_TEST_ENV') is None:
 CERT_DER_B64 = ""
 if os.getenv('mocker_hub_TEST_ENV') is None:
     try:
-        with open("/mnt/local/certs/cert.der.b64", "r") as f:
+        with open("/code/certs/cert.der.b64", "r") as f:
             CERT_DER_B64 = f.read()
     except FileNotFoundError as e:
         print(e)

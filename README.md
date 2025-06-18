@@ -29,7 +29,7 @@
 
 ## Getting started
 
-1) Go to `/distribution/certs` and extract `certs.rar`.
+1) You can optionally regenerate the certificate in `/distribution/certs`.
 
 2) Build and run: `docker compose up--build`.
 
