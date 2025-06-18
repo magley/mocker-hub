@@ -717,7 +717,7 @@ class TestFormatRegistryEvent:
                 tag_name=None,
                 digest="sha:123",
                 method="POST",
-                url=None
+                url="/v2/repo/..."
             )
 
 # -----------------------------------
