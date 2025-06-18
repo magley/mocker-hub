@@ -1,8 +1,9 @@
+from typing import List
 from fastapi import Depends, HTTPException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.access_control.access_control_service import AccessControlService
-from app.api.registry.registry_utils import parse_scope, build_jwt_for_docker_registry
+from app.api.registry.registry_utils import parse_scopes, build_jwt_for_docker_registry
 from app.api.user.user_service import UserService
 from app.api.repo.repo_service import RepositoryService
 from app.api.registry.registry_dto import RegistryActionOperation
@@ -40,49 +41,52 @@ class RegistryService:
         print(f"User '{username}' completed '{action}' of repository '{repo_name}' with tag '{tag}'")
 
 
-    def handle_registry_request(self, username: str, password: str, scope: str | None, service: str | None):
+    def handle_registry_request(self, username: str, password: str, scopes: List[str] | None, service: str | None):
         # User with the provided credentials must exist.
 
         if not self.user_service.exists_with_credentials(username, password):
             raise HTTPException(status_code=401, detail="Invalid username or password")
         
-        # Scope is defined, therefore this is a push/pull request. If the scope
-        # isn't defined, this is a login request, so we can skip to creating the
+        # Scopes are defined, therefore these are push/pull requests. If scopes
+        # aren't defined, this is a login request, so we can skip to creating the
         # JWT.
 
-        if scope is not None:
-            action = parse_scope(username, scope)
+        if scopes is not None:
+            actions = parse_scopes(username, scopes)
             user = self.user_service.find_by_username(username)
-            repo = self.repo_service.find_by_canonical_name(action.repo_canonical_name)
 
-            # Case 1 - User requested push operation on the repo.
+            for action in actions:
+                repo = self.repo_service.find_by_canonical_name(action.repo_canonical_name)
 
-            if RegistryActionOperation.push in action.operations:
-                # This will cover all the neccessary cases:
-                #  - repo doesn't exist
-                #  - user doesn't exist
-                #  - user doesn't have access
-                #  - etc.
+                for operation in action.operations:
 
-                can_write = self.access_control_service.has_write_access(user.id, repo.id)
-                if not can_write:
-                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")      
+                    # Case 1 - User requested push operation on the repo.
+
+                    if operation == RegistryActionOperation.push:
+                        # This will cover all the neccessary cases:
+                        #  - repo doesn't exist
+                        #  - user doesn't exist
+                        #  - user doesn't have access
+                        #  - etc.
+
+                        can_write = self.access_control_service.has_write_access(user.id, repo.id)
+                        if not can_write:
+                            raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")      
+                        
+                    # Case 2 - User requested pull operation on the repo.
+
+                    elif operation == RegistryActionOperation.pull:
+                        can_read = self.access_control_service.has_read_access(user.id, repo.id)
+                        if not can_read:
+                            raise HTTPException(status_code=401, detail=f"User {user.username} cannot pull from repo {repo.canonical_name}")
+                        
+                    # Case 3 - Unknown operation.
+
+                    else:
+                        raise HTTPException(status_code=400, detail=f"Unknown operation {operation}")
                 
-            # Case 2 - User requested pull operation on the repo.
-
-            elif RegistryActionOperation.pull in action.operations:
-                can_read = self.access_control_service.has_read_access(user.id, repo.id)
-                if not can_read:
-                    raise HTTPException(status_code=401, detail=f"User {user.username} cannot pull from repo {repo.canonical_name}")
-                
-            # Case 3 - Unknown operation.
-
-            else:
-                raise HTTPException(status_code=400, detail=f"Unknown operations {action.operations}")
-            
         # Create the JWT.
-            
-        jwt = build_jwt_for_docker_registry(username, service, scope)
+        jwt = build_jwt_for_docker_registry(username, service, scopes)
         return {"token": jwt}
     
 def get_registry_service(session: Session = Depends(get_database)) -> RegistryService:
