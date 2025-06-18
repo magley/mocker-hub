@@ -1,4 +1,5 @@
-from fastapi import APIRouter, Depends, HTTPException, Request
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
 
 from app.api.registry.registry_utils import decode_auth_header
 from app.api.registry.registry_service import RegistryService, get_registry_service
@@ -19,7 +20,7 @@ external_router = APIRouter(prefix="/registry", tags=["dockerhub-registry-extern
 def registry_endpoint(
     request: Request, 
     registry_service: RegistryService = Depends(get_registry_service),
-    scope: str | None = None,
+    scopes: List[str] | None = Query(default=None, alias="scope"),
     service: str | None = None):
 
     authorization_header = request.headers.get("Authorization")
@@ -31,7 +32,7 @@ def registry_endpoint(
     auth_token = authorization_header.split(" ")[1]
     username, password = decode_auth_header(auth_token)
 
-    return registry_service.handle_registry_request(username, password, scope, service)
+    return registry_service.handle_registry_request(username, password, scopes, service)
 
 @internal_router.api_route("/notifications", methods=["POST", "PUT"], summary="Webhook for Docker Registry")
 def registry_notification_endpoint(data: dict, registry_service: RegistryService = Depends(get_registry_service)):
