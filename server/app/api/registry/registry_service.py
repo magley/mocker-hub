@@ -150,7 +150,6 @@ class RegistryService:
         # If a manifest pointed to by two tags is deleted,
         # both tags are also removed from the Distribution.
         digest = await self._fetch_manifest_digest(client, repo.canonical_name, tag.name, username)   
-        print(f"Digest in registry_service {digest}")
         if digest is None:
             self.tag_service.remove_tag(tag.id)
             return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")

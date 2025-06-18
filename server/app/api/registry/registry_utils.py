@@ -133,6 +133,6 @@ def build_manifest_jwt(username: str, repo_name: str, method: Literal["GET", "DE
     host = os.environ["DISTRIBUTION_HOST"]
     port = os.environ["DISTRIBUTION_PORT"]
     service = f"{host}:{port}"
-
-    return build_jwt_for_docker_registry(username, service, scope)
+    
+    return build_jwt_for_docker_registry(username, service, [scope])
 

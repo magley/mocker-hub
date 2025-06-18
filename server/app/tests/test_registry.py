@@ -589,12 +589,12 @@ def test_parse_scopes_valid_input():
     assert action.operations == [RegistryActionOperation.pull]
 
 def test_parse_scopes_invalid_scope():
-    scopes = ["repository:test/repo:push,delete"]
+    scopes = ["repository:test/repo:push,update"]
     username = "testuser"
 
     with pytest.raises(ValueError) as ex:
         parse_scopes(username, scopes)
-    assert "delete" in str(ex)
+    assert "update" in str(ex)
 
 def test_build_jwt_for_docker_registry_with_scope(mock_jwt_encode):
     username = "testuser"
@@ -632,7 +632,7 @@ def test_build_manifest_jwt_calls_build_jwt_correctly(mock_build_jwt, method, ex
     token = build_manifest_jwt(username, "repo", method)
 
     assert token == "fake-jwt-token"
-    mock_build_jwt.assert_called_once_with(username, service, expected_scope)
+    mock_build_jwt.assert_called_once_with(username, service, [expected_scope])
 
 class TestFormatRegistryEvent:
 
