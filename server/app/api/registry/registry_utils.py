@@ -2,7 +2,6 @@ import base64
 import datetime
 import os
 import uuid
-
 import jwt
 
 from typing import List, Literal
@@ -11,7 +10,7 @@ from app.api.registry.registry_dto import RegistryAction, RegistryActionOperatio
 SECRET_KEY = ""
 if os.getenv('mocker_hub_TEST_ENV') is None:
     try:
-        with open("/mnt/local/certs/private_key.pem", "r") as f:
+        with open("/code/certs/private_key.pem", "r") as f:
             SECRET_KEY = f.read()
     except FileNotFoundError as e:
         print(e)
@@ -21,7 +20,7 @@ if os.getenv('mocker_hub_TEST_ENV') is None:
 CERT_DER_B64 = ""
 if os.getenv('mocker_hub_TEST_ENV') is None:
     try:
-        with open("/mnt/local/certs/cert.der.b64", "r") as f:
+        with open("/code/certs/cert.der.b64", "r") as f:
             CERT_DER_B64 = f.read()
     except FileNotFoundError as e:
         print(e)
@@ -126,3 +125,14 @@ def build_jwt_for_docker_registry(username: str, service: str, scopes: List[str]
             )
 
     return jwt.encode(token_payload, SECRET_KEY, algorithm='RS256', headers=token_headers)    
+
+def build_manifest_jwt(username: str, repo_name: str, method: Literal["GET", "DELETE"]) -> str: 
+
+    scope = f"repository:{repo_name}:"  
+    scope = scope + "pull" if method == "GET" else scope + "delete"
+    host = os.environ["DISTRIBUTION_HOST"]
+    port = os.environ["DISTRIBUTION_PORT"]
+    service = f"{host}:{port}"
+    
+    return build_jwt_for_docker_registry(username, service, [scope])
+

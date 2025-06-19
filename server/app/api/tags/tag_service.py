@@ -1,6 +1,6 @@
 from typing import List
 from fastapi import Depends
-from app.api.config.exception_handler import AccessDeniedException, NotFoundException, UserException
+from app.api.config.exception_handler import AccessDeniedException, NotFoundException, NotInRelationshipException, UserException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.repo.repo_model import Repository
@@ -39,20 +39,12 @@ class TagService:
         else:
             return self.tag_repo.update_last_push(existing_tag, user_id)
 
-    def remove_tag(self, user_id: int | None, tag_id: int) -> None:
-        # Fetch the tag.
+    def remove_tag(self, tag_id: int) -> None:
 
         tag = self.tag_repo.find_by_id(tag_id)
         if tag is None:
             raise NotFoundException(Tag, tag_id)
         
-        # Access control.
-        
-        if not self.access_control_service.has_write_access(user_id, tag.repository_id):
-            raise AccessDeniedException(f"User {user_id} cannot remove tag {tag.name} to repo {tag.repository.canonical_name}")
-          
-        # Delete the tag.
-
         self.tag_repo.remove(tag)
 
     def get_tags_for_repository(self, repo_id: int) -> List[Tag]:
@@ -71,7 +63,12 @@ class TagService:
         """
         search_query = search_query.strip()
         return self.tag_repo.filter(repo_name, search_query, params)
-
+    
+    def find_by_name_and_repo_id(self, name: str, repo_id: int) -> Tag:
+        tag = self.tag_repo.find_by_name_and_repo_id(name, repo_id)
+        if tag is None:
+            raise NotInRelationshipException(Repository, repo_id, Tag, name)
+        return tag
 
 def get_tag_service(session: Session = Depends(get_database)) -> TagService:
     return TagService(session)

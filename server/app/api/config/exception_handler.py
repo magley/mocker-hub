@@ -46,6 +46,21 @@ class InvalidInputException(UserException):
 
     def __str__(self):
         return self.message
+    
+class RegistryException(Exception): 
+    def __init__(self, status_code: int, message: str):
+        self.status_code = status_code
+        self.message = f"Registry error with status_code {status_code} and message: \n{message}"
+
+    def __str__(self):
+        return self.message    
+
+class ConflictException(Exception):
+    def __init__(self, msg: str):
+        self.message = f"{msg}"
+
+    def __str__(self):
+        return self.message
 
 def register_exception_handler(app: FastAPI):
     @app.exception_handler(NotFoundException)
@@ -63,3 +78,11 @@ def register_exception_handler(app: FastAPI):
     @app.exception_handler(sqlalchemy.exc.IntegrityError)
     def _IntegrityError(r: Request, e: sqlalchemy.exc.IntegrityError):
         raise HTTPException(400, detail={"message": e._message()}) 
+    
+    @app.exception_handler(RegistryException)
+    def _RegistryException(r: Request, e: RegistryException):
+        raise HTTPException(status_code=e.status_code, detail={"message": e.message})
+    
+    @app.exception_handler(ConflictException)
+    def _ConflictException(r: Request, e: ConflictException):
+        raise HTTPException(409, detail={"message": str(e)})

@@ -4,11 +4,15 @@ WORKDIR /code
 
 COPY ./requirements.txt /code/requirements.txt
 
+RUN apk add 7zip --no-cache
+
 RUN pip install --no-cache-dir --upgrade -r /code/requirements.txt
 
 COPY ./app /code/app
 
 RUN mkdir -p /code/logs
+
+RUN mkdir -p /code/certs
 
 COPY ./entrypoint.sh /code/entrypoint.sh
 RUN ls -l /code

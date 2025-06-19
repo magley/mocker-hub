@@ -52,43 +52,20 @@ class TestOnPush:
 
 class TestRemoveTag:
     def test_remove_tag_success(self, tag_service: "TagService"):
-        user_id = 1
         tag_id = 1
-        
         tag = Tag(id=tag_id, name="v1.0", repository_id=1)
-        repo = Repository(id=1, canonical_name="repo1")
         
         tag_service.tag_repo.find_by_id.return_value = tag
-        tag_service.repo_repo.find_by_id.return_value = repo
-        tag_service.access_control_service.has_write_access.return_value = True
         tag_service.tag_repo.remove = MagicMock()
-
-        tag_service.remove_tag(user_id, tag_id)
-
+        
+        tag_service.remove_tag(tag_id)
         tag_service.tag_repo.remove.assert_called_once_with(tag)
 
-    def test_remove_tag_access_denied(self, tag_service: "TagService"):
-        user_id = 2
-        tag_id = 1
-        
-        repo = Repository(id=1, canonical_name="repo1")
-        tag = Tag(id=tag_id, name="v1.0", repository_id=1, repository=repo)
-        
-        tag_service.tag_repo.find_by_id.return_value = tag
-        tag_service.repo_repo.find_by_id.return_value = repo
-        tag_service.access_control_service.has_write_access.return_value = False
-
-        with pytest.raises(AccessDeniedException):
-            tag_service.remove_tag(user_id, tag_id)
-
     def test_remove_tag_not_found(self, tag_service: "TagService"):
-        user_id = 1
         tag_id = 999
-        
         tag_service.tag_repo.find_by_id.return_value = None
-
         with pytest.raises(NotFoundException):
-            tag_service.remove_tag(user_id, tag_id)
+            tag_service.remove_tag(tag_id)
 
 class TestSearchTags:
     def test_search_tags_success(self, tag_service: "TagService"):

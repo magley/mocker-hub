@@ -25,6 +25,9 @@ services:
       JWT_ALGORITHM: HS256
       ELASTICSEARCH_HOST: elasticsearch
       ELASTICSEARCH_PORT: 9200
+      DISTRIBUTION_HOST: distribution
+      DISTRIBUTION_PORT: 5000
+      PEM_CERT_PATH: /code/certs/cert.pem
 
       # To run tests, do `RUN_TESTS=true docker compose up`.
       # However, I've been having issues with this on WSL,
@@ -42,7 +45,7 @@ services:
     volumes:
       - backend_cfg:/code/volume-server-cfg/
       - ./images:/code/images
-      - "./distribution/certs:/mnt/local/certs"
+      - ./distribution/certs:/code/certs
       - ./logs:/code/logs
 
   db:
@@ -94,6 +97,10 @@ services:
     volumes:
       - "./distribution/config.yaml:/etc/docker/registry/config.yml"
       - "./distribution/certs:/mnt/local/certs"
+      - "./distribution/entrypoint.sh:/entrypoint.sh"
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    environment:
+      RUN_REGISTRY_GC: "true"
 
   elasticsearch:
     image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2

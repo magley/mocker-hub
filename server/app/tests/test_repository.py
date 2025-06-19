@@ -10,7 +10,7 @@ from app.api.config.security import hash_password
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
-from app.api.config.exception_handler import InvalidInputException, FieldTakenException, NotFoundException
+from app.api.config.exception_handler import ConflictException, InvalidInputException, FieldTakenException, NotFoundException
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
 from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
@@ -843,7 +843,7 @@ class TestToggleRepoStar:
         repo_service.repo_repo.find_by_id.return_value = start_repo
         repo_service.repo_repo.unstar_repo.return_value = None
 
-        with pytest.raises(NotFoundException):
+        with pytest.raises(ConflictException):
             repo_service.toggle_repo_star(user_id, repo_id)
 
 def test_toggle_repo_star___integration():

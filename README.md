@@ -29,7 +29,7 @@
 
 ## Getting started
 
-1) Go to `/distribution/certs` and extract `certs.rar`.
+1) You can optionally regenerate the certificate in `/distribution/certs`.
 
 2) Build and run: `docker compose up--build`.
 
@@ -71,14 +71,15 @@ In case you still have issues, create a file `/etc/docker/daemon.json` and write
 Push an image into the registry:
 
 ```sh
-docker tag {image-name} localhost:5000/{image-name}
-docker push localhost:5000/{image-name}
+docker tag {image-name}[:{tag}] localhost:5000/{image-name}[:{tag}]
+docker push localhost:5000/{image-name}[:{tag}]
 ```
+If no `:tag` is provided, latest is used by default.
 
 Pull an image from the registry:
 
 ```sh
-docker pull localhost:5000/{image-name}
+docker pull localhost:5000/{image-name}[:{tag}]
 ```
 
 Log out:
