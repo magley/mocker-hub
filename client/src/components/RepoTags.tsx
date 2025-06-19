@@ -1,12 +1,12 @@
 import React, { useEffect, useState } from 'react';
 import { Button, Card, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
-import { TagDTO, TagsService, DeleteTagResponseDTO, DeleteTagDTO } from '../api/tags.api';
+import { TagDTO, TagsService } from '../api/tags.api';
 import { RepoExtDTO } from '../api/repo.api';
 import { PaginationParams } from '../util/pagination';
 import { AxiosError } from 'axios';
 import { formatDistanceToNow } from 'date-fns';
 import ResponsivePagination from 'react-responsive-pagination';
-import { Link, NavLink } from 'react-router-dom';
+import { NavLink } from 'react-router-dom';
 import { ToastType, useToastStore } from '../util/toastStore';
 
 
@@ -23,6 +23,7 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
     const [currentPage, setCurrentPage] = useState<number>(1);
     const [totalPages, setTotalPages] = useState<number>(1);
     const addToast = useToastStore((state) => state.addToast);
+    const [deletingTag, setDeletingTag] = useState<string | null>(null);
 
     useEffect(() => {
         if (props.isActive) {
@@ -64,20 +65,21 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
     }
 
     const handleDeleteTag = async (tag: TagDTO) => {
-        if (tag.name) {
-            TagsService.DeleteTag({ repo_id: props.repo.id, tag_name: tag.name }).then((res) => {
-                    addToast(res.data.message, ToastType.success);
-                    setTags(currentTags => currentTags.filter(t => t.name !== tag.name));
-                })
-                .catch((err: AxiosError) => {
-                    // setError((err.response?.data as any)["detail"]["message"]);
-                    const data = (err.response?.data ?? {}) as any;
-                    const msg = typeof data.detail === 'string' ? data.detail : data.detail?.message;
-                    addToast(msg, ToastType.error);
-                });
-        } else {
-            addToast('Tag name is missing and cannot be deleted.', ToastType.error);
-        }
+        setDeletingTag(tag.name); 
+
+        TagsService.DeleteTag({ repo_id: props.repo.id, tag_name: tag.name })
+            .then((res) => {
+                addToast(res.data.message, ToastType.success);
+                setTags(currentTags => currentTags.filter(t => t.name !== tag.name));
+            })
+            .catch((err: AxiosError) => {
+                const data = (err.response?.data ?? {}) as any;
+                const msg = typeof data.detail === 'string' ? data.detail : data.detail?.message;
+                addToast(msg, ToastType.error);
+            })
+            .finally(() => { 
+                setDeletingTag(null); 
+            });
     };
 
     return (
@@ -149,8 +151,11 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
                                 {/* Delete tag */}
                                 {/* We can reuse `can_update` as `can_delete_tag` since the access-control logic is identical. */}
                                 {props.repo?.can_update && tag.name &&
-                                    <Button variant="danger" className="me-2" onClick={() => handleDeleteTag(tag)} title="Delete tag">
-                                        <i className="bi bi-trash" /> Delete
+                                    <Button variant="danger" className="me-2" onClick={() => handleDeleteTag(tag)} title="Delete tag" disabled={deletingTag === tag.name}>
+                                        {deletingTag === tag.name
+                                            ? (<output><span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Deleting...</output>)
+                                            : <><i className="bi bi-trash" />Delete</>
+                                        }
                                     </Button>
                                 }
                             </Card.Body>
