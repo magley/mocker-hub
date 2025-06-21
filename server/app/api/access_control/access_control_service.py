@@ -166,7 +166,8 @@ class AccessControlService:
     # - Be the owner of the repository.
     # - Belong to a team that has either 'admin' or 'read_write' permissions.
     # The same conditions apply to the `has_write_access` method.    
-    def has_delete_tag_access(self, user_id: int | None, repo_id: int) -> bool:
+    # This method handles permission checks for both repository and tag deletions.
+    def has_delete_access(self, user_id: int | None, repo_id: int) -> bool:
         return self.has_write_access(user_id, repo_id)    
 
 def get_access_control_service(session: Session = Depends(get_database)) -> AccessControlService:

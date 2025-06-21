@@ -7,7 +7,7 @@ from app.api.config.logutil import LOGGER
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTDep, get_id_from_jwt, get_username_from_jwt, pre_authorize
 from app.api.tags.tag_service import TagService, get_tag_service
-from app.api.registry.registry_dto import DeleteTagDTO, DeleteTagResponseDTO
+from app.api.registry.registry_dto import DeleteTagDTO, DeleteResponseDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
 from app.api.config.exception_handler import AccessDeniedException
@@ -52,7 +52,7 @@ def registry_notification_endpoint(data: dict, registry_service: RegistryService
 
     return {}
 
-@external_router.delete("/tag", status_code=200, summary="Delete a tag by its name", response_model=DeleteTagResponseDTO)
+@external_router.delete("/tag", status_code=200, summary="Delete a tag by its name", response_model=DeleteResponseDTO)
 @pre_authorize([UserRole.user, UserRole.admin])                             
 async def delete_tag_endpoint(
     jwt: JWTDep,
@@ -68,7 +68,7 @@ async def delete_tag_endpoint(
     repo = repo_service.find_by_id(dto.repo_id)
     tag = tag_service.find_by_name_and_repo_id(dto.tag_name, dto.repo_id)
 
-    if not access_control_service.has_delete_tag_access(user_id, repo.id):
+    if not access_control_service.has_delete_access(user_id, repo.id):
         raise AccessDeniedException(f"User {user_id} cannot delete a tag {tag.name} of repository with identifier {repo.id}")
 
     response = await registry_service.delete_tag(registry_client, username, repo, tag)   

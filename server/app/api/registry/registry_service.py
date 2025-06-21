@@ -6,7 +6,7 @@ from app.api.access_control.access_control_service import AccessControlService
 from app.api.registry.registry_utils import build_manifest_jwt, parse_scopes, build_jwt_for_docker_registry
 from app.api.user.user_service import UserService
 from app.api.repo.repo_service import RepositoryService
-from app.api.registry.registry_dto import DeleteTagResponseDTO, RegistryActionOperation
+from app.api.registry.registry_dto import DeleteResponseDTO, RegistryActionOperation
 from app.api.tags.tag_service import TagService
 from app.api.repo.repo_model import Repository
 from app.api.tags.tag_model import Tag
@@ -148,7 +148,7 @@ class RegistryService:
         response = await client.delete_manifest(repo_name, digest, jwt)
         assert response.status_code == 202
 
-    async def delete_tag(self, client: RegistryClient, username: str, repo: Repository, tag: Tag) -> DeleteTagResponseDTO:
+    async def delete_tag(self, client: RegistryClient, username: str, repo: Repository, tag: Tag) -> DeleteResponseDTO:
         # If the manifest for a certain tag can't be found,
         # it means the manifest has already been deleted.
         # Two tags can point to the same manifest.
@@ -157,13 +157,13 @@ class RegistryService:
         digest = await self._fetch_manifest_digest(client, repo.canonical_name, tag.name, username)   
         if digest is None:
             self.tag_service.remove_tag(tag.id)
-            return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
+            return DeleteResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
 
         # Since deletion of the manifest is accepted (202) 
         # by Distribution, it is a slightly better approach 
         # to delete it from the backend database afterward.
         await self._delete_manifest_by_digest(client, repo.canonical_name, digest, username)
-        return DeleteTagResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
+        return DeleteResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
    
 def get_registry_service(session: Session = Depends(get_database)) -> RegistryService:
     return RegistryService(session)
