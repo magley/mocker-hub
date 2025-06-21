@@ -99,6 +99,14 @@ services:
     depends_on:
       - cache
 
+  rq_dashboard:
+    image: eoranged/rq-dashboard:v0.6.3
+    ports:
+      - "9181:9181"
+    environment:
+      RQ_DASHBOARD_REDIS_URL: redis://cache:6379
+    depends_on:
+      - cache
 
   distribution:
     image: "registry:2" 
