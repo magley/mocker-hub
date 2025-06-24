@@ -22,7 +22,7 @@ class TeamMember(SQLModel, table=True):
 
 class TeamPermission(SQLModel, table=True):
     team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True)
-    repo_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True)
+    repo_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True, ondelete="CASCADE")
 
     kind: TeamPermissionKind = Field(default=TeamPermissionKind.read)
 

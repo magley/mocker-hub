@@ -18,7 +18,7 @@ class RepositoryStar(SQLModel, table=True):
     __tablename__ = "repository_stars"
 
     starrer_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
-    repository_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True)
+    repository_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True, ondelete="CASCADE")
 
     starrer: "User" = Relationship(back_populates="stars")
     repository: "Repository" = Relationship()
