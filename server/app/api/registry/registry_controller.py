@@ -12,6 +12,7 @@ from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
 from app.api.config.exception_handler import AccessDeniedException
 from app.api.registry.registry_client import RegistryClient, get_registry_client
+from app.api.jobs.jobs_client import JobsClient, get_jobs_client
 
 internal_router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
 external_router = APIRouter(prefix="/registry", tags=["dockerhub-registry-external"])
@@ -73,4 +74,17 @@ async def delete_tag_endpoint(
 
     response = await registry_service.delete_tag(registry_client, username, repo, tag)   
 
+    return response
+
+@external_router.delete("/repository/{repo_id}", status_code=202, summary="Delete a repository by its id", response_model=DeleteResponseDTO)
+@pre_authorize([UserRole.user, UserRole.admin])                             
+def delete_repo_endpoint(
+    jwt: JWTDep,
+    repo_id: int,
+    jobs_client: JobsClient = Depends(get_jobs_client),
+    registry_service: RegistryService = Depends(get_registry_service), 
+):
+    username = get_username_from_jwt(jwt)
+    user_id = get_id_from_jwt(jwt)
+    response = registry_service.delete_repo(jobs_client, username, user_id, repo_id)   
     return response

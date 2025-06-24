@@ -107,6 +107,12 @@ class RepositoryService:
         repo = self.find_by_id(repo_id)
         repo = self._update_repo_attribute(repo, dto)
         return repo
+    
+    def update_repo_by_id(self, repo_id: int, **kwargs) -> Repository:
+        repo = self.find_by_id(repo_id)
+        for attr, value in kwargs.items():
+            repo = self.repo_repo.set_attribute(repo, attr, value)
+        return repo
 
     def is_repo_starred_by(self, repo: Repository, user: User) -> bool:
         return any(star.repository.id == repo.id for star in user.stars)
@@ -138,6 +144,9 @@ class RepositoryService:
     def get_starred_repositories_of_user(self, user_id: int) -> List[Repository]:
         user_repos = self.repo_repo.find_user_starred_repos(user_id)
         return user_repos
+    
+    def remove_repo(self, repo: Repository) -> None:
+        self.repo_repo.remove(repo)
     
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)

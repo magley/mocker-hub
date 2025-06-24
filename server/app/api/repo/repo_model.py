@@ -60,6 +60,7 @@ class Repository(SQLModel, table=True):
     last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     stars: int = Field(default=0)
     downloads: int = Field(default=0)
+    deleting: bool = Field(default=False)
 
     tags: List["Tag"] = Relationship(back_populates="repository")
 

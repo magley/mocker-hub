@@ -1,5 +1,13 @@
+import asyncio
 from typing import List
+
+from rq import Retry
 from fastapi import Depends, HTTPException
+from app.api.config.exception_handler import AccessDeniedException
+from app.api.jobs.jobs_client import JobsClient
+from app.api.events.event_service import EventService
+from app.api.jobs.jobs_service import delete_tag_job
+from app.api.events.event_model import EventLevel
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.access_control.access_control_service import AccessControlService
@@ -32,6 +40,7 @@ class RegistryService:
         self.repo_service = RepositoryService(session)
         self.tag_service = TagService(session)
         self.access_control_service = AccessControlService(session)
+        self.event_service = EventService()
 
     def _format_registry_event(self, username: str, action: str, repo_name: str, tag_name: str | None, digest: str, method: str, url: str | None):
 
@@ -71,14 +80,19 @@ class RegistryService:
         if action == 'push' and tag_name is not None:
             user = self.user_service.find_by_username(username)
             repo = self.repo_service.find_by_canonical_name(repo_name)
-            tag = self.tag_service.on_push(user.id, repo.id, tag_name)
-            print(f"Pushed tag {tag}")
+            self.tag_service.on_push(user.id, repo.id, tag_name)
+            self.event_service.log(EventLevel.Info, f"Tag '{tag_name}' of repository '{repo.canonical_name}' is pushed.")
 
         elif action == 'delete' and tag_name is not None:
             repo = self.repo_service.find_by_canonical_name(repo_name)
             tag = self.tag_service.find_by_name_and_repo_id(tag_name, repo.id)
             self.tag_service.remove_tag(tag.id)
-            print(f"Deleted tag {tag_name}")
+            self.event_service.log(EventLevel.Info, f"Tag '{tag_name}' of repository '{repo.canonical_name}' is deleted.")
+
+            if repo.deleting and len(repo.tags) == 0:
+                name = repo.canonical_name
+                self.repo_service.remove_repo(repo)
+                self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
 
         message = self._format_registry_event(username, action, repo_name, tag_name, digest, method, url)
         print(message)
@@ -165,5 +179,27 @@ class RegistryService:
         await self._delete_manifest_by_digest(client, repo.canonical_name, digest, username)
         return DeleteResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
    
+    def delete_repo(self, client: JobsClient, username: str, user_id: int, repo_id: int) -> DeleteResponseDTO:
+        repo = self.repo_service.find_by_id(repo_id)
+
+        if not self.access_control_service.has_delete_access(user_id, repo_id):
+            raise AccessDeniedException(f"User {username} cannot delete a repository with identifier {repo_id}.")
+
+        if len(repo.tags) == 0:
+            name = repo.canonical_name
+            self.repo_service.remove_repo(repo)
+            self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
+        else:
+            self.repo_service.update_repo_by_id(repo.id, deleting=True)
+            for tag in repo.tags:
+                queue = client.get("delete_tag")
+                queue.enqueue(
+                    delete_tag_job, 
+                    args=(username, repo.id, tag.name),
+                    retry=Retry(max=6, interval=[60, 60, 60, 120, 4*3600])
+                )
+
+        return DeleteResponseDTO(message=f"Request to delete repository '{repo.canonical_name}' has been accepted and will be processed shortly.")
+
 def get_registry_service(session: Session = Depends(get_database)) -> RegistryService:
     return RegistryService(session)
