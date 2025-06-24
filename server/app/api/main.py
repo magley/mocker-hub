@@ -1,10 +1,8 @@
 import asyncio
-import os
 from fastapi import APIRouter, FastAPI
 from contextlib import asynccontextmanager
 
-from httpx import AsyncClient
-from app.api.config.initialize import init_create_tables, configure_cors, init_dummy_data, init_registry_client, init_superadmin
+from app.api.config.initialize import init_create_tables, configure_cors, init_dummy_data, init_jobs_client, init_registry_client, init_superadmin
 from app.api.config.exception_handler import register_exception_handler
 import app.api.events
 import app.api.events.event_controller
@@ -40,6 +38,7 @@ async def lifespan(app: FastAPI):
     init_create_tables()
     init_cache()
     init_superadmin()
+    app.jobs_client = init_jobs_client()
     app.registry_client = init_registry_client()
     asyncio.create_task(try_to_init_elasticsearch())
     yield
