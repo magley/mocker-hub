@@ -5,11 +5,11 @@ x-common-variables: &common-variables
   POSTGRES_PASSWORD: admin
   REDIS_HOST: cache
   REDIS_PORT: 6379
-  SUPERADMIN_PASSWORD: admin123 #
+  SUPERADMIN_PASSWORD: admin123
   JWT_SECRET: secret
   JWT_ALGORITHM: HS256
-  ELASTICSEARCH_HOST: elasticsearch #
-  ELASTICSEARCH_PORT: 9200 #
+  ELASTICSEARCH_HOST: elasticsearch
+  ELASTICSEARCH_PORT: 9200
   DISTRIBUTION_HOST: distribution
   DISTRIBUTION_PORT: 5000
   PEM_CERT_PATH: /code/certs/cert.pem

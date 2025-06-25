@@ -9,5 +9,5 @@ connection = Redis.from_url(f"{scheme}://{host}:{port}")
 
 if __name__ == '__main__':
     default_queue = [Queue(name, connection=connection) for name in ['delete_tag']]
-    worker = Worker(queues=default_queue, connection=connection)
-    worker.work()
+    worker = Worker(queues=default_queue, connection=connection, job_monitoring_interval=2)
+    worker.work(with_scheduler=True)

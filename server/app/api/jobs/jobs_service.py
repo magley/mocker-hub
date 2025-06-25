@@ -35,7 +35,7 @@ def delete_tag_job(username:str, repo_id: int, tag_name: str):
             registry_service.event_service.log(
                 EventLevel.Error, 
                 (
-                    f"Tag '{tag.name}' is not deleted (retries_left={retries_left}, job_id={job_id}, queue={origin}). " 
+                    f"Tag '{tag.name}' is not deleted (job_id={job_id}, retries_left={retries_left}, queue={origin}). " 
                     f"ADMIN: For an immediate response, check both the queue dashboard and the log trace."
                 )
             )
