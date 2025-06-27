@@ -56,6 +56,10 @@ export interface ToggleStarRepoDTO extends RepoDTO {
     starred: boolean,
 }
 
+export interface DeleteRepoResponseDTO {
+    message: string
+}
+
 export class RepositoryService {
     static BadgeToHumanText(badge: RepositoryBadge): string {
         switch (badge) {
@@ -117,5 +121,9 @@ export class RepositoryService {
 
     static async ToggleRepositoryStar(repoId: number) : Promise<AxiosResponse<ToggleStarRepoDTO>> {
         return await axiosInstance.put(`/repositories/star/${repoId}`)
+    }
+
+    static async DeleteRepo(repoId: number) : Promise<AxiosResponse<DeleteRepoResponseDTO>> {
+        return await axiosInstance.delete(`/registry/repository/${repoId}`)
     }
 }
