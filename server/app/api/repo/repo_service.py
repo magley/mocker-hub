@@ -108,7 +108,7 @@ class RepositoryService:
         repo = self._update_repo_attribute(repo, dto)
         return repo
     
-    def update_repo_by_id(self, repo_id: int, **kwargs) -> Repository:
+    def update_repo_attrs(self, repo_id: int, **kwargs) -> Repository:
         repo = self.find_by_id(repo_id)
         for attr, value in kwargs.items():
             repo = self.repo_repo.set_attribute(repo, attr, value)

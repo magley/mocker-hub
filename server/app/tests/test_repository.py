@@ -1219,3 +1219,79 @@ class TestIsRepoStarredBy:
 
         result = repo_service.is_repo_starred_by(r1, user)
         assert result is True
+
+class TestUpdateRepoAttrs():
+        
+    def test_repo_not_exist(self, repo_service):
+        """ Test case for when the repository does not exist. """
+        repo_id = 1
+        repo_service.repo_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.update_repo_attrs(repo_id, desc="desc123")
+        
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+
+    def test_attributes_not_passed(self, repo_service):
+        """ Test case for when no attributes are passed. """ 
+        repo = mock.MagicMock(spec=Repository)
+        repo.id = 1
+        repo.name = "repo"
+        repo.desc = "desc"
+        repo.public = True
+        repo_service.repo_repo.find_by_id.return_value = repo
+
+        result = repo_service.update_repo_attrs(repo.id)
+
+        assert result == repo 
+        assert result.id == repo.id
+        assert result.name == repo.name
+        assert result.desc == repo.desc
+        assert result.public == repo.public
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo.id)
+
+    def test_attribute_not_exist(self, repo_service):
+        """ Test case for when a specified attribute does not exist. """  
+        repo = mock.MagicMock(spec=Repository)
+        repo.id = 1
+        repo.name = "repo"
+        repo.desc = "desc"
+        repo.public = True
+        repo_service.repo_repo.find_by_id.return_value = repo
+        repo_service.repo_repo.set_attribute.side_effect = ValueError("unknown attribute")
+
+        with pytest.raises(ValueError) as e: 
+            repo_service.update_repo_attrs(repo.id, unknown_attr="fail")
+        
+        assert "unknown attribute" in str(e.value)
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo.id)
+        repo_service.repo_repo.set_attribute.assert_called_once_with(repo, "unknown_attr", "fail")
+    
+    def test_successfully_update_attributes(self, repo_service):
+        """ Test case for when the attributes exist. """
+        repo = mock.MagicMock(spec=Repository)
+        repo.id = 1
+        repo.name = "repo"
+        repo.desc = "desc"
+        repo.public = True
+        repo_service.repo_repo.find_by_id.return_value = repo
+
+        def mock_set_attribute(repo, attr, value):
+            setattr(repo, attr, value)
+            return repo
+        repo_service.repo_repo.set_attribute.side_effect = mock_set_attribute
+
+        result = repo_service.update_repo_attrs(repo.id, name="new_name", desc="new_desc", public=False)
+
+        assert result.id == 1
+        assert result.public is False
+        assert result.name == "new_name"
+        assert result.desc == "new_desc"
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo.id)
+        expected_calls = [
+            mock.call(repo, "name", "new_name"), 
+            mock.call(repo, "desc", "new_desc"), 
+            mock.call(repo, "public", False),
+        ]
+        assert repo_service.repo_repo.set_attribute.call_args_list == expected_calls
+    

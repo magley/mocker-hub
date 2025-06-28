@@ -190,7 +190,7 @@ class RegistryService:
             self.repo_service.remove_repo(repo)
             self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
         else:
-            self.repo_service.update_repo_by_id(repo.id, deleting=True)
+            self.repo_service.update_repo_attrs(repo.id, deleting=True)
             for tag in repo.tags:
                 queue = client.get("delete_tag")
                 queue.enqueue(
