@@ -38,16 +38,16 @@ export const RepoSettings: React.FC<{ isActive: boolean, repo: RepoExtDTO, setRe
     }
 
     const handleDeleteRepo = async () => {
-            RepositoryService.DeleteRepo(props.repo.id)
-                .then((res) => {
-                    addToast(res.data.message, ToastType.success);
-                })
-                .catch((err: AxiosError) => {
-                    const data = (err.response?.data ?? {}) as any;
-                    const msg = typeof data.detail === 'string' ? data.detail : data.detail?.message;
-                    addToast(msg, ToastType.error);
-                })
-        };
+        RepositoryService.DeleteRepo(props.repo.id)
+            .then((res) => {
+                addToast(res.data.message, ToastType.success);
+            })
+            .catch((err: AxiosError) => {
+                const data = (err.response?.data ?? {}) as any;
+                const msg = typeof data.detail === 'string' ? data.detail : data.detail?.message;
+                addToast(msg, ToastType.error);
+            })
+    };
 
     return (
         <div className="tab-pane fade show active" id="settings">
