@@ -1,4 +1,3 @@
-import asyncio
 from typing import List
 
 from rq import Retry
@@ -6,7 +5,7 @@ from fastapi import Depends, HTTPException
 from app.api.config.exception_handler import AccessDeniedException
 from app.api.jobs.jobs_client import JobsClient
 from app.api.events.event_service import EventService
-from app.api.jobs.jobs_service import delete_tag_job
+from app.api.jobs.jobs_service import JobsService
 from app.api.events.event_model import EventLevel
 from sqlmodel import Session
 from app.api.config.database import get_database
@@ -41,6 +40,7 @@ class RegistryService:
         self.tag_service = TagService(session)
         self.access_control_service = AccessControlService(session)
         self.event_service = EventService()
+        self.jobs_service = JobsService()
 
     def _format_registry_event(self, username: str, action: str, repo_name: str, tag_name: str | None, digest: str, method: str, url: str | None):
 
@@ -194,7 +194,7 @@ class RegistryService:
             for tag in repo.tags:
                 queue = client.get("delete_tag")
                 queue.enqueue(
-                    delete_tag_job, 
+                    self.jobs_service.delete_tag_job, 
                     args=(username, repo.id, tag.name),
                     retry=Retry(max=6, interval=[60, 60, 60, 120, 4*3600])
                 )
