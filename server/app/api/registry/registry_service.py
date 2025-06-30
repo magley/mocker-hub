@@ -171,13 +171,13 @@ class RegistryService:
         digest = await self._fetch_manifest_digest(client, repo.canonical_name, tag.name, username)   
         if digest is None:
             self.tag_service.remove_tag(tag.id)
-            return DeleteResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
+            return DeleteResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.canonical_name}'.")
 
         # Since deletion of the manifest is accepted (202) 
         # by Distribution, it is a slightly better approach 
         # to delete it from the backend database afterward.
         await self._delete_manifest_by_digest(client, repo.canonical_name, digest, username)
-        return DeleteResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.name}'.")
+        return DeleteResponseDTO(message=f"Tag '{tag.name}' successfully deleted from repository '{repo.canonical_name}'.")
    
     def delete_repo(self, client: JobsClient, username: str, user_id: int, repo_id: int) -> DeleteResponseDTO:
         repo = self.repo_service.find_by_id(repo_id)

@@ -755,8 +755,6 @@ class TestDeleteRepo:
             r2 = add_repo("u1", "r2", o1["id"])
             r3 = add_repo("u1", "r3", o1["id"])
             r4 = add_repo("u1", "r4", o1["id"])
-            print(f"u1 {u1}")
-            print(f"r4 {r4}")
             add_tag(u1["id"], r2["id"], "t1")
             add_tag(u1["id"], r2["id"], "t2")
             add_tag(u1["id"], r4["id"], "t3")
