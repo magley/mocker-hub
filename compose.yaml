@@ -27,7 +27,7 @@ services:
       - cache
       # - nginx
       - elasticsearch
-      - distribution
+      # - distribution
       - log_collector
       - worker
     environment:
@@ -109,9 +109,7 @@ services:
     entrypoint: []
     command: ["python", "-m", "app.api.config.worker"]
     depends_on:
-      - db
       - cache
-      - distribution
     volumes:
       - backend_cfg:/code/volume-server-cfg/
       - ./images:/code/images
@@ -131,6 +129,8 @@ services:
     image: "registry:2" 
     ports:
       - "5000:5000"
+    depends_on:
+      - backend  # Certs must be unzipped first.
     volumes:
       - "./distribution/config.yaml:/etc/docker/registry/config.yml"
       - "./distribution/certs:/mnt/local/certs"
