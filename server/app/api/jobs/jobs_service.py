@@ -4,6 +4,7 @@ from rq import get_current_job
 from app.api.config.database import get_database
 from app.api.config.initialize import init_registry_client
 from app.api.events.event_model import EventLevel
+from app.api.config.exception_handler import NotFoundException, NotInRelationshipException
 
 class JobsService:
 
@@ -39,14 +40,14 @@ class JobsService:
         try:
             repo = registry_service.repo_service.find_by_id(repo_id)
             tag = registry_service.tag_service.find_by_name_and_repo_id(tag_name, repo_id)
-
-        except Exception:
-            registry_service.event_service.log(EventLevel.Info, f"Tag '{tag_name}' has already been deleted by another job.")
-            return
-
-        try:
             response = loop.run_until_complete(registry_service.delete_tag(client, username, repo, tag))
             registry_service.event_service.log(EventLevel.Info, response.message)
+
+        except NotFoundException:
+            registry_service.event_service.log(EventLevel.Info, f"Repository with identifier '{repo_id}' has already been deleted by another job.")
+
+        except NotInRelationshipException:
+            registry_service.event_service.log(EventLevel.Info, f"Tag '{tag_name}' has already been deleted by another job.")
 
         except Exception:
             job_info = self._get_current_job_metadata()
