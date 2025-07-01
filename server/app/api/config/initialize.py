@@ -2,6 +2,7 @@ import os
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 from httpx import AsyncClient
+from app.api.jobs.jobs_client import JobsClient
 from sqlmodel import SQLModel, select
 from app.api.config.database import engine, get_database
 from app.api.user.user_model import User, UserRole
@@ -34,6 +35,11 @@ def init_registry_client():
     port = os.environ["DISTRIBUTION_PORT"]
     cert = os.environ["PEM_CERT_PATH"]
     return RegistryClient(AsyncClient(verify=cert), host, port, True)
+
+def init_jobs_client():
+    host = os.environ["REDIS_HOST"]
+    port = os.environ["REDIS_PORT"]
+    return JobsClient(host, port)
 
 def init_superadmin():
     session = next(get_database())

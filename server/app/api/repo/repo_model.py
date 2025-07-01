@@ -18,7 +18,7 @@ class RepositoryStar(SQLModel, table=True):
     __tablename__ = "repository_stars"
 
     starrer_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
-    repository_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True)
+    repository_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True, ondelete="CASCADE")
 
     starrer: "User" = Relationship(back_populates="stars")
     repository: "Repository" = Relationship()
@@ -60,6 +60,7 @@ class Repository(SQLModel, table=True):
     last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     stars: int = Field(default=0)
     downloads: int = Field(default=0)
+    deleting: bool = Field(default=False)
 
     tags: List["Tag"] = Relationship(back_populates="repository")
 

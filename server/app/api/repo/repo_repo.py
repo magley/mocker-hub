@@ -82,3 +82,14 @@ class RepositoryRepo:
         )
 
         return self.session.exec(query).all()
+    
+    def set_attribute(self, repo: Repository, attribute: str, value: any) -> Repository:
+        repo.sqlmodel_update({attribute: value})
+        self.session.add(repo)
+        self.session.commit()
+        self.session.refresh(repo)
+        return repo
+    
+    def remove(self, repo: Repository) -> None:
+        self.session.delete(repo)
+        self.session.commit()

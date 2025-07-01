@@ -9,6 +9,7 @@ pyjwt
 cryptography
 
 fastapi-cache2[redis]
+rq
 
 pytest
 pytest-asyncio

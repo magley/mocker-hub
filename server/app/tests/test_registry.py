@@ -1,19 +1,23 @@
 import os
 from fastapi.testclient import TestClient
 import jwt
+from app.api.events.event_model import EventLevel
 import pytest
+from app.api.jobs.jobs_client import JobsClient
+from app.api.user.user_model import User
+from app.api.events.event_service import EventService
 from sqlmodel import SQLModel
 from app.api.main import app
 from unittest.mock import MagicMock, AsyncMock, call, patch
 from fastapi import HTTPException
 from app.api.registry.registry_service import RegistryService
-from app.api.registry.registry_dto import RegistryActionOperation
+from app.api.registry.registry_dto import DeleteResponseDTO, RegistryActionOperation
 from app.api.user.user_service import UserService
 from app.api.repo.repo_service import RepositoryService
 from app.api.access_control.access_control_service import AccessControlService
 from app.api.registry.registry_utils import build_jwt_for_docker_registry, parse_scopes, build_manifest_jwt
 from app.api.registry.registry_client import RegistryClient
-from app.api.config.exception_handler import RegistryException
+from app.api.config.exception_handler import AccessDeniedException, NotFoundException, RegistryException
 from app.api.repo.repo_model import Repository
 from app.api.tags.tag_model import Tag
 from httpx import AsyncClient, Response, Request
@@ -33,7 +37,9 @@ def registry_service() -> RegistryService:
     service.user_service = MagicMock(UserService)
     service.repo_service = MagicMock(RepositoryService)
     service.access_control_service = MagicMock(AccessControlService)
-    
+    service.tag_service = MagicMock(TagService)
+    service.event_service = MagicMock(EventService)
+
     return service
 
 @pytest.fixture
@@ -568,6 +574,227 @@ class TestDeleteTag:
             
             # 8) Delete tag as an organization member with `read_write` permissions.
             standard_deleting_test(r3, t4, u2)
+
+class TestDeleteRepo:
+    
+    def test_repo_not_exist(self, registry_service: RegistryService):
+        """ Test case for when the repository does not exist. """
+        client = MagicMock(spec=JobsClient)
+        user_id = 1
+        repo_id = 99999
+        registry_service.repo_service.find_by_id.side_effect = NotFoundException(Repository, repo_id)
+
+        with pytest.raises(NotFoundException): 
+            registry_service.delete_repo(client, "user", user_id, repo_id)
+    
+        registry_service.repo_service.find_by_id.assert_called_once_with(repo_id)
+
+    def test_user_not_permitted(self, registry_service: RegistryService):
+        """ Test case for when the user is not permitted to delete the repository. """
+        repo = MagicMock(spec=Repository)
+        client = MagicMock(spec=JobsClient)
+        registry_service.repo_service.find_by_id.return_value = repo
+        user_id = 1
+        repo.id = 1
+        registry_service.access_control_service.has_delete_access.return_value = False
+
+        with pytest.raises(AccessDeniedException): 
+            registry_service.delete_repo(client, "user", user_id, repo.id)
+    
+        registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
+        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        
+    def test_repo_not_have_tags(self, registry_service: RegistryService):
+        """ Test case for when the repository does not have any tags. """
+        user_id = 1
+        client = MagicMock(spec=JobsClient)
+        repo = MagicMock(spec=Repository)
+        repo.id =1
+        repo.name = "repo"
+        repo.owner = MagicMock(spec=User)
+        repo.owner.username = "user"
+        repo.tags = []
+        registry_service.repo_service.find_by_id.return_value = repo
+        registry_service.repo_service.remove_repo.return_value = None
+
+        result = registry_service.delete_repo(client, "user", user_id, repo.id)
+
+        assert isinstance(result, DeleteResponseDTO)
+        registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
+        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.repo_service.remove_repo.assert_called_once_with(repo)
+        registry_service.event_service.log.assert_called_once_with(EventLevel.Info, f"Repository '{repo.canonical_name}' is deleted.")
+
+    def test_repo_has_tags(self, registry_service: RegistryService):
+        """ Test case for when the repository has tags. """
+        user_id = 1
+        tag_1 = MagicMock(spec=Tag(name="tag_1"))
+        tag_2 = MagicMock(spec=Tag(name="tag_2"))
+        
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.name = "repo"
+        repo.owner = MagicMock(spec=User)
+        repo.owner.username = "user"
+        repo.tags = [tag_1, tag_2]
+
+        queue = MagicMock()
+        client = MagicMock(spec=JobsClient)
+        client.get.return_value = queue
+
+        registry_service.repo_service.find_by_id.return_value = repo
+        registry_service.repo_service.remove_repo.return_value = None
+
+        result = registry_service.delete_repo(client, "user", user_id, repo.id)
+
+        assert isinstance(result, DeleteResponseDTO)
+        assert queue.enqueue.call_count == 2
+        client.get.assert_called_with("delete_tag")
+        registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
+        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.repo_service.update_repo_attrs.assert_called_once_with(repo.id, deleting=True)
+
+    @patch("app.api.jobs.jobs_client.JobsClient.get", return_value=MagicMock())
+    def test_delete_repo__integration(self, mock_get_queue):
+
+        # NOTE: Queues are mocked in these tests, as  
+        # spinning up Redis and workers is very complex.
+
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@email.com",
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+
+            def log_in(username):
+                data = {"username": username, "password": "1234"}
+                response = client.post("/api/v1/users/login", json=data)
+                return response.json()["token"]
+
+            def add_repo(username, repo_name, org_id = None):
+                data = {
+                    "name": repo_name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": org_id,
+                }
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+
+                return client.post("/api/v1/repositories/", json=data, headers=header).json()
+            
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto = {
+                    "name": name,
+                    "desc": "",
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto, headers=header).json()
+
+            def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+                # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+                from app.api.config.database import engine
+                from app.api.org.org_repo import OrganizationRepo
+                from app.api.config.database import get_database
+
+                session = next(get_database())
+                org_repo = OrganizationRepo(session)
+                return org_repo.add_user_to_org(org_id, user_id)
+
+            def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto1 = {
+                    "organization_id": org_id,
+                    "name": name,
+                    "desc": desc,
+                }
+                return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+            def add_team_member(user_id: int, team_id: int) -> TeamMember:
+                # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+                from app.api.team.team_repo import TeamRepo
+                from app.api.config.database import get_database
+
+                session = next(get_database())
+                team_repo = TeamRepo(session)
+                return team_repo.add_member(team_id, user_id)
+            
+            def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+                # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+                from app.api.team.team_repo import TeamRepo
+                from app.api.config.database import get_database
+
+                session = next(get_database())
+                team_repo = TeamRepo(session)
+                return team_repo.add_permission(team_id, repo_id, kind).model_dump()
+
+            def add_tag(user_id, repo_id, tag_name):
+                session = next(get_database())
+                tag_service = TagService(session)
+                return tag_service.on_push(user_id, repo_id, tag_name).model_dump()
+            
+            
+
+            def delete_repo(repo_id, username):
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+                return client.request("DELETE", f"/api/v1/registry/repository/{repo_id}", headers=header)
+
+            u1 = add_user("u1")
+            u2 = add_user("u2")
+            u3 = add_user("u3")
+            o1 = add_org("u1", "o1")
+            r1 = add_repo("u1", "r1")
+            r2 = add_repo("u1", "r2", o1["id"])
+            r3 = add_repo("u1", "r3", o1["id"])
+            r4 = add_repo("u1", "r4", o1["id"])
+            add_tag(u1["id"], r2["id"], "t1")
+            add_tag(u1["id"], r2["id"], "t2")
+            add_tag(u1["id"], r4["id"], "t3")
+            add_tag(u1["id"], r4["id"], "t4")
+
+            add_user_to_org(u3["id"], o1["id"])
+            t1 = add_team("u1", o1["id"], "t1")
+            add_team_member(u3["id"], t1["id"])
+            add_team_permission(t1["id"], r3["id"], TeamPermissionKind.admin)
+            add_team_permission(t1["id"], r4["id"], TeamPermissionKind.read_write)
+
+            # 1) Repository does not exist.
+            response = delete_repo(99999, u1["username"])
+            assert response.status_code == 404
+            assert mock_get_queue.call_count == 0
+
+            # 2) User is not authorized to delete the repository.
+            response = delete_repo(r1["id"], u2["username"])
+            assert response.status_code == 400
+            assert mock_get_queue.call_count == 0
+
+            # 3) User removes a repository without tags successfully.
+            with patch("app.api.events.event_service.EventService.log"):
+                response = delete_repo(r1["id"], u1["username"])
+                assert response.status_code == 202
+                assert mock_get_queue.call_count == 0
+
+            with patch("app.api.events.event_service.EventService.log"):
+                response = delete_repo(r3["id"], u3["username"])
+                assert response.status_code == 202
+                assert mock_get_queue.call_count == 0
+
+            # 4) User removes a repository with tags successfully.
+            response = delete_repo(r2["id"], u1["username"])
+            assert response.status_code == 202
+            assert mock_get_queue.call_count == 2   
+
+            response = delete_repo(r4["id"], u3["username"])
+            assert response.status_code == 202
+            assert mock_get_queue.call_count == 4   
 
 # -----------------------------------
 # Util functions

@@ -37,6 +37,18 @@ export const RepoSettings: React.FC<{ isActive: boolean, repo: RepoExtDTO, setRe
         });
     }
 
+    const handleDeleteRepo = async () => {
+        RepositoryService.DeleteRepo(props.repo.id)
+            .then((res) => {
+                addToast(res.data.message, ToastType.success);
+            })
+            .catch((err: AxiosError) => {
+                const data = (err.response?.data ?? {}) as any;
+                const msg = typeof data.detail === 'string' ? data.detail : data.detail?.message;
+                addToast(msg, ToastType.error);
+            })
+    };
+
     return (
         <div className="tab-pane fade show active" id="settings">
             <Card className="mt-4">
@@ -54,6 +66,17 @@ export const RepoSettings: React.FC<{ isActive: boolean, repo: RepoExtDTO, setRe
                     <Button variant="outline-primary" onClick={changeVisibility}>
                         {props.repo.public ? 'Make private' : 'Make public'}
                     </Button>
+                </Card.Body>
+            </Card>
+        
+            <Card className="mt-4">
+                <Card.Body>
+                    <Card.Title className="d-flex align-items-center">
+                        <h5 className="mb-0">Delete repository</h5>
+                    </Card.Title>
+                    {error && <Alert variant="danger">{error}</Alert>}
+                    <p className="text-muted mt-3"> Deleting a repository will destroy all images stored within it. This action cannot be undone. </p>
+                    <Button variant="outline-danger" onClick={handleDeleteRepo}>Delete repository</Button>
                 </Card.Body>
             </Card>
         </div>

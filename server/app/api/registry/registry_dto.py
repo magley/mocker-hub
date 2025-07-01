@@ -16,5 +16,5 @@ class DeleteTagDTO(BaseModel):
     repo_id: int
     tag_name: str
 
-class DeleteTagResponseDTO(BaseModel):
+class DeleteResponseDTO(BaseModel):
     message: str

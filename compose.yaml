@@ -1,3 +1,19 @@
+x-common-variables: &common-variables
+  PYTHONUNBUFFERED: 1
+  POSTGRES_USER: postgres
+  POSTGRES_DATABASE: postgres
+  POSTGRES_PASSWORD: admin
+  REDIS_HOST: cache
+  REDIS_PORT: 6379
+  SUPERADMIN_PASSWORD: admin123
+  JWT_SECRET: secret
+  JWT_ALGORITHM: HS256
+  ELASTICSEARCH_HOST: elasticsearch
+  ELASTICSEARCH_PORT: 9200
+  DISTRIBUTION_HOST: distribution
+  DISTRIBUTION_PORT: 5000
+  PEM_CERT_PATH: /code/certs/cert.pem
+
 services:
   backend:
     build: ./server
@@ -11,23 +27,11 @@ services:
       - cache
       # - nginx
       - elasticsearch
-      - distribution
+      # - distribution
       - log_collector
+      - worker
     environment:
-      PYTHONUNBUFFERED: 1
-      POSTGRES_USER: postgres
-      POSTGRES_DATABASE: postgres
-      POSTGRES_PASSWORD: admin
-      REDIS_HOST: cache
-      REDIS_PORT: 6379
-      SUPERADMIN_PASSWORD: admin123
-      JWT_SECRET: secret
-      JWT_ALGORITHM: HS256
-      ELASTICSEARCH_HOST: elasticsearch
-      ELASTICSEARCH_PORT: 9200
-      DISTRIBUTION_HOST: distribution
-      DISTRIBUTION_PORT: 5000
-      PEM_CERT_PATH: /code/certs/cert.pem
+      <<: *common-variables
 
       # To run tests, do `RUN_TESTS=true docker compose up`.
       # However, I've been having issues with this on WSL,
@@ -87,13 +91,46 @@ services:
     restart: always
     ports:
       - '6888:6379'
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     # volumes: 
-      # - cache:/data
+    #   - cache:/data
+    
+  worker:
+    image: magley/mocker-hub-backend:latest
+    restart: always
+    environment:
+      REDIS_SCHEME: redis 
+      PYTHONPATH: /code
+      <<: *common-variables
+    entrypoint: []
+    command: ["python", "-m", "app.api.config.worker"]
+    depends_on:
+      - cache
+    volumes:
+      - backend_cfg:/code/volume-server-cfg/
+      - ./images:/code/images
+      - ./distribution/certs:/code/certs
+      - ./logs:/code/logs
+
+  rq_dashboard:
+    image: cjlapao/rq-dashboard:0.8.3
+    ports:
+      - "9181:9181"
+    environment:
+      RQ_DASHBOARD_REDIS_URL: redis://cache:6379
+    depends_on:
+      - cache
 
   distribution:
     image: "registry:2" 
     ports:
       - "5000:5000"
+    depends_on:
+      - backend  # Certs must be unzipped first.
     volumes:
       - "./distribution/config.yaml:/etc/docker/registry/config.yml"
       - "./distribution/certs:/mnt/local/certs"
