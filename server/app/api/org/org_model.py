@@ -10,7 +10,7 @@ class OrganizationMembers(SQLModel, table=True):
     __tablename__ = "organization_members"
 
     user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
-    organization_id: int | None = Field(default=None, foreign_key="organization.id", primary_key=True)
+    organization_id: int | None = Field(default=None, foreign_key="organization.id", primary_key=True, ondelete="CASCADE")  
 
     organization: "Organization" = Relationship(back_populates="members")
     user: "User" = Relationship()
@@ -21,6 +21,7 @@ class Organization(SQLModel, table=True):
 
     name: str = Field()
     desc: str = Field(default="")
+    deleting: bool = Field(default=False)
     image: str = Field(default="")
     """
     Path to the image, relative to the internal `/images/` folder.
@@ -30,4 +31,4 @@ class Organization(SQLModel, table=True):
     owner: "User" = Relationship()
 
     repositories: list["Repository"] = Relationship(back_populates="organization", cascade_delete=True)
-    members: List["OrganizationMembers"] = Relationship(back_populates="organization")
+    members: List["OrganizationMembers"] = Relationship(back_populates="organization", cascade_delete=True)
