@@ -189,12 +189,12 @@ class RegistryService:
    
     def delete_repo(self, client: JobsClient, username: str, user_id: int, repo_id: int) -> DeleteResponseDTO:
         repo = self.repo_service.find_by_id(repo_id)
+        name = repo.canonical_name
 
         if not self.access_control_service.has_delete_access(user_id, repo_id):
             raise AccessDeniedException(f"User {username} cannot delete a repository with identifier {repo_id}.")
 
         if len(repo.tags) == 0:
-            name = repo.canonical_name
             org = repo.organization
             self.repo_service.remove_repo(repo)
             self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
@@ -214,7 +214,7 @@ class RegistryService:
                     retry=Retry(max=6, interval=[60, 60, 60, 120, 4*3600])
                 )
 
-        return DeleteResponseDTO(message=f"Request to delete repository '{repo.canonical_name}' has been accepted and will be processed shortly.")
+        return DeleteResponseDTO(message=f"Request to delete repository '{name}' has been accepted and will be processed shortly.")
 
     def delete_org(self, client: JobsClient, username: str, user_id: int, org_name: str) -> DeleteResponseDTO:
         org = self.org_service.find_by_name(org_name)
