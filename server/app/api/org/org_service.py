@@ -86,5 +86,14 @@ class OrganizationService:
     def get_org_names_from_repos(self, repos: List[Repository]) -> Dict[int, str]:
         return self.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
 
+    def remove_org(self, org: Organization) -> None:
+        self.org_repo.remove(org)
+
+    def update_org_attrs(self, name: str, **kwargs) -> Organization:
+        org = self.find_by_name(name)
+        for attr, value in kwargs.items():
+            repo = self.org_repo.set_attribute(org, attr, value)
+        return repo
+
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
     return OrganizationService(session)

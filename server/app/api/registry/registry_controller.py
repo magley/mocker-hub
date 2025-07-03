@@ -88,3 +88,16 @@ def delete_repo_endpoint(
     user_id = get_id_from_jwt(jwt)
     response = registry_service.delete_repo(jobs_client, username, user_id, repo_id)   
     return response
+
+@external_router.delete("/organization/{org_name}", status_code=202, summary="Delete an organization by its name", response_model=DeleteResponseDTO)
+@pre_authorize([UserRole.user, UserRole.admin])                             
+def delete_org_endpoint(
+    jwt: JWTDep,
+    org_name: str,
+    jobs_client: JobsClient = Depends(get_jobs_client),
+    registry_service: RegistryService = Depends(get_registry_service), 
+):
+    username = get_username_from_jwt(jwt)
+    user_id = get_id_from_jwt(jwt)
+    response = registry_service.delete_org(jobs_client, username, user_id, org_name) 
+    return response

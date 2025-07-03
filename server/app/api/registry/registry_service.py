@@ -7,6 +7,7 @@ from app.api.jobs.jobs_client import JobsClient
 from app.api.events.event_service import EventService
 from app.api.jobs.jobs_service import JobsService
 from app.api.events.event_model import EventLevel
+from app.api.org.org_service import OrganizationService
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.access_control.access_control_service import AccessControlService
@@ -41,6 +42,7 @@ class RegistryService:
         self.access_control_service = AccessControlService(session)
         self.event_service = EventService()
         self.jobs_service = JobsService()
+        self.org_service = OrganizationService(session)
 
     def _format_registry_event(self, username: str, action: str, repo_name: str, tag_name: str | None, digest: str, method: str, url: str | None):
 
@@ -90,9 +92,15 @@ class RegistryService:
             self.event_service.log(EventLevel.Info, f"Tag '{tag_name}' of repository '{repo.canonical_name}' is deleted.")
 
             if repo.deleting and len(repo.tags) == 0:
-                name = repo.canonical_name
+                org = repo.organization
+                repo_name = repo.canonical_name
                 self.repo_service.remove_repo(repo)
-                self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
+                self.event_service.log(EventLevel.Info, f"Repository '{repo_name}' is deleted.")
+
+                if org.deleting and len(org.repositories) == 0:
+                    org_name = org.name
+                    self.org_service.remove_org(org)
+                    self.event_service.log(EventLevel.Info, f"Organization '{org_name}' is deleted.")
 
         message = self._format_registry_event(username, action, repo_name, tag_name, digest, method, url)
         print(message)
@@ -187,8 +195,15 @@ class RegistryService:
 
         if len(repo.tags) == 0:
             name = repo.canonical_name
+            org = repo.organization
             self.repo_service.remove_repo(repo)
             self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
+
+            if org.deleting and len(org.repositories) == 0:
+                org_name = org.name
+                self.org_service.remove_org(org)
+                self.event_service.log(EventLevel.Info, f"Organization '{org_name}' is deleted.")
+
         else:
             self.repo_service.update_repo_attrs(repo.id, deleting=True)
             for tag in repo.tags:
@@ -200,6 +215,24 @@ class RegistryService:
                 )
 
         return DeleteResponseDTO(message=f"Request to delete repository '{repo.canonical_name}' has been accepted and will be processed shortly.")
+
+    def delete_org(self, client: JobsClient, username: str, user_id: int, org_name: str) -> DeleteResponseDTO:
+        org = self.org_service.find_by_name(org_name)
+        org.deleting = True
+        name = org.name
+
+        if user_id != org.owner_id:
+            raise AccessDeniedException(f"User {username} cannot delete an organization with name {org_name}.")
+
+        if len(org.repositories) == 0:
+            self.org_service.remove_org(org)
+            self.event_service.log(EventLevel.Info, f"Organization '{name}' is deleted.")
+        else:
+            self.org_service.update_org_attrs(org.name, deleting=True)
+            for repo in org.repositories:
+                self.delete_repo(client, username, user_id, repo.id)
+
+        return DeleteResponseDTO(message=f"Request to delete organization '{name}' has been accepted and will be processed shortly.")
 
 def get_registry_service(session: Session = Depends(get_database)) -> RegistryService:
     return RegistryService(session)
