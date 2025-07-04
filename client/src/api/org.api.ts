@@ -32,6 +32,10 @@ export interface OrganizationHasMemberDTO {
     is_member: boolean
 }
 
+export interface DeleteOrgResponseDTO {
+    message: string
+}
+
 export class OrganizationService {
     static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.post(`/organizations`, dto);
@@ -51,5 +55,9 @@ export class OrganizationService {
         
     static async AmIMemberOfOrg(org_id: number): Promise<AxiosResponse<OrganizationHasMemberDTO>> {
         return await axiosInstance.get(`/organizations/me/${org_id}`);
+    }
+
+    static async DeleteOrg(orgName: string) : Promise<AxiosResponse<DeleteOrgResponseDTO>> {
+        return await axiosInstance.delete(`/registry/organization/${orgName}`)
     }
 }
