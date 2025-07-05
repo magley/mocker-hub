@@ -92,8 +92,8 @@ class OrganizationService:
     def update_org_attrs(self, name: str, **kwargs) -> Organization:
         org = self.find_by_name(name)
         for attr, value in kwargs.items():
-            repo = self.org_repo.set_attribute(org, attr, value)
-        return repo
+            org = self.org_repo.set_attribute(org, attr, value)
+        return org
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
     return OrganizationService(session)
