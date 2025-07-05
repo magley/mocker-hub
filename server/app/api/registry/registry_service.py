@@ -97,7 +97,7 @@ class RegistryService:
                 self.repo_service.remove_repo(repo)
                 self.event_service.log(EventLevel.Info, f"Repository '{repo_name}' is deleted.")
 
-                if org.deleting and len(org.repositories) == 0:
+                if org and org.deleting and len(org.repositories) == 0:
                     org_name = org.name
                     self.org_service.remove_org(org)
                     self.event_service.log(EventLevel.Info, f"Organization '{org_name}' is deleted.")
@@ -199,7 +199,7 @@ class RegistryService:
             self.repo_service.remove_repo(repo)
             self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
 
-            if org.deleting and len(org.repositories) == 0:
+            if org and org.deleting and len(org.repositories) == 0:
                 org_name = org.name
                 self.org_service.remove_org(org)
                 self.event_service.log(EventLevel.Info, f"Organization '{org_name}' is deleted.")
