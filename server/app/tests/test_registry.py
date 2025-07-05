@@ -25,7 +25,7 @@ from httpx import AsyncClient, Response, Request
 from app.api.config.database import get_database
 from app.api.tags.tag_service import TagService
 from app.api.team.team_model import TeamMember, TeamPermissionKind, TeamPermission
-from app.api.org.org_model import OrganizationMembers
+from app.api.org.org_model import Organization, OrganizationMembers
 
 BUILD_MANIFEST_JWT_PATH = "app.api.registry.registry_service.build_manifest_jwt"
 
@@ -614,6 +614,8 @@ class TestDeleteRepo:
         repo.owner = MagicMock(spec=User)
         repo.owner.username = "user"
         repo.tags = []
+        repo.organization = MagicMock(spec=Organization)
+        repo.organization.deleting = False
         registry_service.repo_service.find_by_id.return_value = repo
         registry_service.repo_service.remove_repo.return_value = None
 
