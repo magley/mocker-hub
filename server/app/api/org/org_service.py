@@ -5,7 +5,7 @@ from app.api.config.database import get_database
 from app.api.org.org_dto import OrganizationCreateDTO
 from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.org.org_repo import OrganizationRepo
-from app.api.config.exception_handler import FieldTakenException
+from app.api.config.exception_handler import FieldTakenException, NotFoundException
 from app.api.config.images import generate_inline_image, save_image
 from app.api.repo.repo_model import Repository
  
@@ -91,6 +91,8 @@ class OrganizationService:
 
     def update_org_attrs(self, name: str, **kwargs) -> Organization:
         org = self.find_by_name(name)
+        if org is None:
+            raise NotFoundException(Organization, name)
         for attr, value in kwargs.items():
             org = self.org_repo.set_attribute(org, attr, value)
         return org
