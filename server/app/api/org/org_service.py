@@ -77,8 +77,11 @@ class OrganizationService:
     def find_org_names_by_ids(self, ids: List[int]) -> Dict[int, str]:
         return self.org_repo.find_orgs_by_ids(ids)
     
-    def find_by_name(self, org_name: str) -> Organization:
-        return self.org_repo.find_by_name(org_name)
+    def find_by_name(self, name: str) -> Organization:
+        org = self.org_repo.find_by_name(name)
+        if org is None:
+            raise NotFoundException(Organization, name)
+        return org
     
     def is_user_member_of_org(self, org_id: int, user_id: int) -> bool:
         return self.org_repo.user_is_in_org(user_id, org_id)
