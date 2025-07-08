@@ -244,4 +244,26 @@ class TestUpdateOrgAttrs():
             call(org, "desc", "new_desc"), 
         ]
         assert org_service.org_repo.set_attribute.call_args_list == expected_calls
-    
+
+class TestFindByName:
+
+    def test_org_not_exist(self, org_service):
+        """ Test case for when the org does not exist. """
+        org_name = "o999"
+        org_service.org_repo.find_by_name.return_value = None
+
+        with pytest.raises(NotFoundException): 
+            org_service.find_by_name(org_name)
+
+        org_service.org_repo.find_by_name.assert_called_once_with(org_name)
+
+    def test_org_exist(self, org_service):
+        """ Test case for when the org exists. """
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org_service.org_repo.find_by_name.return_value = org
+
+        result = org_service.find_by_name(org.name)
+
+        org_service.org_repo.find_by_name.assert_called_once_with(org.name)
+        assert result == org
