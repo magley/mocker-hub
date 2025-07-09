@@ -26,6 +26,7 @@ from app.api.config.database import get_database
 from app.api.tags.tag_service import TagService
 from app.api.team.team_model import TeamMember, TeamPermissionKind, TeamPermission
 from app.api.org.org_model import Organization, OrganizationMembers
+from app.api.org.org_service import OrganizationService
 
 BUILD_MANIFEST_JWT_PATH = "app.api.registry.registry_service.build_manifest_jwt"
 
@@ -39,6 +40,7 @@ def registry_service() -> RegistryService:
     service.access_control_service = MagicMock(AccessControlService)
     service.tag_service = MagicMock(TagService)
     service.event_service = MagicMock(EventService)
+    service.org_service = MagicMock(OrganizationService)
 
     return service
 
@@ -797,6 +799,87 @@ class TestDeleteRepo:
             response = delete_repo(r4["id"], u3["username"])
             assert response.status_code == 202
             assert mock_get_queue.call_count == 4   
+
+class TestDeleteOrg:
+    
+    def test_org_not_exist(self, registry_service: RegistryService):
+        """ Test case for when the organization does not exist. """
+        client = MagicMock(spec=JobsClient)
+        user_id = 1
+        org_name = "o1"
+        registry_service.org_service.find_by_name.side_effect = NotFoundException(Organization, org_name)
+
+        with pytest.raises(NotFoundException): 
+            registry_service.delete_org(client, "user", user_id, org_name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org_name)
+        registry_service.org_service.update_org_attrs.assert_not_called()
+
+    def test_user_not_have_permission(self, registry_service: RegistryService):
+        """ Test case for when the user does not have permission. """
+        client = MagicMock(spec=JobsClient)
+        user_id = 9999
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner_id = 1
+        registry_service.org_service.find_by_name.return_value = org
+
+        with pytest.raises(AccessDeniedException): 
+            registry_service.delete_org(client, "user", user_id, org.name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org.name)
+        registry_service.org_service.update_org_attrs.assert_not_called()
+
+    def test_org_not_have_repos(self, registry_service: RegistryService):
+        """ Test case for when the org does not have any repo. """
+        client = MagicMock(spec=JobsClient)
+        user_id = 1
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner_id = 1
+        org.repositories = []
+        registry_service.org_service.find_by_name.return_value = org
+
+        result = registry_service.delete_org(client, "user", user_id, org.name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org.name)
+        registry_service.org_service.update_org_attrs.assert_called_once_with(org.name, deleting=True)
+        registry_service.org_service.remove_org.assert_called_once_with(org)
+        registry_service.event_service.log.assert_called_once()
+        assert result.message == f"Request to delete organization '{org.name}' has been accepted and will be processed shortly."
+
+    def test_org_have_repos(self, registry_service: RegistryService):
+        """ Test case for when the org has repos. """
+        
+        # I won't test the deeper logic behind `self.delete_repo`, 
+        # as we have unit tests specifically designed for it.
+
+        client = MagicMock(spec=JobsClient)
+        user_id = 1
+        tag = MagicMock(speci=Tag)
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.deleting = False
+        repo.tags = [tag]
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner_id = 1
+        org.repositories = [repo]
+        org.deleting = False
+        repo.organization = org
+        registry_service.org_service.find_by_name.return_value = org
+        registry_service.repo_service.find_by_id.return_value = repo
+
+        result = registry_service.delete_org(client, "user", user_id, org.name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org.name)
+        registry_service.org_service.update_org_attrs.assert_called_once_with(org.name, deleting=True)
+        registry_service.org_service.remove_org.assert_not_called()
+        registry_service.event_service.log.assert_not_called()
+        registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
+        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        client.get.assert_called_once_with("delete_tag")
+        assert result.message == f"Request to delete organization '{org.name}' has been accepted and will be processed shortly."
 
 # -----------------------------------
 # Util functions
