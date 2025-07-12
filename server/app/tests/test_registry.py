@@ -881,6 +881,91 @@ class TestDeleteOrg:
         client.get.assert_called_once_with("delete_tag")
         assert result.message == f"Request to delete organization '{org.name}' has been accepted and will be processed shortly."
 
+class TestOnNotification:
+    
+    # NOTE: Most cases that do not require deeper logic in `on_notification`
+    # are covered by tests for `_format_registry_event`.
+
+    def test_push_operation(self, registry_service: RegistryService):
+        """ Test case for the push tag operation. """
+        user = MagicMock(spec=User)
+        user.id = 1
+        user.username = "user"
+
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.canonical_name="repo"
+
+        action="push"
+        tag_name="tag"
+        digest="sha:123"
+        method="PUT"
+        url="/v2/repo/manifests/sha:123"
+
+        registry_service.user_service.find_by_username.return_value = user
+        registry_service.repo_service.find_by_canonical_name.return_value = repo
+
+        registry_service.on_notification(user.username, action, repo.canonical_name, tag_name, digest, method, url)
+    
+        registry_service.user_service.find_by_username.assert_called_once_with(user.username)
+        registry_service.repo_service.find_by_canonical_name.assert_called_once_with(repo.canonical_name)
+        registry_service.tag_service.on_push.assert_called_once_with(user.id, repo.id, tag_name)
+        registry_service.event_service.log.assert_called_once_with(EventLevel.Info, f"Tag '{tag_name}' of repository '{repo.canonical_name}' is pushed.")
+
+    def test_delete_operation(self, registry_service: RegistryService):
+        """ Test case for the delete tag operation. """
+        user = MagicMock(spec=User)
+        user.id = 1
+        user.username = "user"
+
+        org = MagicMock(spec=Organization)
+        org.deleting = False
+
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.canonical_name="repo"
+        repo.deleting = False
+        repo.organization = org
+
+        tag = MagicMock(spec=Tag)
+        tag.name = "tag"
+
+        action="delete"
+        digest="sha:123"
+        method="DELETE"
+        url="/v2/repo/manifests/sha:123"
+
+        registry_service.repo_service.find_by_canonical_name.return_value = repo
+        registry_service.tag_service.find_by_name_and_repo_id.return_value = tag
+
+        registry_service.on_notification(user.username, action, repo.canonical_name, tag.name, digest, method, url)
+    
+        registry_service.repo_service.find_by_canonical_name.assert_called_once_with(repo.canonical_name)
+        registry_service.tag_service.find_by_name_and_repo_id.assert_called_once_with(tag.name, repo.id)
+        registry_service.tag_service.remove_tag.assert_called_once_with(tag.id)
+        registry_service.event_service.log.assert_called_once_with(EventLevel.Info, f"Tag '{tag.name}' of repository '{repo.canonical_name}' is deleted.")
+
+    def test_uncovered_operation(self, registry_service: RegistryService):
+        """ Test case for the uncovered operation. """
+        user = MagicMock(spec=User)
+        user.id = 1
+        user.username = "user"
+
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.canonical_name="repo"
+
+        action="unknown"
+        digest="sha:123"
+        method="POST"
+        url="/v2/repo/..."
+        tag_name=None
+
+        with pytest.raises(ValueError) as e:
+            registry_service.on_notification(user.username, action, repo.canonical_name, tag_name, digest, method, url)
+            
+        assert str(e.value) == f"Unsupported event: action='{action}', repo='{repo.canonical_name}', tag='{tag_name}', method='{method}', url='{url}'"
+
 # -----------------------------------
 # Util functions
 # -----------------------------------
