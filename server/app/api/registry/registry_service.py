@@ -205,7 +205,7 @@ class RegistryService:
         repo = self.repo_service.find_by_id(repo_id)
         name = repo.canonical_name
 
-        if not self.access_control_service.has_delete_access(user_id, repo_id):
+        if not self.access_control_service.has_delete_repo_access(user_id, repo):
             raise AccessDeniedException(f"User {username} cannot delete a repository with identifier {repo_id}.")
 
         self.repo_service.update_repo_attrs(repo.id, deleting=True)
@@ -221,7 +221,7 @@ class RegistryService:
                 )
 
         return DeleteResponseDTO(message=f"Request to delete repository '{name}' has been accepted and will be processed shortly.")
-
+    
     def delete_org(self, client: JobsClient, username: str, user_id: int, org_name: str) -> DeleteResponseDTO:
         org = self.org_service.find_by_name(org_name)
 

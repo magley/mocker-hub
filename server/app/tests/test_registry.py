@@ -598,13 +598,13 @@ class TestDeleteRepo:
         registry_service.repo_service.find_by_id.return_value = repo
         user_id = 1
         repo.id = 1
-        registry_service.access_control_service.has_delete_access.return_value = False
+        registry_service.access_control_service.has_delete_repo_access.return_value = False
 
         with pytest.raises(AccessDeniedException): 
             registry_service.delete_repo(client, "user", user_id, repo.id)
     
         registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
-        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
         
     def test_repo_not_have_tags(self, registry_service: RegistryService):
         """ Test case for when the repository does not have any tags. """
@@ -625,7 +625,7 @@ class TestDeleteRepo:
 
         assert isinstance(result, DeleteResponseDTO)
         registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
-        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
         registry_service.repo_service.remove_repo.assert_called_once_with(repo)
         registry_service.event_service.log.assert_called_once_with(EventLevel.Info, f"Repository '{repo.canonical_name}' is deleted.")
 
@@ -655,7 +655,7 @@ class TestDeleteRepo:
         assert queue.enqueue.call_count == 2
         client.get.assert_called_with("delete_tag")
         registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
-        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
         registry_service.repo_service.update_repo_attrs.assert_called_once_with(repo.id, deleting=True)
 
     @patch("app.api.jobs.jobs_client.JobsClient.get", return_value=MagicMock())
@@ -745,8 +745,6 @@ class TestDeleteRepo:
                 tag_service = TagService(session)
                 return tag_service.on_push(user_id, repo_id, tag_name).model_dump()
             
-            
-
             def delete_repo(repo_id, username):
                 header = {"Authorization": f"Bearer {log_in(username)}"}
                 return client.request("DELETE", f"/api/v1/registry/repository/{repo_id}", headers=header)
@@ -877,7 +875,7 @@ class TestDeleteOrg:
         registry_service.org_service.remove_org.assert_not_called()
         registry_service.event_service.log.assert_not_called()
         registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
-        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
         client.get.assert_called_once_with("delete_tag")
         assert result.message == f"Request to delete organization '{org.name}' has been accepted and will be processed shortly."
 
