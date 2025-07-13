@@ -91,7 +91,7 @@ class RegistryService:
     def _try_delete_repo_and_org(self, repo: Repository) -> bool:
         org = repo.organization
         delete_repo = repo.deleting and len(repo.tags) == 0
-        delete_org = delete_repo and org and org.deleting and len(org.repositories) == 0
+        delete_org = delete_repo and org and org.deleting and len(org.repositories) == 1
 
         if delete_repo:
             self._delete_repo(repo)
