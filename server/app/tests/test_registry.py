@@ -879,6 +879,86 @@ class TestDeleteOrg:
         client.get.assert_called_once_with("delete_tag")
         assert result.message == f"Request to delete organization '{org.name}' has been accepted and will be processed shortly."
 
+    @patch("app.api.jobs.jobs_client.JobsClient.get", return_value=MagicMock())
+    def test_delete_org__integration(self, mock_get_queue):
+
+        # NOTE: Queues are mocked in these tests, as  
+        # spinning up Redis and workers is very complex.
+
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@email.com",
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+
+            def log_in(username):
+                data = {"username": username, "password": "1234"}
+                response = client.post("/api/v1/users/login", json=data)
+                return response.json()["token"]
+
+            def add_repo(username, repo_name, org_id = None):
+                data = {
+                    "name": repo_name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": org_id,
+                }
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+
+                return client.post("/api/v1/repositories/", json=data, headers=header).json()
+            
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto = {
+                    "name": name,
+                    "desc": "",
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto, headers=header).json()
+
+            def add_tag(user_id, repo_id, tag_name):
+                session = next(get_database())
+                tag_service = TagService(session)
+                return tag_service.on_push(user_id, repo_id, tag_name).model_dump()
+            
+            def delete_org(org_name, username):
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+                return client.request("DELETE", f"/api/v1/registry/organization/{org_name}", headers=header)
+
+            u1 = add_user("u1")
+            u2 = add_user("u2")
+            o1 = add_org("u1", "o1")
+            o2 = add_org("u1", "o2")
+            r1 = add_repo("u1", "r1", o1["id"])
+            r2 = add_repo("u1", "r2", o1["id"])
+            r3 = add_repo("u1", "r2", o1["id"])
+            add_tag(u1["id"], r1["id"], "t1")
+            add_tag(u1["id"], r1["id"], "t2")
+            add_tag(u1["id"], r2["id"], "t3")
+
+            # 1) User is not organization owner.
+            response = delete_org(o1["name"], u2["username"])
+            assert response.status_code == 400
+            assert mock_get_queue.call_count == 0
+
+            # 2) User is organization owner, whereas organization is empty.
+            with patch("app.api.events.event_service.EventService.log"):
+                response = delete_org(o2["name"], u1["username"])
+                assert response.status_code == 202
+                assert mock_get_queue.call_count == 0
+
+            # 3) User is organization owner, whereas organization has repositories.
+            with patch("app.api.events.event_service.EventService.log"):
+                response = delete_org(o1["name"], u1["username"])
+                assert response.status_code == 202
+                assert mock_get_queue.call_count == 3
+
 class TestOnNotification:
     
     # NOTE: Most cases that do not require deeper logic in `on_notification`
