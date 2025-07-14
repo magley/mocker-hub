@@ -7,6 +7,7 @@ from app.api.jobs.jobs_client import JobsClient
 from app.api.events.event_service import EventService
 from app.api.jobs.jobs_service import JobsService
 from app.api.events.event_model import EventLevel
+from app.api.org.org_service import OrganizationService
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.access_control.access_control_service import AccessControlService
@@ -18,6 +19,7 @@ from app.api.tags.tag_service import TagService
 from app.api.repo.repo_model import Repository
 from app.api.tags.tag_model import Tag
 from app.api.registry.registry_client import RegistryClient
+from app.api.org.org_model import Organization
 
 class RegistryService:
     def __init__(self, session: Session):
@@ -41,6 +43,7 @@ class RegistryService:
         self.access_control_service = AccessControlService(session)
         self.event_service = EventService()
         self.jobs_service = JobsService()
+        self.org_service = OrganizationService(session)
 
     def _format_registry_event(self, username: str, action: str, repo_name: str, tag_name: str | None, digest: str, method: str, url: str | None):
 
@@ -75,6 +78,29 @@ class RegistryService:
     
         return f"User '{username}' completed a {action} using method {method} on repo '{repo_name}' ({target}) [{desc}]"
 
+    def _delete_org(self, org: Organization) -> None:
+        org_name = org.name
+        self.org_service.remove_org(org)
+        self.event_service.log(EventLevel.Info, f"Organization '{org_name}' is deleted.")
+
+    def _delete_repo(self, repo: Repository) -> None:
+        repo_name = repo.canonical_name
+        self.repo_service.remove_repo(repo)
+        self.event_service.log(EventLevel.Info, f"Repository '{repo_name}' is deleted.")
+
+    def _try_delete_repo_and_org(self, repo: Repository) -> bool:
+        org = repo.organization
+        delete_repo = repo.deleting and len(repo.tags) == 0
+        delete_org = delete_repo and org and org.deleting and len(org.repositories) == 1
+
+        if delete_repo:
+            self._delete_repo(repo)
+
+        if delete_org:
+            self._delete_org(org)
+
+        return delete_repo or delete_org
+
     def on_notification(self, username: str, action: str, repo_name: str, tag_name: str | None, digest: str, method: str, url: str | None):
 
         if action == 'push' and tag_name is not None:
@@ -89,10 +115,7 @@ class RegistryService:
             self.tag_service.remove_tag(tag.id)
             self.event_service.log(EventLevel.Info, f"Tag '{tag_name}' of repository '{repo.canonical_name}' is deleted.")
 
-            if repo.deleting and len(repo.tags) == 0:
-                name = repo.canonical_name
-                self.repo_service.remove_repo(repo)
-                self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
+            self._try_delete_repo_and_org(repo)
 
         message = self._format_registry_event(username, action, repo_name, tag_name, digest, method, url)
         print(message)
@@ -144,8 +167,7 @@ class RegistryService:
         # Create the JWT.
         jwt = build_jwt_for_docker_registry(username, service, scopes)
         return {"token": jwt}
-    
-   
+     
     async def _fetch_manifest_digest(self, client: RegistryClient, repo_name: str, tag_name: str, username: str) -> str | None:
 
         jwt = build_manifest_jwt(username, repo_name, "GET")
@@ -181,16 +203,15 @@ class RegistryService:
    
     def delete_repo(self, client: JobsClient, username: str, user_id: int, repo_id: int) -> DeleteResponseDTO:
         repo = self.repo_service.find_by_id(repo_id)
+        name = repo.canonical_name
 
-        if not self.access_control_service.has_delete_access(user_id, repo_id):
+        if not self.access_control_service.has_delete_repo_access(user_id, repo):
             raise AccessDeniedException(f"User {username} cannot delete a repository with identifier {repo_id}.")
 
-        if len(repo.tags) == 0:
-            name = repo.canonical_name
-            self.repo_service.remove_repo(repo)
-            self.event_service.log(EventLevel.Info, f"Repository '{name}' is deleted.")
-        else:
-            self.repo_service.update_repo_attrs(repo.id, deleting=True)
+        self.repo_service.update_repo_attrs(repo.id, deleting=True)
+        deleted = self._try_delete_repo_and_org(repo)
+        
+        if deleted is False:
             for tag in repo.tags:
                 queue = client.get("delete_tag")
                 queue.enqueue(
@@ -199,7 +220,23 @@ class RegistryService:
                     retry=Retry(max=6, interval=[60, 60, 60, 120, 4*3600])
                 )
 
-        return DeleteResponseDTO(message=f"Request to delete repository '{repo.canonical_name}' has been accepted and will be processed shortly.")
+        return DeleteResponseDTO(message=f"Request to delete repository '{name}' has been accepted and will be processed shortly.")
+    
+    def delete_org(self, client: JobsClient, username: str, user_id: int, org_name: str) -> DeleteResponseDTO:
+        org = self.org_service.find_by_name(org_name)
+
+        if user_id != org.owner_id:
+            raise AccessDeniedException(f"User {username} cannot delete an organization with name {org_name}.")
+
+        self.org_service.update_org_attrs(org.name, deleting=True)
+
+        if len(org.repositories) == 0:
+            self._delete_org(org)
+        else:
+            for repo in org.repositories:
+                self.delete_repo(client, username, user_id, repo.id)
+
+        return DeleteResponseDTO(message=f"Request to delete organization '{org_name}' has been accepted and will be processed shortly.")
 
 def get_registry_service(session: Session = Depends(get_database)) -> RegistryService:
     return RegistryService(session)

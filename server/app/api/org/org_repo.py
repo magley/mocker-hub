@@ -47,3 +47,14 @@ class OrganizationRepo:
         query = select(Organization.id, Organization.name).where(Organization.id.in_(ids))
         result = self.session.exec(query).all()
         return {org.id: org.name for org in result}
+    
+    def remove(self, org: Organization) -> None:
+        self.session.delete(org)
+        self.session.commit()
+
+    def set_attribute(self, org: Organization, attribute: str, value: any) -> Organization:
+        org.sqlmodel_update({attribute: value})
+        self.session.add(org)
+        self.session.commit()
+        self.session.refresh(org)
+        return org

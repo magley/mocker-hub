@@ -25,7 +25,8 @@ from httpx import AsyncClient, Response, Request
 from app.api.config.database import get_database
 from app.api.tags.tag_service import TagService
 from app.api.team.team_model import TeamMember, TeamPermissionKind, TeamPermission
-from app.api.org.org_model import OrganizationMembers
+from app.api.org.org_model import Organization, OrganizationMembers
+from app.api.org.org_service import OrganizationService
 
 BUILD_MANIFEST_JWT_PATH = "app.api.registry.registry_service.build_manifest_jwt"
 
@@ -39,6 +40,7 @@ def registry_service() -> RegistryService:
     service.access_control_service = MagicMock(AccessControlService)
     service.tag_service = MagicMock(TagService)
     service.event_service = MagicMock(EventService)
+    service.org_service = MagicMock(OrganizationService)
 
     return service
 
@@ -596,13 +598,13 @@ class TestDeleteRepo:
         registry_service.repo_service.find_by_id.return_value = repo
         user_id = 1
         repo.id = 1
-        registry_service.access_control_service.has_delete_access.return_value = False
+        registry_service.access_control_service.has_delete_repo_access.return_value = False
 
         with pytest.raises(AccessDeniedException): 
             registry_service.delete_repo(client, "user", user_id, repo.id)
     
         registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
-        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
         
     def test_repo_not_have_tags(self, registry_service: RegistryService):
         """ Test case for when the repository does not have any tags. """
@@ -614,6 +616,8 @@ class TestDeleteRepo:
         repo.owner = MagicMock(spec=User)
         repo.owner.username = "user"
         repo.tags = []
+        repo.organization = MagicMock(spec=Organization)
+        repo.organization.deleting = False
         registry_service.repo_service.find_by_id.return_value = repo
         registry_service.repo_service.remove_repo.return_value = None
 
@@ -621,7 +625,7 @@ class TestDeleteRepo:
 
         assert isinstance(result, DeleteResponseDTO)
         registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
-        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
         registry_service.repo_service.remove_repo.assert_called_once_with(repo)
         registry_service.event_service.log.assert_called_once_with(EventLevel.Info, f"Repository '{repo.canonical_name}' is deleted.")
 
@@ -651,7 +655,7 @@ class TestDeleteRepo:
         assert queue.enqueue.call_count == 2
         client.get.assert_called_with("delete_tag")
         registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
-        registry_service.access_control_service.has_delete_access.assert_called_once_with(user_id, repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
         registry_service.repo_service.update_repo_attrs.assert_called_once_with(repo.id, deleting=True)
 
     @patch("app.api.jobs.jobs_client.JobsClient.get", return_value=MagicMock())
@@ -741,8 +745,6 @@ class TestDeleteRepo:
                 tag_service = TagService(session)
                 return tag_service.on_push(user_id, repo_id, tag_name).model_dump()
             
-            
-
             def delete_repo(repo_id, username):
                 header = {"Authorization": f"Bearer {log_in(username)}"}
                 return client.request("DELETE", f"/api/v1/registry/repository/{repo_id}", headers=header)
@@ -795,6 +797,252 @@ class TestDeleteRepo:
             response = delete_repo(r4["id"], u3["username"])
             assert response.status_code == 202
             assert mock_get_queue.call_count == 4   
+
+class TestDeleteOrg:
+    
+    def test_org_not_exist(self, registry_service: RegistryService):
+        """ Test case for when the organization does not exist. """
+        client = MagicMock(spec=JobsClient)
+        user_id = 1
+        org_name = "o1"
+        registry_service.org_service.find_by_name.side_effect = NotFoundException(Organization, org_name)
+
+        with pytest.raises(NotFoundException): 
+            registry_service.delete_org(client, "user", user_id, org_name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org_name)
+        registry_service.org_service.update_org_attrs.assert_not_called()
+
+    def test_user_not_have_permission(self, registry_service: RegistryService):
+        """ Test case for when the user does not have permission. """
+        client = MagicMock(spec=JobsClient)
+        user_id = 9999
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner_id = 1
+        registry_service.org_service.find_by_name.return_value = org
+
+        with pytest.raises(AccessDeniedException): 
+            registry_service.delete_org(client, "user", user_id, org.name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org.name)
+        registry_service.org_service.update_org_attrs.assert_not_called()
+
+    def test_org_not_have_repos(self, registry_service: RegistryService):
+        """ Test case for when the org does not have any repo. """
+        client = MagicMock(spec=JobsClient)
+        user_id = 1
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner_id = 1
+        org.repositories = []
+        registry_service.org_service.find_by_name.return_value = org
+
+        result = registry_service.delete_org(client, "user", user_id, org.name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org.name)
+        registry_service.org_service.update_org_attrs.assert_called_once_with(org.name, deleting=True)
+        registry_service.org_service.remove_org.assert_called_once_with(org)
+        registry_service.event_service.log.assert_called_once()
+        assert result.message == f"Request to delete organization '{org.name}' has been accepted and will be processed shortly."
+
+    def test_org_have_repos(self, registry_service: RegistryService):
+        """ Test case for when the org has repos. """
+        
+        # I won't test the deeper logic behind `self.delete_repo`, 
+        # as we have unit tests specifically designed for it.
+
+        client = MagicMock(spec=JobsClient)
+        user_id = 1
+        tag = MagicMock(speci=Tag)
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.deleting = False
+        repo.tags = [tag]
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner_id = 1
+        org.repositories = [repo]
+        org.deleting = False
+        repo.organization = org
+        registry_service.org_service.find_by_name.return_value = org
+        registry_service.repo_service.find_by_id.return_value = repo
+
+        result = registry_service.delete_org(client, "user", user_id, org.name)
+    
+        registry_service.org_service.find_by_name.assert_called_once_with(org.name)
+        registry_service.org_service.update_org_attrs.assert_called_once_with(org.name, deleting=True)
+        registry_service.org_service.remove_org.assert_not_called()
+        registry_service.event_service.log.assert_not_called()
+        registry_service.repo_service.find_by_id.assert_called_once_with(repo.id)
+        registry_service.access_control_service.has_delete_repo_access.assert_called_once_with(user_id, repo)
+        client.get.assert_called_once_with("delete_tag")
+        assert result.message == f"Request to delete organization '{org.name}' has been accepted and will be processed shortly."
+
+    @patch("app.api.jobs.jobs_client.JobsClient.get", return_value=MagicMock())
+    def test_delete_org__integration(self, mock_get_queue):
+
+        # NOTE: Queues are mocked in these tests, as  
+        # spinning up Redis and workers is very complex.
+
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@email.com",
+                    "password": "1234"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+
+            def log_in(username):
+                data = {"username": username, "password": "1234"}
+                response = client.post("/api/v1/users/login", json=data)
+                return response.json()["token"]
+
+            def add_repo(username, repo_name, org_id = None):
+                data = {
+                    "name": repo_name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": org_id,
+                }
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+
+                return client.post("/api/v1/repositories/", json=data, headers=header).json()
+            
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto = {
+                    "name": name,
+                    "desc": "",
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto, headers=header).json()
+
+            def add_tag(user_id, repo_id, tag_name):
+                session = next(get_database())
+                tag_service = TagService(session)
+                return tag_service.on_push(user_id, repo_id, tag_name).model_dump()
+            
+            def delete_org(org_name, username):
+                header = {"Authorization": f"Bearer {log_in(username)}"}
+                return client.request("DELETE", f"/api/v1/registry/organization/{org_name}", headers=header)
+
+            u1 = add_user("u1")
+            u2 = add_user("u2")
+            o1 = add_org("u1", "o1")
+            o2 = add_org("u1", "o2")
+            r1 = add_repo("u1", "r1", o1["id"])
+            r2 = add_repo("u1", "r2", o1["id"])
+            r3 = add_repo("u1", "r2", o1["id"])
+            add_tag(u1["id"], r1["id"], "t1")
+            add_tag(u1["id"], r1["id"], "t2")
+            add_tag(u1["id"], r2["id"], "t3")
+
+            # 1) User is not organization owner.
+            response = delete_org(o1["name"], u2["username"])
+            assert response.status_code == 400
+            assert mock_get_queue.call_count == 0
+
+            # 2) User is organization owner, whereas organization is empty.
+            with patch("app.api.events.event_service.EventService.log"):
+                response = delete_org(o2["name"], u1["username"])
+                assert response.status_code == 202
+                assert mock_get_queue.call_count == 0
+
+            # 3) User is organization owner, whereas organization has repositories.
+            with patch("app.api.events.event_service.EventService.log"):
+                response = delete_org(o1["name"], u1["username"])
+                assert response.status_code == 202
+                assert mock_get_queue.call_count == 3
+
+class TestOnNotification:
+    
+    # NOTE: Most cases that do not require deeper logic in `on_notification`
+    # are covered by tests for `_format_registry_event`.
+
+    def test_push_operation(self, registry_service: RegistryService):
+        """ Test case for the push tag operation. """
+        user = MagicMock(spec=User)
+        user.id = 1
+        user.username = "user"
+
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.canonical_name="repo"
+
+        action="push"
+        tag_name="tag"
+        digest="sha:123"
+        method="PUT"
+        url="/v2/repo/manifests/sha:123"
+
+        registry_service.user_service.find_by_username.return_value = user
+        registry_service.repo_service.find_by_canonical_name.return_value = repo
+
+        registry_service.on_notification(user.username, action, repo.canonical_name, tag_name, digest, method, url)
+    
+        registry_service.user_service.find_by_username.assert_called_once_with(user.username)
+        registry_service.repo_service.find_by_canonical_name.assert_called_once_with(repo.canonical_name)
+        registry_service.tag_service.on_push.assert_called_once_with(user.id, repo.id, tag_name)
+        registry_service.event_service.log.assert_called_once_with(EventLevel.Info, f"Tag '{tag_name}' of repository '{repo.canonical_name}' is pushed.")
+
+    def test_delete_operation(self, registry_service: RegistryService):
+        """ Test case for the delete tag operation. """
+        user = MagicMock(spec=User)
+        user.id = 1
+        user.username = "user"
+
+        org = MagicMock(spec=Organization)
+        org.deleting = False
+
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.canonical_name="repo"
+        repo.deleting = False
+        repo.organization = org
+
+        tag = MagicMock(spec=Tag)
+        tag.name = "tag"
+
+        action="delete"
+        digest="sha:123"
+        method="DELETE"
+        url="/v2/repo/manifests/sha:123"
+
+        registry_service.repo_service.find_by_canonical_name.return_value = repo
+        registry_service.tag_service.find_by_name_and_repo_id.return_value = tag
+
+        registry_service.on_notification(user.username, action, repo.canonical_name, tag.name, digest, method, url)
+    
+        registry_service.repo_service.find_by_canonical_name.assert_called_once_with(repo.canonical_name)
+        registry_service.tag_service.find_by_name_and_repo_id.assert_called_once_with(tag.name, repo.id)
+        registry_service.tag_service.remove_tag.assert_called_once_with(tag.id)
+        registry_service.event_service.log.assert_called_once_with(EventLevel.Info, f"Tag '{tag.name}' of repository '{repo.canonical_name}' is deleted.")
+
+    def test_uncovered_operation(self, registry_service: RegistryService):
+        """ Test case for the uncovered operation. """
+        user = MagicMock(spec=User)
+        user.id = 1
+        user.username = "user"
+
+        repo = MagicMock(spec=Repository)
+        repo.id = 1
+        repo.canonical_name="repo"
+
+        action="unknown"
+        digest="sha:123"
+        method="POST"
+        url="/v2/repo/..."
+        tag_name=None
+
+        with pytest.raises(ValueError) as e:
+            registry_service.on_notification(user.username, action, repo.canonical_name, tag_name, digest, method, url)
+            
+        assert str(e.value) == f"Unsupported event: action='{action}', repo='{repo.canonical_name}', tag='{tag_name}', method='{method}', url='{url}'"
 
 # -----------------------------------
 # Util functions

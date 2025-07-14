@@ -15,13 +15,13 @@ class TeamPermissionKind(str, enum.Enum):
 
 class TeamMember(SQLModel, table=True):
     user_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
-    team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True)
+    team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True, ondelete="CASCADE")
 
     team: "Team" = Relationship(back_populates="members")
     user: "User" = Relationship()
 
 class TeamPermission(SQLModel, table=True):
-    team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True)
+    team_id: int | None = Field(default=None, foreign_key="team.id", primary_key=True, ondelete="CASCADE")
     repo_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True, ondelete="CASCADE")
 
     kind: TeamPermissionKind = Field(default=TeamPermissionKind.read)
@@ -34,8 +34,8 @@ class Team(SQLModel, table=True):
     name: str = Field()
     desc: str = Field()
 
-    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id")
+    organization_id: Optional[int] = Field(default=None, foreign_key="organization.id", ondelete="CASCADE")
     organization: "Organization" = Relationship()
 
-    members: List["TeamMember"] = Relationship(back_populates="team")
-    permissions : List["TeamPermission"] = Relationship(back_populates="team")
+    members: List["TeamMember"] = Relationship(back_populates="team", cascade_delete=True)
+    permissions : List["TeamPermission"] = Relationship(back_populates="team", cascade_delete=True)

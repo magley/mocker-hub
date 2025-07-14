@@ -1,9 +1,9 @@
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, call
 from fastapi.testclient import TestClient
 import pytest
 from app.api.org.org_service import OrganizationService
 from app.api.org.org_dto import OrganizationCreateDTO
-from app.api.config.exception_handler import FieldTakenException
+from app.api.config.exception_handler import FieldTakenException, NotFoundException
 from app.api.config.exception_handler import FieldTakenException
 from app.api.main import app
 from app.api.repo.repo_model import Repository
@@ -175,3 +175,95 @@ class TestGetOrgNamesFromRepos:
         assert result[o1.id] == o1.name
         assert result[o2.id] == o2.name
         org_service.org_repo.find_orgs_by_ids.assert_called_once_with(ids)
+
+class TestUpdateOrgAttrs():
+        
+    def test_org_not_exist(self, org_service):
+        """ Test case for when the org does not exist. """
+        org_name = "o1"
+        org_service.org_repo.find_by_name.return_value = None
+
+        with pytest.raises(NotFoundException):
+            org_service.update_org_attrs(org_name, desc="desc123")
+        
+        org_service.org_repo.find_by_name.assert_called_once_with(org_name)
+
+    def test_attributes_not_passed(self, org_service):
+        """ Test case for when no attributes are passed. """ 
+        org = MagicMock(spec=Organization)
+        org.id = 1
+        org.name = "o1"
+        org.desc = "desc"
+        org_service.org_repo.find_by_name.return_value = org
+
+        result = org_service.update_org_attrs(org.name)
+
+        assert result == org 
+        assert result.id == org.id
+        assert result.name == org.name
+        assert result.desc == org.desc
+        org_service.org_repo.find_by_name.assert_called_once_with(org.name)
+
+    def test_attribute_not_exist(self, org_service):
+        """ Test case for when a specified attribute does not exist. """  
+        org = MagicMock(spec=Organization)
+        org.id = 1
+        org.name = "o1"
+        org.desc = "desc"
+        org_service.org_repo.find_by_name.return_value = org
+        org_service.org_repo.set_attribute.side_effect = ValueError("unknown attribute")
+
+        with pytest.raises(ValueError) as e: 
+            org_service.update_org_attrs(org.name, unknown_attr="fail")
+        
+        assert "unknown attribute" in str(e.value)
+        org_service.org_repo.find_by_name.assert_called_once_with(org.name)
+        org_service.org_repo.set_attribute.assert_called_once_with(org, "unknown_attr", "fail")
+    
+    def test_successfully_update_attributes(self, org_service):
+        """ Test case for when the attributes exist. """
+        org = MagicMock(spec=Organization)
+        org.id = 1
+        org.desc = "desc"
+        org.deleting = False
+        org_service.org_repo.find_by_name.return_value = org
+
+        def mock_set_attribute(org, attr, value):
+            setattr(org, attr, value)
+            return org
+        org_service.org_repo.set_attribute.side_effect = mock_set_attribute
+
+        result = org_service.update_org_attrs(name=org.name, deleting=True, desc="new_desc")
+
+        assert result.id == 1
+        assert result.deleting == True
+        assert result.desc == "new_desc"
+        org_service.org_repo.find_by_name.assert_called_once_with(org.name)
+        expected_calls = [
+            call(org, "deleting", True), 
+            call(org, "desc", "new_desc"), 
+        ]
+        assert org_service.org_repo.set_attribute.call_args_list == expected_calls
+
+class TestFindByName:
+
+    def test_org_not_exist(self, org_service):
+        """ Test case for when the org does not exist. """
+        org_name = "o999"
+        org_service.org_repo.find_by_name.return_value = None
+
+        with pytest.raises(NotFoundException): 
+            org_service.find_by_name(org_name)
+
+        org_service.org_repo.find_by_name.assert_called_once_with(org_name)
+
+    def test_org_exist(self, org_service):
+        """ Test case for when the org exists. """
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org_service.org_repo.find_by_name.return_value = org
+
+        result = org_service.find_by_name(org.name)
+
+        org_service.org_repo.find_by_name.assert_called_once_with(org.name)
+        assert result == org
