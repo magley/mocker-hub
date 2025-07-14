@@ -31,3 +31,6 @@ class OrganizationHasMemberDTO(BaseModel):
     org_id: int
     user_id: int | None
     is_member: bool
+
+class OrganizationDescUpdateDTO(BaseModel):
+    desc: str

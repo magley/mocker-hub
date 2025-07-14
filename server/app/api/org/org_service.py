@@ -2,10 +2,10 @@ from typing import Dict, List
 from fastapi import Depends
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.org.org_dto import OrganizationCreateDTO
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDescUpdateDTO
 from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.org.org_repo import OrganizationRepo
-from app.api.config.exception_handler import FieldTakenException, NotFoundException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from app.api.config.images import generate_inline_image, save_image
 from app.api.repo.repo_model import Repository
  
@@ -91,6 +91,13 @@ class OrganizationService:
 
     def remove_org(self, org: Organization) -> None:
         self.org_repo.remove(org)
+
+    def update_desc_by_name(self, name: str, dto: OrganizationDescUpdateDTO, user_id: int) -> Organization:
+        org = self.find_by_name(name)
+        if user_id != org.owner.id:
+            raise AccessDeniedException(f"User {user_id} cannot update organization description with identifier {name}")
+        self.update_org_attrs(name, desc=dto.desc)
+        return org
 
     def update_org_attrs(self, name: str, **kwargs) -> Organization:
         org = self.find_by_name(name)
