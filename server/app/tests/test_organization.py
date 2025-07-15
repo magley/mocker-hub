@@ -2,12 +2,13 @@ from unittest.mock import MagicMock, call
 from fastapi.testclient import TestClient
 import pytest
 from app.api.org.org_service import OrganizationService
-from app.api.org.org_dto import OrganizationCreateDTO
-from app.api.config.exception_handler import FieldTakenException, NotFoundException
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDescUpdateDTO
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from app.api.config.exception_handler import FieldTakenException
 from app.api.main import app
 from app.api.repo.repo_model import Repository
 from app.api.org.org_model import Organization
+from app.api.user.user_model import User
 
 
 @pytest.fixture
@@ -267,3 +268,61 @@ class TestFindByName:
 
         org_service.org_repo.find_by_name.assert_called_once_with(org.name)
         assert result == org
+
+class TestUpdateOrgDescByName:
+
+    def test_org_not_exist(self, org_service):
+        """ Test case for when organization does not exist. """   
+        user_id = 1
+        dto = OrganizationDescUpdateDTO(desc="new desc")
+        org_name = "o1"
+        org_service.org_repo.find_by_name.return_value = None
+
+        with pytest.raises(NotFoundException):
+            org_service.update_desc_by_name(org_name, dto, user_id)
+
+        org_service.org_repo.set_attribute.assert_not_called()
+        org_service.org_repo.find_by_name.assert_called_once_with(org_name)
+
+    def test_non_eligible_user(self, org_service):
+        """ Test case for when the user is not eligible to make an update. """   
+        user_id = 1
+        dto = OrganizationDescUpdateDTO(desc="new desc")
+
+        owner = MagicMock(spec=User)
+        owner.id = 999999
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner = owner        
+
+        org_service.org_repo.find_by_name.return_value = org
+
+        with pytest.raises(AccessDeniedException):
+            org_service.update_desc_by_name(org.name, dto, user_id)
+
+        org_service.org_repo.set_attribute.assert_not_called()
+        org_service.org_repo.find_by_name.assert_called_once_with(org.name)
+
+    def test_successful_update(self, org_service):
+        """ Test case for when the user is eligble and org does exist. """   
+        dto = OrganizationDescUpdateDTO(desc="new desc")
+        user = MagicMock(spec=User)
+        user.id = 1
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner = user
+        org.desc = "old desc"
+
+        org_service.org_repo.find_by_name.return_value = org
+
+        org.desc = "new desc"
+        org_service.org_repo.set_attribute.return_value = org
+
+        result = org_service.update_desc_by_name(org.name, dto, user.id)
+
+        assert result.desc == "new desc"
+
+        org_service.org_repo.set_attribute.assert_called_once_with(org, "desc", "new desc")
+        expected_calls = [call(org.name), call(org.name)]
+        assert org_service.org_repo.find_by_name.call_args_list == expected_calls
+
