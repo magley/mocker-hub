@@ -304,7 +304,7 @@ class TestUpdateOrgDescByName:
         org_service.org_repo.find_by_name.assert_called_once_with(org.name)
 
     def test_successful_update(self, org_service):
-        """ Test case for when the user is eligble and org does exist. """   
+        """ Test case for when the user is eligible and organization does exist. """   
         dto = OrganizationDescUpdateDTO(desc="new desc")
         user = MagicMock(spec=User)
         user.id = 1
