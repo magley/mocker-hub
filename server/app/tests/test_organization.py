@@ -326,3 +326,96 @@ class TestUpdateOrgDescByName:
         expected_calls = [call(org.name), call(org.name)]
         assert org_service.org_repo.find_by_name.call_args_list == expected_calls
 
+    @pytest.mark.parametrize("user_type", [("user"), ("admin")])
+    def integration_test(self, user_type):
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+            
+            def log_in(username: str, password: str = "12345678"):
+                data = {
+                    "username": username,
+                    "password": password
+                }
+                response = client.post("/api/v1/users/login", json=data)
+                if response.status_code == 400:
+                    assert response.json() == False
+                jwt = response.json()["token"]
+                return jwt
+            
+            def change_superadmin_password():
+                # [1] Loading the super admin credentials
+                config_file = "./volume-server-cfg/superadmin_password.txt"
+
+                with open(config_file, "r") as f:
+                    old_password = f.readline()
+
+                jwt = log_in("admin", old_password)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                # [2] Changing the super admin password
+                data = {
+                    "old_password": old_password,
+                    "new_password": "12345678"
+                }
+                response = client.post("/api/v1/users/password", json=data, headers=header)
+                assert response.is_success
+            
+            def add_admin(admin_username: str) -> dict:
+                jwt = log_in("admin", "12345678")
+                header = {"Authorization": f"Bearer {jwt}"}
+                data = {
+                    "username": admin_username,
+                    "email": f"{admin_username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+                created_admin = response.json()
+
+                return created_admin
+
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto1 = {
+                    "name": name,
+                    "desc": "",
+                    "owner"
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+            def update_desc(username: str, org_name: str, desc: str):
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+                
+                data = {
+                    "desc": desc
+                }
+
+                response = client.put(f"/api/v1/organizations/{org_name}/desc", json=data, headers=header)
+                return response
+
+            if (user_type == "user"):
+                add_user("u1")
+                add_user("u2")
+            else:
+                change_superadmin_password()
+                add_admin("u1")
+                add_admin("u2")
+
+            o1 = add_org("u1", "o1")
+           
+            # User who is the organization owner
+            assert update_desc("u1", o1["name"], "new desc").is_success
+            # User who is trying to update a non existing organization
+            assert update_desc("u1", "unknown org", "new desc").status_code == 400
+            # User who is not an organization owner
+            assert update_desc("u2", o1["id"], "new desc").status_code == 400
