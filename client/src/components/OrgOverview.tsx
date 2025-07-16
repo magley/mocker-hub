@@ -54,7 +54,7 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
                 {error && <Alert variant="danger">{error}</Alert>}
                 {isEditing ? (
                     <div>
-                        <textarea className="form-control" rows={7} value={newDesc} onChange={(e) => setNewDesc(e.target.value)}/>
+                        <textarea className="form-control" rows={7} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} autoFocus/>
                         <div className='mt-3'>
                             <button className="btn btn-primary me-2" onClick={updateDescription}> 
                                 Update description
