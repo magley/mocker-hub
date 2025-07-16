@@ -45,13 +45,6 @@ export const OrgSettings: React.FC<{ isActive: boolean, org: OrganizationDTOBasi
     
     return (
         <>
-            <Card className="mt-4">
-                <Card.Body>
-                    <img src={OrganizationService.GetImageURI(org.image)} /> <br />
-                    Desc: {org.desc} <br />
-                </Card.Body>
-            </Card>
-
             {amOwnerOfOrg && 
                 <Card className="mt-4">
                     <Card.Body>

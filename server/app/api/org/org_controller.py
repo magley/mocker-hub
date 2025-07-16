@@ -4,8 +4,9 @@ from fastapi import APIRouter, Depends
 from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTDep, JWTDepOptional
-from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDTO, OrganizationDTOBasic, OrganizationHasMemberDTO
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDTO, OrganizationDTOBasic, OrganizationDescUpdateDTO, OrganizationHasMemberDTO
 from app.api.org.org_service import OrganizationService, get_org_service
+from app.api.access_control.access_control_service import AccessControlService
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -37,3 +38,13 @@ def am_i_member_of_org(org_id: int, jwt: JWTDepOptional, org_service: Organizati
         user_id=user_id, 
         is_member=is_member
     )
+
+@router.put("/{org_name}/desc", response_model=OrganizationDTO, status_code=200, summary="Update organization description by its name")
+@pre_authorize([UserRole.user, UserRole.admin])
+def update_org_desc_by_name(
+    jwt: JWTDep, org_name: str, 
+    dto: OrganizationDescUpdateDTO, 
+    org_service: OrganizationService = Depends(get_org_service)):
+    user_id = get_id_from_jwt(jwt)
+    org = org_service.update_desc_by_name(org_name, dto, user_id)
+    return org

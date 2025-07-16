@@ -8,12 +8,13 @@ import { OrgMembers } from "../components/OrgMembers";
 import { OrgRepositories } from "../components/OrgRepositories";
 import { OrgTeams } from "../components/OrgTeams";
 import { OrgSettings } from "../components/OrgSettings";
+import { OrgOverview } from "../components/OrgOverview";
 
 export const OrganizationPage = () => {
     const { "*": orgName } = useParams();
     const [loading, setLoading] = useState<boolean>(true);
     const [org, setOrg] = useState<OrganizationDTOBasic>();
-    const [key, setKey] = useState<string>('members');
+    const [key, setKey] = useState<string>('overview');
     const [amMemberOfOrg, setAmMemberOfOrg] = useState<boolean>(false);
     let navigate = useNavigate();
 
@@ -60,6 +61,7 @@ export const OrganizationPage = () => {
             <div className="org-page">
                 {/* Organization Section */}
                 <div className="org-page-header mb-4">
+                    
                     <h1>
                         {org?.name}
                     </h1>
@@ -68,6 +70,12 @@ export const OrganizationPage = () => {
                 {/* Tabs Section */}
                 <Tab.Container activeKey={key} onSelect={(k) => setKey(k!)} id="tabs">
                     <Nav variant="tabs" className="mb-3">
+                        <Nav.Item>
+                            <Nav.Link eventKey="overview" className={key === 'overview' ? 'active' : ''}>
+                                <i className="bi bi-list"> </i>
+                                Overview
+                            </Nav.Link>
+                        </Nav.Item>
                         <Nav.Item>
                             <Nav.Link eventKey="members" className={key === 'members' ? 'active' : ''}>
                                 <i className="bi bi-person"> </i>
@@ -95,6 +103,9 @@ export const OrganizationPage = () => {
                     </Nav>
 
                     <Tab.Content>
+                        <Tab.Pane eventKey="overview">
+                            <OrgOverview isActive={key === 'overview'} org={org} setOrg={setOrg} />
+                        </Tab.Pane>
                         <Tab.Pane eventKey="members">
                             <OrgMembers isActive={key === 'members'} />
                         </Tab.Pane>

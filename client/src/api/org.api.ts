@@ -36,6 +36,10 @@ export interface DeleteOrgResponseDTO {
     message: string
 }
 
+export interface OrgDescUpdateDTO {
+    desc: string
+}
+
 export class OrganizationService {
     static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.post(`/organizations`, dto);
@@ -60,4 +64,9 @@ export class OrganizationService {
     static async DeleteOrg(orgName: string) : Promise<AxiosResponse<DeleteOrgResponseDTO>> {
         return await axiosInstance.delete(`/registry/organization/${orgName}`)
     }
+
+    static async UpdateOrgDescByName(orgName: string, dto: OrgDescUpdateDTO) : Promise<AxiosResponse<OrganizationDTOBasic>> {
+        return await axiosInstance.put(`/organizations/${orgName}/desc`, dto)
+    }
 }
+

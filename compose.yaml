@@ -85,6 +85,8 @@ services:
       - "80:80"
     depends_on:
       - backend
+    volumes:
+      - ./images:/usr/share/nginx/html/images/
   
   cache:
     image: redis:alpine3.20

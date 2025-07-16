@@ -2,12 +2,13 @@ from unittest.mock import MagicMock, call
 from fastapi.testclient import TestClient
 import pytest
 from app.api.org.org_service import OrganizationService
-from app.api.org.org_dto import OrganizationCreateDTO
-from app.api.config.exception_handler import FieldTakenException, NotFoundException
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDescUpdateDTO
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from app.api.config.exception_handler import FieldTakenException
 from app.api.main import app
 from app.api.repo.repo_model import Repository
 from app.api.org.org_model import Organization
+from app.api.user.user_model import User
 
 
 @pytest.fixture
@@ -267,3 +268,154 @@ class TestFindByName:
 
         org_service.org_repo.find_by_name.assert_called_once_with(org.name)
         assert result == org
+
+class TestUpdateOrgDescByName:
+
+    def test_org_not_exist(self, org_service):
+        """ Test case for when organization does not exist. """   
+        user_id = 1
+        dto = OrganizationDescUpdateDTO(desc="new desc")
+        org_name = "o1"
+        org_service.org_repo.find_by_name.return_value = None
+
+        with pytest.raises(NotFoundException):
+            org_service.update_desc_by_name(org_name, dto, user_id)
+
+        org_service.org_repo.set_attribute.assert_not_called()
+        org_service.org_repo.find_by_name.assert_called_once_with(org_name)
+
+    def test_non_eligible_user(self, org_service):
+        """ Test case for when the user is not eligible to make an update. """   
+        user_id = 1
+        dto = OrganizationDescUpdateDTO(desc="new desc")
+
+        owner = MagicMock(spec=User)
+        owner.id = 999999
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner = owner        
+
+        org_service.org_repo.find_by_name.return_value = org
+
+        with pytest.raises(AccessDeniedException):
+            org_service.update_desc_by_name(org.name, dto, user_id)
+
+        org_service.org_repo.set_attribute.assert_not_called()
+        org_service.org_repo.find_by_name.assert_called_once_with(org.name)
+
+    def test_successful_update(self, org_service):
+        """ Test case for when the user is eligible and organization does exist. """   
+        dto = OrganizationDescUpdateDTO(desc="new desc")
+        user = MagicMock(spec=User)
+        user.id = 1
+        org = MagicMock(spec=Organization)
+        org.name = "o1"
+        org.owner = user
+        org.desc = "old desc"
+
+        org_service.org_repo.find_by_name.return_value = org
+
+        org.desc = "new desc"
+        org_service.org_repo.set_attribute.return_value = org
+
+        result = org_service.update_desc_by_name(org.name, dto, user.id)
+
+        assert result.desc == "new desc"
+
+        org_service.org_repo.set_attribute.assert_called_once_with(org, "desc", "new desc")
+        expected_calls = [call(org.name), call(org.name)]
+        assert org_service.org_repo.find_by_name.call_args_list == expected_calls
+
+    @pytest.mark.parametrize("user_type", [("user"), ("admin")])
+    def integration_test(self, user_type):
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+            
+            def log_in(username: str, password: str = "12345678"):
+                data = {
+                    "username": username,
+                    "password": password
+                }
+                response = client.post("/api/v1/users/login", json=data)
+                if response.status_code == 400:
+                    assert response.json() == False
+                jwt = response.json()["token"]
+                return jwt
+            
+            def change_superadmin_password():
+                # [1] Loading the super admin credentials
+                config_file = "./volume-server-cfg/superadmin_password.txt"
+
+                with open(config_file, "r") as f:
+                    old_password = f.readline()
+
+                jwt = log_in("admin", old_password)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                # [2] Changing the super admin password
+                data = {
+                    "old_password": old_password,
+                    "new_password": "12345678"
+                }
+                response = client.post("/api/v1/users/password", json=data, headers=header)
+                assert response.is_success
+            
+            def add_admin(admin_username: str) -> dict:
+                jwt = log_in("admin", "12345678")
+                header = {"Authorization": f"Bearer {jwt}"}
+                data = {
+                    "username": admin_username,
+                    "email": f"{admin_username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+                created_admin = response.json()
+
+                return created_admin
+
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto1 = {
+                    "name": name,
+                    "desc": "",
+                    "owner"
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+            def update_desc(username: str, org_name: str, desc: str):
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+                
+                data = {
+                    "desc": desc
+                }
+
+                response = client.put(f"/api/v1/organizations/{org_name}/desc", json=data, headers=header)
+                return response
+
+            if (user_type == "user"):
+                add_user("u1")
+                add_user("u2")
+            else:
+                change_superadmin_password()
+                add_admin("u1")
+                add_admin("u2")
+
+            o1 = add_org("u1", "o1")
+           
+            # User who is the organization owner
+            assert update_desc("u1", o1["name"], "new desc").is_success
+            # User who is trying to update a non existing organization
+            assert update_desc("u1", "unknown org", "new desc").status_code == 400
+            # User who is not an organization owner
+            assert update_desc("u2", o1["id"], "new desc").status_code == 400
