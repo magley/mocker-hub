@@ -48,7 +48,7 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
     return (
         <>
             {/* Consider placing the image next to the organization name */}
-            <img src={OrganizationService.GetImageURI(props.org.image)} /> <br /> 
+            <img src={OrganizationService.GetImageURI(props.org.image)} className="mb-3"/> 
 
             <div className="tab-pane fade show active" id="overview">
                 {error && <Alert variant="danger">{error}</Alert>}
