@@ -26,7 +26,7 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
         }
     }, [props.isActive]);
 
-    const updateChanges = () => {
+    const updateDescription = () => {
         setIsEditing(false);
 
         let dto: OrgDescUpdateDTO = {
@@ -56,8 +56,8 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
                     <div>
                         <textarea className="form-control" rows={7} value={newDesc} onChange={(e) => setNewDesc(e.target.value)}/>
                         <div className='mt-3'>
-                            <button className="btn btn-primary me-2" onClick={updateChanges}> 
-                                Update 
+                            <button className="btn btn-primary me-2" onClick={updateDescription}> 
+                                Update description
                             </button>
                             <button className="btn btn-secondary" onClick={() => { setIsEditing(false); setNewDesc(props.org.desc); }}> 
                                 Cancel 

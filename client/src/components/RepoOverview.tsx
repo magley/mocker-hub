@@ -17,7 +17,7 @@ export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, setRe
         }
     }, [props.isActive]);
 
-    const updateChanges = () => {
+    const updateDescription = () => {
         setIsEditing(false);
 
         let dto: RepositoryDescUpdateDTO = {
@@ -43,8 +43,8 @@ export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, setRe
                 <div>
                     <textarea className="form-control" rows={7} value={newDesc} onChange={(e) => setNewDesc(e.target.value)}/>
                     <div className='mt-3'>
-                        <button className="btn btn-primary me-2" onClick={updateChanges}> 
-                            Update 
+                        <button className="btn btn-primary me-2" onClick={updateDescription}> 
+                            Update description
                         </button>
                         <button className="btn btn-secondary" onClick={() => { setIsEditing(false); setNewDesc(props.repo.desc); }}> 
                             Cancel 
