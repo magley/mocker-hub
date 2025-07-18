@@ -28,8 +28,19 @@ export const UserPasswordChangeRequired = () => {
             clearJWT();
             navigate("/login", { replace: true });
         }).catch((err: AxiosError) => {
-            console.error(err);
-            setError((err.response?.data as any)["detail"]["message"]);
+            let message = (err.response?.data as any)["detail"]["message"];
+            try {
+                if (typeof message == "string") {
+                    message = message.replace("'", "\"");
+                    const parsedMessage = JSON.parse(message);
+                    setError(parsedMessage[0]["msg"]);
+                } else {
+                    setError(message);
+                }
+            } catch (e) {
+                setError("Old password is incorrect or new password is invalid (must be at least 8 characters long and different from old password)");
+            }
+
         });
     };
 
