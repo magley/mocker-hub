@@ -4,6 +4,7 @@ import { UserPasswordChangeDTO, UserService } from '../api/user.api';
 import { useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
 import { clearJWT } from '../util/localstorage';
+import { get_validation_error_readable } from '../util/http';
 
 export const UserPasswordChangeRequired = () => {
     let navigate = useNavigate();
@@ -28,19 +29,7 @@ export const UserPasswordChangeRequired = () => {
             clearJWT();
             navigate("/login", { replace: true });
         }).catch((err: AxiosError) => {
-            let message = (err.response?.data as any)["detail"]["message"];
-            try {
-                if (typeof message == "string") {
-                    message = message.replace("'", "\"");
-                    const parsedMessage = JSON.parse(message);
-                    setError(parsedMessage[0]["msg"]);
-                } else {
-                    setError(message);
-                }
-            } catch (e) {
-                setError("Old password is incorrect or new password is invalid (must be at least 8 characters long and different from old password)");
-            }
-
+            setError(get_validation_error_readable(err));
         });
     };
 

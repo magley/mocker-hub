@@ -3,6 +3,7 @@ import { Form, Button, Container, Row, Col, Alert } from 'react-bootstrap';
 import './UserRegistration.css';
 import { UserRegisterDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
+import { get_validation_error_readable } from '../util/http';
 
 const initialFormState = {
     username: '',
@@ -48,20 +49,7 @@ export const UserAdminRegistration = () => {
             setFormData(initialFormState);
             setSuccess("Admin " + dto.username + " is successfully registered!")
         }).catch((err: AxiosError) => {
-            try {
-                let err_msg = (err.response?.data as any)["detail"]["message"];
-                if (Array.isArray(err_msg)) {
-                    setError(err_msg[0]["msg"]);
-                } else if (typeof err_msg == "string") {
-                    setError(err_msg);
-                } else {
-                    setError((err.response?.data as any)["detail"]["message"]);
-                }
-            } catch (e) {
-                setError("Invalid user input");
-                console.error(e);
-                console.error(err.response?.data as any);
-            }
+            setError(get_validation_error_readable(err));
         });
     };
 
