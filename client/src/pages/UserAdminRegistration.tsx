@@ -48,7 +48,20 @@ export const UserAdminRegistration = () => {
             setFormData(initialFormState);
             setSuccess("Admin " + dto.username + " is successfully registered!")
         }).catch((err: AxiosError) => {
-            setError((err.response?.data as any)["detail"]["message"]);
+            try {
+                let err_msg = (err.response?.data as any)["detail"]["message"];
+                if (Array.isArray(err_msg)) {
+                    setError(err_msg[0]["msg"]);
+                } else if (typeof err_msg == "string") {
+                    setError(err_msg);
+                } else {
+                    setError((err.response?.data as any)["detail"]["message"]);
+                }
+            } catch (e) {
+                setError("Invalid user input");
+                console.error(e);
+                console.error(err.response?.data as any);
+            }
         });
     };
 
