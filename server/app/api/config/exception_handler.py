@@ -73,7 +73,7 @@ def register_exception_handler(app: FastAPI):
     
     @app.exception_handler(RequestValidationError)
     def _ValidationError(r: Request, e: RequestValidationError):
-        raise HTTPException(400, detail={"message": str(e.errors())})
+        raise HTTPException(400, detail={"message": e.errors()})
     
     @app.exception_handler(sqlalchemy.exc.IntegrityError)
     def _IntegrityError(r: Request, e: sqlalchemy.exc.IntegrityError):
