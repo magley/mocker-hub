@@ -5,7 +5,14 @@ on:
     branches:
       - develop
       - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.jpg'
+      - '**/*.png'
+      - '**/*.txt'
 
+      # We don't test the client app, so we can ignore changes made to it when running the workflow.
+      - 'client/**'
 jobs:
   test:
     runs-on: ubuntu-latest
