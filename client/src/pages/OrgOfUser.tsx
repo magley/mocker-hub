@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
-import { Row, Spinner } from 'react-bootstrap';
+import { Link, useNavigate, useParams } from 'react-router-dom';
+import { Button, Row, Spinner } from 'react-bootstrap';
 import { OrganizationDTOBasic, OrganizationService } from '../api/org.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import './OrgOfUser.css';
@@ -74,14 +74,23 @@ export const OrganisationsOfUser: React.FC = () => {
             { organisations!.length >= 1 ? (
                 <>
                 <div className="d-flex justify-content-between">
-                    {/* Search Bar */}
-                    <input
-                        type="text"
-                        className="form-control me-2"
-                        placeholder="Search organisations"
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                    />
+                    <div className="d-flex align-items-center flex-grow-1 me-3" style={{ maxWidth: "70%" }}>
+                        {/* Search Bar */}
+                        <input
+                            type="text"
+                            className="form-control me-2"
+                            placeholder="Search organisations"
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                        />
+                    </div>
+                    
+                    {/* Add new organisation Button */}
+                    <Link to={`/org`}>
+                        <Button className="btn btn-primary">
+                                Create Organisation
+                        </Button>
+                    </Link>
                 </div>
                 {
                     filteredOrgs.map((org) => (

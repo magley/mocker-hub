@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useNavigate, useParams } from 'react-router-dom';
+import { Link, useNavigate, useParams } from 'react-router-dom';
 import { Row, Spinner, Button } from 'react-bootstrap';
 import { RepoDTO, RepositoryBadge, RepositoryService, ReposOfUserDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
@@ -161,18 +161,27 @@ export const RepositoriesOfUser: React.FC = () => {
             { fullResult!.repos.length >= 1 ? (
                 <>
                 <div className="d-flex justify-content-between">
-                    {/* Search Bar */}
-                    <input
-                        type="text"
-                        className="form-control me-2"
-                        placeholder="Search repositories"
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                    />
-                    {/* Advanced Search Button */}
-                    <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
-                        {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
-                    </Button>
+                    <div className="d-flex align-items-center flex-grow-1 me-3" style={{ maxWidth: "70%" }}>
+                        {/* Search Bar */}
+                        <input
+                            type="text"
+                            className="form-control me-2"
+                            placeholder="Search repositories"
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                        />
+                        {/* Advanced Search Button */}
+                        <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
+                            {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
+                        </Button>
+                    </div>
+
+                    {/* Add new repo Button */}
+                    <Link to={`/new`}>
+                        <Button className="btn btn-primary">
+                                Create Repository
+                        </Button>
+                    </Link>
                 </div>
         
                 {/* Advanced Search Section */}
