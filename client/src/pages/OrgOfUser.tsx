@@ -98,7 +98,17 @@ export const OrganisationsOfUser: React.FC = () => {
                     ))
                 }
                 </>
-            ) : ( <div>No organisations that you are a part of.</div> ) }
+            ) : ( <div  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                No organisations that you are a part of.
+                <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                    <Link to={`/org`}>
+                        <Button className="btn btn-primary">
+                                Create Organisation
+                        </Button>
+                    </Link>
+                    </div>
+
+            </div> ) }
 
         </Row>
     );

@@ -261,7 +261,17 @@ export const RepositoriesOfUser: React.FC = () => {
                     ))
                 }
                 </>
-            ) : ( <div>No repositories created yet.</div> ) }
+            ) : ( <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                No repositories created yet.
+                    <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                        <Link to={`/new`}>
+                            <Button className="btn btn-primary">
+                                    Create Repository
+                            </Button>
+                        </Link>
+                    </div>
+                 </div>
+             ) }
 
         </Row>
     );
