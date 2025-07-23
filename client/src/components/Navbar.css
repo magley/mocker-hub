@@ -4,8 +4,8 @@ nav {
 }
 
 .navlink {
-    margin-right: 0.5em;
-    margin-left: 0.25em;
+    margin-right: 1em;
+    margin-left: 0.5em;
     text-decoration: none;
     color: white;
 
@@ -20,7 +20,7 @@ nav {
 
 .bordered {
     border: 2px solid white;
-    padding: 6px 12px;
+    padding: 0px 12px;
     border-radius: 3px;
     font-size: 90%;
 }
@@ -32,3 +32,56 @@ nav {
 .bold {
     font-weight: bold;
 }
+
+.navbar-container {
+  display: flex;
+  justify-content: space-between; /* Logo left, links center, account right */
+}
+
+.bi{
+    margin-right: 0.25em;
+}
+
+.navbar-center {
+  margin-left: 0.8em;
+}
+
+/* account */
+.navbar-right {
+  position: relative;
+  flex: 1;
+  display: flex;
+  justify-content: flex-end;
+  color: white;
+}
+
+.username {
+    margin-right: 0.5em;
+    cursor: pointer;
+}
+
+.dropdown-menu {
+  position: absolute;
+  top: 100%;
+  right: 0;
+  background: white;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.5rem;
+  display: flex;
+  flex-direction: column;
+  min-width: 180px;
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.dropdown-menu a {
+  padding: 0.5rem;
+  text-decoration: none;
+  color: #333;
+}
+
+.dropdown-menu a:hover {
+  background: #f0f0f0;
+}
+
+

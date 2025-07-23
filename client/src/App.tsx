@@ -15,6 +15,7 @@ import { RepositoryPage } from './pages/RepoPage';
 import { TheToastContainer } from './components/TheToastContainer';
 import { OrganizationPage } from './pages/OrgPage';
 import { RepoStarred } from './pages/RepoStarred';
+import { OrganisationsOfUser } from './pages/OrgOfUser';
 
 // This function converts:
 //
@@ -54,6 +55,7 @@ function App() {
                     {authRoute("/logout", [], UserLogout)}
 
                     {authRoute("/u/:username/repos", [], RepositoriesOfUser)}
+                    {authRoute("/u/:username/orgs", [], OrganisationsOfUser)}
                     {authRoute("/u/:username/starred", [], RepoStarred)}
                     {authRoute("/r/*", [], RepositoryPage)}
                     {authRoute("/o/*", [], OrganizationPage)}
