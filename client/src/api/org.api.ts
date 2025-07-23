@@ -1,5 +1,6 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance, ENV } from "../util/http";
+import { UserDTO } from "./user.api";
 
 export interface OrganizationCreateDTO {
     name: string
@@ -67,6 +68,10 @@ export class OrganizationService {
 
     static async UpdateOrgDescByName(orgName: string, dto: OrgDescUpdateDTO) : Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.put(`/organizations/${orgName}/desc`, dto)
+    }
+
+    static async GetMembersOfOrg(org_id: number): Promise<AxiosResponse<UserDTO[]>> {
+        return await axiosInstance.get(`/organizations/${org_id}/members`);
     }
 }
 
