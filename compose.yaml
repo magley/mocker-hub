@@ -17,7 +17,7 @@ x-common-variables: &common-variables
 services:
   backend:
     build: ./server
-    image: magley/mocker-hub-backend:latest
+    image: magley/mocker-hub-backend
     ports:
       - "8000:8000"
     expose:
@@ -102,7 +102,7 @@ services:
     #   - cache:/data
     
   worker:
-    image: magley/mocker-hub-backend:latest
+    image: magley/mocker-hub-worker
     restart: always
     environment:
       REDIS_SCHEME: redis 
@@ -162,6 +162,7 @@ services:
         hard: -1
 
   log_collector:
+    image: magley/mocker-hub-log-collector
     build: ./log_collector
     restart: on-failure
     volumes:
