@@ -4,8 +4,8 @@ nav {
 }
 
 .navlink {
-    margin-right: 0.5em;
-    margin-left: 0.25em;
+    margin-right: 1em;
+    margin-left: 0.5em;
     text-decoration: none;
     color: white;
 
@@ -38,16 +38,12 @@ nav {
   justify-content: space-between; /* Logo left, links center, account right */
 }
 
-/* Logo */
-.navbar-left {
-  flex: 1; 
+.bi{
+    margin-right: 0.25em;
 }
 
 .navbar-center {
-  flex: 2;
-  display: flex;
-  justify-content: center;
-  gap: 1rem;
+  margin-left: 0.8em;
 }
 
 /* account */
@@ -60,7 +56,7 @@ nav {
 }
 
 .username {
-    margin-right: 5em;
+    margin-right: 0.5em;
     cursor: pointer;
 }
 
