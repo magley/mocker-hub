@@ -49,7 +49,9 @@ export const OrgPreview: React.FC<{ org: OrganizationDTOBasic }> = ({
 
               {/* Description */}
               {org.desc && (
-                <Card.Text style={{ fontSize: "0.9rem" }}>{org.desc}</Card.Text>
+                <Card.Text style={{ fontSize: "0.9rem" }}>
+                    {org.desc.length > 201 ? `${org.desc.slice(0, 201)}...` : org.desc}
+                    </Card.Text>
               )}
             </Col>
           </Row>

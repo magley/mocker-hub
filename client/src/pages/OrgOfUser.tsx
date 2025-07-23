@@ -28,6 +28,8 @@ export const OrganisationsOfUser: React.FC = () => {
             return;
         }
 
+        setLoading(true);
+
         OrganizationService.GetMyOrganizations().then((res: AxiosResponse<OrganizationDTOBasic[]>) => {
             setLoading(false);
             setOrganisations(res.data);
