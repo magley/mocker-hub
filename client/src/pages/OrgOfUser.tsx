@@ -71,7 +71,7 @@ export const OrganisationsOfUser: React.FC = () => {
     return (
         <Row className="g-4 org-of-user">
             {/* Page Title */}
-            {<h1>Organisations</h1> }
+            {<h1>Organizations</h1> }
 
             { organisations!.length >= 1 ? (
                 <>
@@ -81,7 +81,7 @@ export const OrganisationsOfUser: React.FC = () => {
                         <input
                             type="text"
                             className="form-control me-2"
-                            placeholder="Search organisations"
+                            placeholder="Search organizations"
                             value={searchTerm}
                             onChange={handleSearchChange}
                         />
@@ -90,7 +90,7 @@ export const OrganisationsOfUser: React.FC = () => {
                     {/* Add new organisation Button */}
                     <Link to={`/org`}>
                         <Button className="btn btn-primary">
-                                Create Organisation
+                                Create Organization
                         </Button>
                     </Link>
                 </div>
@@ -101,11 +101,11 @@ export const OrganisationsOfUser: React.FC = () => {
                 }
                 </>
             ) : ( <div  style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                No organisations that you are a part of.
+                No organizations that you are a part of.
                 <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
                     <Link to={`/org`}>
                         <Button className="btn btn-primary">
-                                Create Organisation
+                                Create Organization
                         </Button>
                     </Link>
                     </div>

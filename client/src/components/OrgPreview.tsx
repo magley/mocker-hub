@@ -42,8 +42,8 @@ export const OrgPreview: React.FC<{ org: OrganizationDTOBasic }> = ({
               <Card.Text className="text-muted" style={{ fontSize: "0.85rem" }}>
                 <strong>
                   {isOwner
-                    ? "You are an owner of this organisation"
-                    : "You are a member of this organisation"}
+                    ? "You are an owner of this organization"
+                    : "You are a member of this organization"}
                 </strong>
               </Card.Text>
 

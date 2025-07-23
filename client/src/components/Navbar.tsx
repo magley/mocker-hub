@@ -35,7 +35,7 @@ export function Navbar() {
                 <>
                     <NavLink className={"navlink"} to="/." end><i className="bi bi-search"></i>Explore</NavLink>
                     <NavLink className={"navlink"} to={`/u/${username}/repos`} end><i className="bi bi-collection"></i>Repositories</NavLink>
-                    <NavLink className={"navlink"} to={`/u/${username}/orgs`} end><i className="bi bi-building"></i>Organisations</NavLink>
+                    <NavLink className={"navlink"} to={`/u/${username}/orgs`} end><i className="bi bi-building"></i>Organizations</NavLink>
                 </>
             }
                         {
