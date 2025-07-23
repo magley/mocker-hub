@@ -31,9 +31,11 @@
 
 1) You can optionally regenerate the certificate in `/distribution/certs`.
 
-2) Build and run: `docker compose up--build`.
+2) Build: `docker compose build`
 
-3) Use debug data while developing. On the first run, while the database is empty, visit [localhost:8000/api/v1/dummy](localhost:8000/api/v1/dummy) (do this just once).
+3) Run: `docker compose up`
+
+4) Use debug data while developing. On the first run, while the database is empty, visit [http://localhost:8000/api/v1/dummy](http://localhost:8000/api/v1/dummy) (do this just once).
 
 ### Nginx and the web app
 

@@ -10,11 +10,12 @@ on:
       - '**/*.jpg'
       - '**/*.png'
       - '**/*.txt'
+      - 'docs/**'
 
       # We don't test the client app, so we can ignore changes made to it when running the workflow.
       - 'client/**'
 jobs:
-  test:
+  test: # This should be the same as in test_and_deploy.yml!
     runs-on: ubuntu-latest
 
     steps:
