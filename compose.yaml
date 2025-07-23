@@ -102,7 +102,7 @@ services:
     #   - cache:/data
     
   worker:
-    image: magley/mocker-hub-worker
+    image: magley/mocker-hub-backend
     restart: always
     environment:
       REDIS_SCHEME: redis 
