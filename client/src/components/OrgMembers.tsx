@@ -2,8 +2,9 @@ import React, { useEffect, useState } from "react";
 import { OrganizationDTOBasic, OrganizationService } from "../api/org.api";
 import { UserDTO, UserService } from "../api/user.api";
 import { AxiosError, AxiosResponse } from "axios";
-import { Button, Form, ListGroup, Modal, Spinner } from "react-bootstrap";
+import { Badge, Button, Form, ListGroup, Modal, Spinner } from "react-bootstrap";
 import { getJwtId } from "../util/localstorage";
+import "./OrgMembers.css";
 
 export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }> = ({ isActive, org }) => {
     const [members, setMembers] = useState<UserDTO[]>([]);
@@ -119,16 +120,56 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
             {members.length > 0 && (
                 <>
                     {amOwnerOfOrg && (
-                        <div className="d-flex justify-content-center mb-3">
+                        <div className="d-flex justify-content-end mb-3 ms-4" style={{maxWidth:"75%"}}>
                             <Button variant="primary" onClick={handleShow}>
                                 Add Members
                             </Button>
                         </div>
                     )}
 
-                    {members.map((member, i) => (
-                        <div key={i}>{member.username} </div>
-                    ))}
+                    <div className="ms-4 me-5" style={{ maxWidth: "85%" }}>
+                        {/* Table Header */}
+                        <div
+                            className="d-flex fw-bold border-bottom pb-3"
+                            style={{ fontSize: "1.05rem", letterSpacing: "0.3px", maxWidth: "90%" }}
+                        >
+                            <div style={{ width: "20%", paddingLeft: "8px" }}>Username</div>
+                            <div style={{ width: "25%" }}>Full Name</div>
+                            <div style={{ width: "35%" }}>Email</div>
+                            <div style={{ width: "10%" }}>Role</div>
+                        </div>
+
+                        {/* Table Rows */}
+                        {members.map((member) => {
+                            const isOwner = member.id === org.owner_id;
+
+                            return (
+                            <div
+                                key={member.id} className="d-flex align-items-center border-bottom"
+                                style={{fontSize: "1rem",padding: "12px 0", maxWidth: "90%"}}
+                                >
+                                    
+                                <div style={{ width: "20%", paddingLeft: "8px"}} className="fw-bold text-primary">
+                                {member.username}
+                                </div>
+
+                                <div style={{ width: "25%" }} className="text-muted">
+                                {("Ime") + " " + ("Prezime")}
+                                </div>
+
+                                <div style={{ width: "35%" }} className="text-dark">
+                                <i className="bi bi-envelope me-1 text-secondary"></i> {member.email || "—"}
+                                </div>
+
+                                <div style={{ width: "10%" }}>
+                                {isOwner ? (<Badge className="custom-owner-badge">Owner</Badge>) : (
+                                    <Badge className="custom-member-badge">Member</Badge>
+                                )}
+                                </div>
+                            </div>
+                            );
+                        })}
+                    </div>
                 </>
             )}
 
