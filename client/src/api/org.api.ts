@@ -42,6 +42,7 @@ export interface OrgDescUpdateDTO {
 }
 
 export class OrganizationService {
+
     static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.post(`/organizations`, dto);
     }
@@ -72,6 +73,10 @@ export class OrganizationService {
 
     static async GetMembersOfOrg(org_id: number): Promise<AxiosResponse<UserDTO[]>> {
         return await axiosInstance.get(`/organizations/${org_id}/members`);
+    }
+
+    static async AddUsersToOrg(org_id: number, user_ids: number[]) {
+        return await axiosInstance.post(`/organizations/${org_id}/addMember`, { user_ids });
     }
 }
 
