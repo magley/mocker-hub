@@ -3,6 +3,7 @@ from typing import List
 from sqlmodel import Session, select
 from app.api.user.user_model import User, UserRole
 from app.api.config.exception_handler import NotFoundException
+from sqlalchemy import and_
 
 class UserRepo:
     def __init__(self, session: Session):
@@ -50,6 +51,6 @@ class UserRepo:
     def search_by_username_prefix(self, query: str, limit: int = 7) -> List[User]:
         return self.session.exec(
             select(User)
-            .where(User.username.ilike(f"{query}%"))  # case-insensitive prefix search
+            .where(User.username.ilike(f"{query}%"), User.role != UserRole.superadmin)
             .limit(limit)
         ).all()

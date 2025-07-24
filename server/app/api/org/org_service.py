@@ -131,6 +131,8 @@ class OrganizationService:
                 continue
             if self.org_repo.user_is_in_org(uid, org_id):
                 continue
+            if user.role == "superadmin":
+                continue
             self.org_repo.add_user_to_org(org_id, uid)
             new_members.append(user)
         return new_members
