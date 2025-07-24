@@ -56,3 +56,10 @@ def find_members_of_org(jwt: JWTDep, org_id: int, org_service: OrganizationServi
     user_id = get_id_from_jwt(jwt)
     members = org_service.find_members_of_org(org_id, user_id)
     return members
+
+@router.post("/{org_id}/addMember", response_model=List[UserDTO], status_code=200, summary="Add multiple users to an organization")
+@pre_authorize([UserRole.user, UserRole.admin])
+def add_members_to_org(jwt: JWTDep, org_id: int, user_ids: List[int], org_service: OrganizationService = Depends(get_org_service)):
+    owner_id = get_id_from_jwt(jwt)
+    result = org_service.add_members_to_org(org_id, user_ids, owner_id)
+    return result

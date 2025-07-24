@@ -76,7 +76,7 @@ export class OrganizationService {
     }
 
     static async AddUsersToOrg(org_id: number, user_ids: number[]) {
-        return await axiosInstance.post(`/organizations/${org_id}/addMember`, { user_ids });
+        return await axiosInstance.post(`/organizations/${org_id}/addMember`, user_ids);
     }
 }
 
