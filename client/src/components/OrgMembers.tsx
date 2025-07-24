@@ -60,7 +60,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
         setSearchLoading(true);
 
         try {
-            const res: AxiosResponse<UserDTO[]> = await UserService.SearchUsers(query);
+            const res: AxiosResponse<UserDTO[]> = await UserService.SearchUsers(query, org.id);
             setSearchResults(res.data);
         } catch (err) {
             console.error(err);

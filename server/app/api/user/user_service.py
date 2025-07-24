@@ -5,6 +5,7 @@ from app.api.config.security import hash_password, verify_password
 from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
 from sqlmodel import Session
 from app.api.config.database import get_database
+from app.api.org.org_repo import OrganizationRepo
 from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO, UserDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
@@ -14,6 +15,7 @@ class UserService:
     def __init__(self, session: Session):
         self.session = session
         self.user_repo = UserRepo(session)
+        self.org_repo = OrganizationRepo(session)
 
     def add(self, dto: UserRegisterDTO) -> User:
         if self.user_repo.find_by_email(dto.email) is not None:
@@ -86,8 +88,11 @@ class UserService:
 
         return True
 
-    def search_by_username_prefix(self, query: str) -> List[User]:
-        return self.user_repo.search_by_username_prefix(query)
+    def search_by_username_prefix(self, query: str, org_id: int) -> List[User]:
+        all_users = self.user_repo.search_by_username_prefix(query)
+        users_to_exclude = self.org_repo.find_members_of_org(org_id)
+        users = [u for u in all_users if u not in users_to_exclude]
+        return users
 
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:

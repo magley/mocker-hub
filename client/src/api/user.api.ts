@@ -52,7 +52,9 @@ export class UserService {
         return await axiosInstance.post(`/users/register-admin`, dto);
     }
 
-    static async SearchUsers(query: string): Promise<AxiosResponse<UserDTO[]>> {
-        return await axiosInstance.get(`/users/search/${query}`);
+    static async SearchUsers(query: string, organization_id: number=0): Promise<AxiosResponse<UserDTO[]>> {
+        return await axiosInstance.get(`/users/search/${query}`, {
+            params: {organization_id}
+        });
     }
 }

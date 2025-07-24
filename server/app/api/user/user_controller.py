@@ -43,6 +43,6 @@ def test(jwt: JWTDep):
 
 @router.get("/search/{query}", status_code=200, response_model=List[UserDTO], summary="Search users by username prefix")
 @pre_authorize([UserRole.user, UserRole.admin])
-def search_by_username_prefix(jwt: JWTDep, query: str, user_service: UserService = Depends(get_user_service)):
-    users = user_service.search_by_username_prefix(query)
+def search_by_username_prefix(jwt: JWTDep, query: str, organization_id: int = 0, user_service: UserService = Depends(get_user_service)):
+    users = user_service.search_by_username_prefix(query, organization_id)
     return users
