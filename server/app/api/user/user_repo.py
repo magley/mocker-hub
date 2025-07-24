@@ -1,3 +1,5 @@
+from typing import List
+
 from sqlmodel import Session, select
 from app.api.user.user_model import User, UserRole
 from app.api.config.exception_handler import NotFoundException
@@ -44,3 +46,10 @@ class UserRepo:
         self.session.commit()
         self.session.refresh(user)
         return user
+
+    def search_by_username_prefix(self, query: str, limit: int = 7) -> List[User]:
+        return self.session.exec(
+            select(User)
+            .where(User.username.ilike(f"{query}%"))  # case-insensitive prefix search
+            .limit(limit)
+        ).all()

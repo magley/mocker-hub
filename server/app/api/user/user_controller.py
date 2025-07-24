@@ -1,9 +1,9 @@
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import APIRouter, Depends
 
 from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO
 from app.api.user.user_service import UserService, get_user_service
-from app.api.user.user_model import UserRole
+from app.api.user.user_model import UserRole, User
 from fastapi_cache.decorator import cache
 from app.api.config.auth import JWTBearer, JWTDep, get_id_from_jwt
 from app.api.config.auth import pre_authorize
@@ -40,3 +40,9 @@ def test(jwt: JWTDep):
         { "id": 2, "name": "Coc" },
         { "id": 3, "name": "Did" },
     ]
+
+@router.get("/search/{query}", status_code=200, response_model=List[UserDTO], summary="Search users by username prefix")
+@pre_authorize([UserRole.user, UserRole.admin])
+def search_by_username_prefix(jwt: JWTDep, query: str, user_service: UserService = Depends(get_user_service)):
+    users = user_service.search_by_username_prefix(query)
+    return users
