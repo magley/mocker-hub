@@ -82,6 +82,9 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
         } else {
             setSelectedUsers([...selectedUsers, user]);
         }
+
+        setSearchTerm("");
+        setSearchResults([]);
     };
     
     const handleAddMembers = async () => {
@@ -128,6 +131,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                     )}
 
                     <div className="ms-4 me-5" style={{ maxWidth: "85%" }}>
+
                         {/* Table Header */}
                         <div
                             className="d-flex fw-bold border-bottom pb-3"
@@ -193,27 +197,35 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
 
                     {searchResults.length > 0 && (
                         <ListGroup>
-                            {searchResults.map((user) => {
-                                const isSelected = selectedUsers.find((u) => u.id === user.id);
-                                return (
-                                    <ListGroup.Item
-                                        key={user.id}
-                                        action
-                                        active={!!isSelected}
-                                        onClick={() => toggleSelectUser(user)}
-                                    >
-                                        {user.username} ({user.email})
-                                    </ListGroup.Item>
-                                );
-                            })}
+                            {searchResults.filter((user) => !selectedUsers.some((u) => u.id === user.id)).map((user) => (
+                                <ListGroup.Item key={user.id} action onClick={() => toggleSelectUser(user)}>
+                                {user.username} ({user.email})
+                                </ListGroup.Item>
+                            ))}
                         </ListGroup>
                     )}
 
                     {selectedUsers.length > 0 && (
                         <div className="mt-3">
-                            <strong>Selected users:</strong>{" "}
-                            {selectedUsers.map((u) => u.username).join(", ")}
-                        </div>
+                            <strong>Selected users:</strong>
+                            <div className="mt-2 d-flex flex-wrap gap-2">
+                            {selectedUsers.map((u) => (
+                                <span key={u.id} className="chip badge bg-primary text-white d-flex align-items-center"
+                                style={{
+                                    fontSize: "0.9rem",
+                                    padding: "0.5em 0.8em",
+                                    borderRadius: "20px",
+                                    cursor: "pointer",
+                                }} onClick={() => setSelectedUsers(selectedUsers.filter((usr) => usr.id !== u.id))}>
+                                    {u.username}
+                                <i className="bi bi-x-circle ms-2"></i>
+                                </span>
+                            ))}
+                            </div>
+                        <small className="text-muted d-block mt-1">
+                            Click a chip to remove it
+                        </small>
+                    </div>
                     )}
 
                     <div className="d-flex justify-content-between mt-3">
