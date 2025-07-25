@@ -88,7 +88,7 @@ class UserService:
 
         return True
 
-    def search_by_username_prefix(self, query: str, org_id: int) -> List[User]:
+    def search_by_username_prefix(self, query: str, org_id: int = 0) -> List[User]:
         all_users = self.user_repo.search_by_username_prefix(query)
         users_to_exclude = self.org_repo.find_members_of_org(org_id)
         users = [u for u in all_users if u not in users_to_exclude]
