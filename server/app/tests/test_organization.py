@@ -18,6 +18,7 @@ def org_service():
 
     service.org_repo = MagicMock()
     service.add_user_to_org = MagicMock()
+    service.user_repo = MagicMock()
     return service
 
 
@@ -566,3 +567,63 @@ class TestAddMembersToOrg:
 
         assert result == [user1, user2]
         assert org_service.org_repo.add_user_to_org.call_count == 2
+
+    def test_search_users_and_add_them_to_org_integration(self):
+        with TestClient(app) as client:
+            def create_user(username: str, email: str, password: str = "Password123") -> dict:
+                data = {"username": username, "email": email, "password": password}
+                response = client.post("/api/v1/users", json=data)
+                assert response.status_code == 200
+                return response.json()
+
+            create_user("john", "john@mail.com")
+            create_user("josh", "josh@mail.com")
+            create_user("jane", "jane@mail.com")
+
+            def login(username: str, password: str = "Password123") -> dict:
+                data = {"username": username, "password": password}
+                response = client.post("/api/v1/users/login", json=data)
+                assert response.status_code == 200
+                token = response.json()["token"]
+                return {"Authorization": f"Bearer {token}"}
+
+            create_user("user00", "user00@mail.com")
+            user_header = login("user00")
+
+            org_data = {"name": "TestOrg", "desc": "Integration test org", "image": None}
+            org_response = client.post("/api/v1/organizations", json=org_data, headers=user_header)
+            assert org_response.status_code == 200
+            org_id = org_response.json()["id"]
+
+            def search_users_by_username_prefix(query: str) -> dict:
+                search_response = client.get(f"/api/v1/users/search/{query}?organization_id={org_id}",
+                                             headers=user_header)
+                assert search_response.status_code == 200
+                return search_response.json()
+
+            found_users = search_users_by_username_prefix("jo")
+            assert len(found_users) == 2  # john + josh
+
+            def add_members_to_org(user_ids: list) -> dict:
+                add_members_response = client.post( f"/api/v1/organizations/{org_id}/addMember",
+                    json=user_ids,
+                    headers=user_header
+                )
+                assert add_members_response.status_code == 200
+                return add_members_response.json()
+
+            user_ids_to_add = [user["id"] for user in found_users]
+            add_members_to_org(user_ids_to_add)
+
+            # Verify they are indeed in the org
+            members_response = client.get(f"/api/v1/organizations/{org_id}/members", headers=user_header)
+            assert members_response.status_code == 200
+            members = members_response.json()
+            member_usernames = [m["username"] for m in members]
+
+            assert "john" in member_usernames
+            assert "josh" in member_usernames
+            assert "jane" not in member_usernames
+
+
+
