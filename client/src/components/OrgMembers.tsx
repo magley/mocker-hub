@@ -221,10 +221,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                                 <i className="bi bi-x-circle ms-2"></i>
                                 </span>
                             ))}
-                            </div>
-                        <small className="text-muted d-block mt-1">
-                            Click a chip to remove it
-                        </small>
+                        </div>
                     </div>
                     )}
 

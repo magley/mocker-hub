@@ -76,12 +76,12 @@ export const OrganizationPage = () => {
                                 Overview
                             </Nav.Link>
                         </Nav.Item>
-                        <Nav.Item>
+                        {amMemberOfOrg && <Nav.Item>
                             <Nav.Link eventKey="members" className={key === 'members' ? 'active' : ''}>
                                 <i className="bi bi-person"> </i>
                                 Members
                             </Nav.Link>
-                        </Nav.Item>
+                        </Nav.Item>}
                         <Nav.Item>
                             <Nav.Link eventKey="repositories" className={key === 'repositories' ? 'active' : ''}>
                                 <i className="bi bi-boxes"> </i>
