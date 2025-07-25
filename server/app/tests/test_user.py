@@ -9,8 +9,10 @@ from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
+from app.api.org.org_repo import OrganizationRepo
 from app.api.config.exception_handler import NotFoundException, UserException, FieldTakenException
 from app.api.main import app
+
 
 @pytest.fixture
 def mock_session():
@@ -21,13 +23,18 @@ def mock_user_repo():
     return mock.MagicMock(spec=UserRepo)
 
 @pytest.fixture
+def mock_org_repo():
+    return mock.MagicMock(spec=OrganizationRepo)
+
+@pytest.fixture
 def mock_user():
     return mock.MagicMock(User)
 
 @pytest.fixture
-def user_service(mock_session, mock_user_repo):
+def user_service(mock_session, mock_user_repo, mock_org_repo):
     service = UserService(mock_session)
     service.user_repo = mock_user_repo
+    service.org_repo = mock_org_repo
     return service
 
 @pytest.fixture(scope="function", autouse=True)
@@ -269,3 +276,22 @@ def test_add___integration():
         log_in(username, 200)
         
         add_user(username, 400)
+
+def test_search_by_username_prefix(user_service):
+    """ Searching for users by username prefix and filtering those that are already members of specific organization. """
+    def make_user(user_id: int, username: str) -> User:
+        return User(id=user_id, username=username, email=f"{username}@mail.com", role=UserRole.user,
+                    hashed_password="hash")
+    org_id = 1
+    query = "jo"
+    user1 = make_user(1, "john")
+    user2 = make_user(2, "josh")
+    user3 = make_user(3, "jane")
+    user_service.user_repo.search_by_username_prefix.return_value = [user1, user2]
+    user_service.org_repo.find_members_of_org.return_value = [user2, user3]
+
+    result = user_service.search_by_username_prefix(query, org_id)
+    assert result == [user1]
+    user_service.user_repo.search_by_username_prefix.assert_called_once_with(query)
+    user_service.org_repo.find_members_of_org.assert_called_once_with(org_id)
+
