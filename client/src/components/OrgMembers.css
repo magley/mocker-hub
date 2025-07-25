@@ -1,0 +1,17 @@
+.custom-owner-badge {
+  background-color: #fffbe6 !important; 
+  color: #8c6d1f !important;
+  border: 1px solid #ffe58f !important;
+  font-size: 0.95rem;
+  padding: 0.4em 0.8em;
+  font-weight: 500;
+}
+
+.custom-member-badge {
+  background-color: #f4f6f8 !important;
+  color: #495057 !important;
+  border: 1px solid #dee2e6 !important;
+  font-size: 0.95rem;
+  padding: 0.4em 0.8em;
+  font-weight: 500;
+}

@@ -51,4 +51,10 @@ export class UserService {
     static async RegisterAdmin(dto: UserRegisterDTO): Promise<void> {
         return await axiosInstance.post(`/users/register-admin`, dto);
     }
+
+    static async SearchUsers(query: string, org_id_to_exclude_members: number=0): Promise<AxiosResponse<UserDTO[]>> {
+        return await axiosInstance.get(`/users/search/${query}`, {
+            params: {org_id_to_exclude_members}
+        });
+    }
 }

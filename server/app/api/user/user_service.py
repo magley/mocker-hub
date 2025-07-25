@@ -1,9 +1,12 @@
+from typing import List
+
 from fastapi import Depends
 from app.api.config.security import hash_password, verify_password
 from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO
+from app.api.org.org_repo import OrganizationRepo
+from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO, UserDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.config.auth import sign_jwt
@@ -12,6 +15,7 @@ class UserService:
     def __init__(self, session: Session):
         self.session = session
         self.user_repo = UserRepo(session)
+        self.org_repo = OrganizationRepo(session)
 
     def add(self, dto: UserRegisterDTO) -> User:
         if self.user_repo.find_by_email(dto.email) is not None:
@@ -82,7 +86,14 @@ class UserService:
         if not verify_password(password, user.hashed_password):
             raise False
 
-        return True  
+        return True
+
+    def search_by_username_prefix(self, query: str, org_id_to_exclude_members: int = 0) -> List[User]:
+        all_users = self.user_repo.search_by_username_prefix(query)
+        users_to_exclude = self.org_repo.find_members_of_org(org_id_to_exclude_members)
+        users = [u for u in all_users if u not in users_to_exclude]
+        return users
+
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:
     return UserService(session)

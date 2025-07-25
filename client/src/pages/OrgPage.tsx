@@ -76,12 +76,12 @@ export const OrganizationPage = () => {
                                 Overview
                             </Nav.Link>
                         </Nav.Item>
-                        <Nav.Item>
+                        {amMemberOfOrg && <Nav.Item>
                             <Nav.Link eventKey="members" className={key === 'members' ? 'active' : ''}>
                                 <i className="bi bi-person"> </i>
                                 Members
                             </Nav.Link>
-                        </Nav.Item>
+                        </Nav.Item>}
                         <Nav.Item>
                             <Nav.Link eventKey="repositories" className={key === 'repositories' ? 'active' : ''}>
                                 <i className="bi bi-boxes"> </i>
@@ -107,7 +107,7 @@ export const OrganizationPage = () => {
                             <OrgOverview isActive={key === 'overview'} org={org} setOrg={setOrg} />
                         </Tab.Pane>
                         <Tab.Pane eventKey="members">
-                            <OrgMembers isActive={key === 'members'} />
+                            <OrgMembers isActive={key === 'members'} org={org}/>
                         </Tab.Pane>
                         <Tab.Pane eventKey="repositories">
                             <OrgRepositories isActive={key === 'repositories'} />

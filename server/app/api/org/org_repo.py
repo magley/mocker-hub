@@ -42,6 +42,13 @@ class OrganizationRepo:
             .join(OrganizationMembers, Organization.id == OrganizationMembers.organization_id)
             .where(OrganizationMembers.user_id == user_id)
         ).all()
+
+    def find_members_of_org(self, org_id: int) -> List[User]:
+        return self.session.exec(
+            select(User)
+            .join(OrganizationMembers, User.id == OrganizationMembers.user_id)
+            .where(OrganizationMembers.organization_id == org_id)
+        ).all()
     
     def find_orgs_by_ids(self, ids: list[int]) -> Dict[int, str]:
         query = select(Organization.id, Organization.name).where(Organization.id.in_(ids))

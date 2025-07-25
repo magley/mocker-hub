@@ -8,11 +8,15 @@ from app.api.org.org_repo import OrganizationRepo
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from app.api.config.images import generate_inline_image, save_image
 from app.api.repo.repo_model import Repository
- 
+from app.api.user.user_model import User
+from app.api.user.user_repo import UserRepo
+
+
 class OrganizationService:
     def __init__(self, session: Session):
         self.session = session
         self.org_repo = OrganizationRepo(session)
+        self.user_repo = UserRepo(session)
 
     def add(self, user_id: int, dto: OrganizationCreateDTO) -> Organization:
         # Check if the name is available.
@@ -106,6 +110,33 @@ class OrganizationService:
         for attr, value in kwargs.items():
             org = self.org_repo.set_attribute(org, attr, value)
         return org
+
+    def find_members_of_org(self, org_id: int, user_id: int) -> List[User]:
+        if not self.org_repo.user_is_in_org(user_id, org_id):
+            raise AccessDeniedException(
+                f"User {user_id} cannot see members of organization {org_id}")
+        return self.org_repo.find_members_of_org(org_id)
+
+    def add_members_to_org(self, org_id: int, user_ids: list[int], owner_id: int):
+        org = self.org_repo.find_by_id(org_id)
+        if not org:
+            raise NotFoundException(Organization, org_id)
+        if org.owner_id != owner_id:
+            raise AccessDeniedException(f"User {owner_id} cannot add members to organization with id {org_id}")
+
+        new_members = []
+        for uid in user_ids:
+            user = self.user_repo.find_by_id(uid)
+            if not user:
+                continue
+            if self.org_repo.user_is_in_org(uid, org_id):
+                continue
+            if user.role == "superadmin":
+                continue
+            self.org_repo.add_user_to_org(org_id, uid)
+            new_members.append(user)
+        return new_members
+
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
     return OrganizationService(session)
