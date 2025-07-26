@@ -2,7 +2,7 @@ import os
 from typing import List
 from enum import Enum
 from elasticsearch_dsl import Document, Text, Date, Keyword, Search, Q, connections
-
+import math
 
 class EventLevel(Enum):
     Debug = "debug"
@@ -53,6 +53,15 @@ def search(page_number: int, page_size: int, sort_by: str, sort_ascending: bool)
 
     return response
 
-res = search(0, 5, 'date_time', True)
+PAGE_NUM = 1
+PAGE_SIZE = 40
+
+res = search(PAGE_NUM, PAGE_SIZE, 'date_time', True)
+total_hits = res.hits.total.value
+total_pages = math.ceil(total_hits / PAGE_SIZE)
+
 for hit in res:
     print(f"[{hit.date_time}] [{hit.log_level}] {hit.text_content}")
+
+print()
+print(f"Page ({PAGE_NUM} / {total_pages}) [{PAGE_SIZE} items of {total_hits}]")
