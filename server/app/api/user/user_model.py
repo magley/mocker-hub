@@ -20,5 +20,9 @@ class User(SQLModel, table=True):
     hashed_password: str
     must_change_password: bool = Field(default=False)
 
+    first_name: str | None = Field(default="")
+    last_name: str | None = Field(default="")
+    bio: str | None = Field(default="")
+
     repositories: list["Repository"] = Relationship(back_populates="owner")
     stars: list["RepositoryStar"] = Relationship(back_populates="starrer")

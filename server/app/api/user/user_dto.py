@@ -8,6 +8,9 @@ class UserDTO(BaseModel):
     username: str
     role: UserRole
     join_date: datetime.datetime
+    first_name: str | None
+    last_name: str | None
+    bio: str | None
 
 class UserTokenDTO(BaseModel):
     token: str
@@ -24,3 +27,4 @@ class UserPasswordChangeDTO(BaseModel):
 class UserLoginDTO(BaseModel):
     username: str
     password: str
+
