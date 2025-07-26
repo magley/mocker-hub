@@ -46,3 +46,16 @@ def test(jwt: JWTDep):
 def search_by_username_prefix(jwt: JWTDep, query: str, org_id_to_exclude_members: int = 0, user_service: UserService = Depends(get_user_service)):
     users = user_service.search_by_username_prefix(query, org_id_to_exclude_members)
     return users
+
+@router.get("/{username}", status_code=200, response_model=UserDTO, summary="Get user's profile info")
+@pre_authorize([UserRole.user, UserRole.admin, UserRole.superadmin])
+def get_user_profile(jwt: JWTDep, username: str, user_service: UserService = Depends(get_user_service)):
+    user = user_service.find_by_username(username)
+    return user
+
+@router.put("/", status_code=200, response_model=UserDTO, summary="Update user's profile info")
+@pre_authorize([UserRole.user, UserRole.admin, UserRole.superadmin])
+def update_user_profile(jwt: JWTDep, dto: UserDTO, user_service: UserService = Depends(get_user_service)):
+    user_id = get_id_from_jwt(jwt)
+    updated_user = user_service.update_profile(user_id, dto)
+    return updated_user
