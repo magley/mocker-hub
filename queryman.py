@@ -1,8 +1,11 @@
 import os
 from typing import List
 from enum import Enum
-from elasticsearch_dsl import Document, Text, Date, Keyword, Search, Q, connections
 import math
+from elasticsearch_dsl import Document, Text, Date, Keyword, Search, Q, connections
+from textx import metamodel_from_str
+
+####################################################### MODEL
 
 class EventLevel(Enum):
     Debug = "debug"
@@ -18,7 +21,90 @@ class Event(Document):
     class Index:
         name = 'events'
 
-def search(page_number: int, page_size: int, sort_by: str, sort_ascending: bool) -> List:
+####################################################### GRAMMAR
+
+query_grammar = r'''
+Model: expr ;
+
+expr: or_expr ;
+
+or_expr:
+    left=and_expr
+    ( op='or' right=and_expr )*
+;
+
+and_expr:
+    left=not_expr
+    ( op='and' right=not_expr )*
+;
+
+not_expr:
+    op='not' right=not_expr
+  | atom=atom
+;
+
+atom:
+    condition
+  | '(' expr ')'
+;
+
+condition:
+    field=ID op=Op value=STRING
+;
+
+Op: '==' | '!=' | '~=' | '>=' | '>' | '<=' | '<';
+'''
+
+meta = metamodel_from_str(query_grammar)
+
+def to_query(node):
+    # 1) Leaf conditions
+    if hasattr(node, 'op') and hasattr(node, 'field'):
+        field, op, val = node.field, node.op, node.value.strip('"')
+        if op == '==':
+            return Q('term', **{field: val})
+        if op == '!=':
+            return Q('bool', must_not=[Q('term', **{field: val})])
+        if op == '~=':
+            return Q('match', **{field: val})
+        if op in ['>', '<', '>=', '<=']:
+            op_map = {
+                '>': 'gt', 
+                '<': 'lt', 
+                '>=': 'gte', 
+                '<=': 'lte'
+            }
+            return Q('range', **{field: {op_map[op]: val}})
+
+    # 2) Parenthesized subexpression
+    if hasattr(node, 'expr'):
+        return to_query(node.expr)
+
+    # 3) NOT expressions
+    if getattr(node, 'op', None) == 'not' and hasattr(node, 'right'):
+        inner_q = to_query(node.right)
+        return Q('bool', must_not=[inner_q])
+
+    # 4) AND / OR chains
+    if hasattr(node, 'left') and hasattr(node, 'op'):
+        q = to_query(node.left)
+        for operator, right_node in zip(node.op, node.right):
+            next_q = to_query(right_node)
+            if operator == 'and':
+                q = Q('bool', must=[q, next_q])
+            else:  # 'or'
+                q = Q('bool', should=[q, next_q])
+        return q
+
+    # 5) Atom wrapper
+    if hasattr(node, 'atom'):
+        return to_query(node.atom)
+
+    return None
+
+####################################################### QUERY BUILDER
+
+def search(query: Q, page_number: int, page_size: int, sort_by: str, sort_ascending: bool) -> List:
     hostname = os.getenv("ES_HOST", "localhost:9200")
     connections.create_connection(hosts=[f"http://{hostname}"])
 
@@ -31,6 +117,8 @@ def search(page_number: int, page_size: int, sort_by: str, sort_ascending: bool)
     if sort_by not in ['date_time', 'log_level', 'text_content']:
         sort_str = None
 
+    print(sort_by, sort_str)
+
     pag_start = (page_number - 1) * page_size
     pag_end = pag_start + page_size
 
@@ -40,31 +128,49 @@ def search(page_number: int, page_size: int, sort_by: str, sort_ascending: bool)
     s = s[pag_start:pag_end]
 
 
-    q = Q('bool',
-        must = [
-            Q("match", text_content="wants"),
-            #Q('term', log_level=EventLevel.Error.value),
-            Q('range', date_time={"gte": "2025-07-16T07:08:18"}),
-        ],
-        must_not = [
-            Q("match", text_content="Retrying in 5")
-        ]
-    )
+    # q = Q('bool',
+    #     must = [
+    #         Q("match", text_content="wants"),
+    #         #Q('term', log_level=EventLevel.Error.value),
+    #         Q('range', date_time={"gte": "2025-07-16T07:08:18"}),
+    #     ],
+    #     must_not = [
+    #         Q("match", text_content="Retrying in 5")
+    #     ]
+    # )
     
-    s = s.query(q)
+    s = s.query(query)
     response = s.execute()
 
     return response
 
+####################################################### "API"
+
+
+def doit(query_string: str, page_num: int, page_size: int, sort_by: str, sort_asc: bool):
+    model = meta.model_from_str(query_string)
+    query = to_query(model)
+
+    print(query)
+
+    res = search(query, page_num, page_size, sort_by, sort_asc)
+    total_hits = res.hits.total.value
+    total_pages = math.ceil(total_hits / page_size)
+
+    for hit in res:
+        print(f"[{hit.date_time}] [{hit.log_level}] {hit.text_content}")
+
+    print()
+    print(f"Page ({page_num} / {total_pages}) [{page_size} items of {total_hits}]")
+
+
+
+QUERY = '(log_level == "error" or log_level == "info") and (not text_content ~= "ghuyueyeuyeuriey7327983 2")'
+QUERY = 'date_time > "2025-07-16" and date_time <= "2030-01-01"'
+
 PAGE_NUM = 1
-PAGE_SIZE = 10
+PAGE_SIZE = 5
+SORT_BY = 'date_time' # 'date_time', 'log_level', 'text_content', ''
+SORT_ASC = False
 
-res = search(PAGE_NUM, PAGE_SIZE, 'date_time', True)
-total_hits = res.hits.total.value
-total_pages = math.ceil(total_hits / PAGE_SIZE)
-
-for hit in res:
-    print(f"[{hit.date_time}] [{hit.log_level}] {hit.text_content}")
-
-print()
-print(f"Page ({PAGE_NUM} / {total_pages}) [{PAGE_SIZE} items of {total_hits}]")
+doit(QUERY, PAGE_NUM, PAGE_SIZE, SORT_BY, SORT_ASC)
