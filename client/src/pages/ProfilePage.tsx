@@ -5,6 +5,7 @@ import { UserService, UserDTO } from "../api/user.api";
 import { AxiosError, AxiosResponse } from "axios";
 import { getJwtUsername } from "../util/localstorage";
 import { get_validation_error_readable } from "../util/http";
+import { ToastType, useToastStore } from "../util/toastStore";
 
 export const ProfilePage = () => {
   const { username: profileUsername } = useParams<{ username: string }>();
@@ -15,6 +16,7 @@ export const ProfilePage = () => {
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState('');
+  const addToast = useToastStore((state) => state.addToast);
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -70,6 +72,7 @@ export const ProfilePage = () => {
         setUser(res.data);
         setIsEditing(false);
         setError("");
+        addToast(`Successfully updated your profile`, ToastType.success);
       })
       .catch((err) => {
         console.error(err);
@@ -97,10 +100,11 @@ export const ProfilePage = () => {
       <Form>
         {/* First Name */}
         <Form.Group className="mb-3">
-          <Form.Label>First Name</Form.Label>
+          <Form.Label style={{ fontWeight: isEditing ? 500 : 400 }}>First Name</Form.Label>
           <Form.Control
             type="text"
             value={updateUser?.first_name ?? ""}
+            style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={50} 
             onChange={(e) =>
@@ -113,10 +117,11 @@ export const ProfilePage = () => {
 
         {/* Last Name */}
         <Form.Group className="mb-3">
-          <Form.Label>Last Name</Form.Label>
+          <Form.Label style={{ fontWeight: isEditing ? 500 : 400 }}>Last Name</Form.Label>
           <Form.Control
             type="text"
             value={updateUser?.last_name ?? ""}
+            style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={50}
             onChange={(e) =>
@@ -129,11 +134,12 @@ export const ProfilePage = () => {
 
         {/* Bio */}
         <Form.Group className="mb-3">
-          <Form.Label>Bio</Form.Label>
+          <Form.Label style={{ fontWeight: isEditing ? 500 : 400 }}>Bio</Form.Label>
           <Form.Control
             as="textarea"
             rows={3}
             value={updateUser?.bio ?? ""}
+            style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={400} 
             onChange={(e) =>
@@ -146,10 +152,11 @@ export const ProfilePage = () => {
 
         {/* Email */}
         <Form.Group className="mb-3">
-          <Form.Label>Email</Form.Label>
+          <Form.Label style={{ fontWeight: isEditing ? 500 : 400 }}>Email</Form.Label>
           <Form.Control
             type="email"
             value={updateUser?.email ?? ""}
+            style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={50} 
             onChange={(e) =>
@@ -171,7 +178,7 @@ export const ProfilePage = () => {
             Change Password
             </a>
           <Button variant="light" style={{backgroundColor: "white",border: "1px solid #ddd",padding: "8px 16px"}} onClick={handleEdit}>
-            <i className="bi bi-pencil"></i> Edit Profile
+             <i className="bi bi-pencil"></i>
           </Button>
             </>
           ) : (
