@@ -16,6 +16,7 @@ import { TheToastContainer } from './components/TheToastContainer';
 import { OrganizationPage } from './pages/OrgPage';
 import { RepoStarred } from './pages/RepoStarred';
 import { OrganisationsOfUser } from './pages/OrgOfUser';
+import { ProfilePage } from './pages/ProfilePage';
 
 // This function converts:
 //
@@ -62,6 +63,7 @@ function App() {
 
                     {/* Any role. */}
                     {authRoute("/password-change-required", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}
+                    {authRoute("/u/:username", ['user', 'admin', 'superadmin'], ProfilePage)}
 
                     {/* Protected routes. */}
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}

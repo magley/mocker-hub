@@ -18,7 +18,10 @@ export interface UserDTO {
     email: string,
     username: string,
     role: UserRole,
-    join_date: Date
+    join_date: Date,
+    first_name: string | null,
+    last_name: string | null,
+    bio: string | null,
 }
 
 export interface UserPasswordChangeDTO {
@@ -56,5 +59,13 @@ export class UserService {
         return await axiosInstance.get(`/users/search/${query}`, {
             params: {org_id_to_exclude_members}
         });
+    }
+
+    static async GetUserProfile(username: string): Promise<AxiosResponse<UserDTO>> {
+        return await axiosInstance.get(`/users/${username}`);
+    }
+
+    static async UpdateMyProfile(dto: UserDTO): Promise<AxiosResponse<UserDTO>> {
+        return await axiosInstance.put(`/users`, dto);
     }
 }
