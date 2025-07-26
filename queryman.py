@@ -44,7 +44,10 @@ def search(page_number: int, page_size: int, sort_by: str, sort_ascending: bool)
         must = [
             Q("match", text_content="wants"),
             #Q('term', log_level=EventLevel.Error.value),
-            Q('range', date_time={"gte": "2025-06-10"}),
+            Q('range', date_time={"gte": "2025-07-16T07:08:18"}),
+        ],
+        must_not = [
+            Q("match", text_content="Retrying in 5")
         ]
     )
     
@@ -54,7 +57,7 @@ def search(page_number: int, page_size: int, sort_by: str, sort_ascending: bool)
     return response
 
 PAGE_NUM = 1
-PAGE_SIZE = 40
+PAGE_SIZE = 10
 
 res = search(PAGE_NUM, PAGE_SIZE, 'date_time', True)
 total_hits = res.hits.total.value
