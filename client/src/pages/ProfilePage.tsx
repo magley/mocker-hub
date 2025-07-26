@@ -156,7 +156,7 @@ export const ProfilePage = () => {
         <div className="d-flex justify-content-between mt-4">
           {!isEditing ? (
             <>
-            <a href="/password-change-required" target="_blank" rel="noopener noreferrer"
+            <a href="/password-change" rel="noopener noreferrer"
             style={{ textDecoration: "underline", color: "#007bff", cursor: "pointer" }}>
             Change Password
             </a>

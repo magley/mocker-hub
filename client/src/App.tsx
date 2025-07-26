@@ -49,6 +49,7 @@ function App() {
                 <Routes>
                     {authRoute("/register", [""], UserRegistration)}
                     {authRoute("/register-admin", ["superadmin"], UserAdminRegistration)}
+                    {authRoute("/password-change-required", ['superadmin'], UserPasswordChangeRequired)}
 
                     {/* Anybody. */}
                     {authRoute("/", [], Home)}
@@ -62,7 +63,7 @@ function App() {
                     {authRoute("/o/*", [], OrganizationPage)}
 
                     {/* Any role. */}
-                    {authRoute("/password-change-required", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}
+                    {authRoute("/password-change", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}
                     {authRoute("/u/:username", ['user', 'admin', 'superadmin'], ProfilePage)}
 
                     {/* Protected routes. */}
