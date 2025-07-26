@@ -1,4 +1,5 @@
 import os
+from typing import List
 from enum import Enum
 from elasticsearch_dsl import Document, Text, Date, Keyword, Search, Q, connections
 
@@ -17,23 +18,32 @@ class Event(Document):
     class Index:
         name = 'events'
 
-def search():
+def search(page_number: int, page_size: int, sort_by: str, sort_ascending: bool) -> List:
     hostname = os.getenv("ES_HOST", "localhost:9200")
     connections.create_connection(hosts=[f"http://{hostname}"])
 
+    if page_number < 1:
+        page_number = 1
+    if page_size < 1:
+        page_size = 1
+
+    sort_str = f"{'' if sort_ascending else '-'}{sort_by}"
+    if sort_by not in ['date_time', 'log_level', 'text_content']:
+        sort_str = None
+
+    pag_start = (page_number - 1) * page_size
+    pag_end = pag_start + page_size
+
     s = Search(index=Event.Index.name)
+    if sort_str is not None:
+        s = s.sort(sort_str)
+    s = s[pag_start:pag_end]
 
-    q = Q('term', log_level=EventLevel.Error.value)
-
-    q = Q('range', date_time={
-              "gte": "2025-07-10",
-              "lt": "2025-07-31"
-    })
 
     q = Q('bool',
         must = [
-            #Q("match", text_content="wants"),
-            Q('term', log_level=EventLevel.Error.value),
+            Q("match", text_content="wants"),
+            #Q('term', log_level=EventLevel.Error.value),
             Q('range', date_time={"gte": "2025-06-10"}),
         ]
     )
@@ -41,7 +51,8 @@ def search():
     s = s.query(q)
     response = s.execute()
 
-    for hit in response:
-        print(f"[{hit.date_time}] [{hit.log_level}] {hit.text_content}")
+    return response
 
-search()
+res = search(0, 5, 'date_time', True)
+for hit in res:
+    print(f"[{hit.date_time}] [{hit.log_level}] {hit.text_content}")
