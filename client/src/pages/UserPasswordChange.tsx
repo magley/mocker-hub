@@ -6,7 +6,7 @@ import { AxiosError } from 'axios';
 import { clearJWT } from '../util/localstorage';
 import { get_validation_error_readable } from '../util/http';
 
-export const UserPasswordChangeRequired = () => {
+export const UserPasswordChange = () => {
     let navigate = useNavigate();
     const location = useLocation();
     const [oldPassword, setOldPassword] = useState('');
