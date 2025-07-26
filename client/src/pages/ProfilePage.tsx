@@ -1,9 +1,10 @@
 import { useEffect, useState } from "react";
-import { Button, Form, Spinner } from "react-bootstrap";
+import { Alert, Button, Form, Spinner } from "react-bootstrap";
 import { useParams, useNavigate } from "react-router-dom";
 import { UserService, UserDTO } from "../api/user.api";
 import { AxiosError, AxiosResponse } from "axios";
 import { getJwtUsername } from "../util/localstorage";
+import { get_validation_error_readable } from "../util/http";
 
 export const ProfilePage = () => {
   const { username: profileUsername } = useParams<{ username: string }>();
@@ -13,6 +14,7 @@ export const ProfilePage = () => {
   const [isMyProfile, setIsMyProfile] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [saving, setSaving] = useState(false);
+  const [error, setError] = useState('');
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -33,9 +35,9 @@ export const ProfilePage = () => {
       .catch((err: AxiosError) => {
         if (err.response?.status === 404) {
           navigate("/");
-          console.error("Not found - either a typo or access denied.");
+          setError(get_validation_error_readable(err));
         } else {
-            console.error(err);
+            setError(get_validation_error_readable(err));
         }
       });
   };
@@ -43,11 +45,13 @@ export const ProfilePage = () => {
   const handleEdit = () => {
     setUpdateUser(user ? { ...user } : null);
     setIsEditing(true);
+    setError("");
   };
 
   const handleCancel = () => {
     setUpdateUser(user ? { ...user } : null);
     setIsEditing(false);
+    setError("");
   };
 
   const handleSave = () => {
@@ -65,10 +69,11 @@ export const ProfilePage = () => {
     UserService.UpdateMyProfile(dto).then((res) => {
         setUser(res.data);
         setIsEditing(false);
+        setError("");
       })
       .catch((err) => {
         console.error(err);
-        alert("Failed to update profile");
+        setError(get_validation_error_readable(err));
       })
       .finally(() => setSaving(false));
   };
@@ -97,6 +102,7 @@ export const ProfilePage = () => {
             type="text"
             value={updateUser?.first_name ?? ""}
             readOnly={!isEditing}
+            maxLength={50} 
             onChange={(e) =>
               setUpdateUser((prev) =>
                 prev ? { ...prev, first_name: e.target.value } : prev
@@ -112,6 +118,7 @@ export const ProfilePage = () => {
             type="text"
             value={updateUser?.last_name ?? ""}
             readOnly={!isEditing}
+            maxLength={50}
             onChange={(e) =>
               setUpdateUser((prev) =>
                 prev ? { ...prev, last_name: e.target.value } : prev
@@ -128,6 +135,7 @@ export const ProfilePage = () => {
             rows={3}
             value={updateUser?.bio ?? ""}
             readOnly={!isEditing}
+            maxLength={400} 
             onChange={(e) =>
               setUpdateUser((prev) =>
                 prev ? { ...prev, bio: e.target.value } : prev
@@ -143,6 +151,7 @@ export const ProfilePage = () => {
             type="email"
             value={updateUser?.email ?? ""}
             readOnly={!isEditing}
+            maxLength={50} 
             onChange={(e) =>
               setUpdateUser((prev) =>
                 prev ? { ...prev, email: e.target.value } : prev
@@ -150,6 +159,7 @@ export const ProfilePage = () => {
             }
           />
         </Form.Group>
+        {error && <Alert variant="danger" className='mt-3'>{error}</Alert>}
       </Form>
 
       {isMyProfile && (
