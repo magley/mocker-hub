@@ -1,3 +1,15 @@
+"""
+This is a utility script for running ElasticSearch queries without starting the entire server.
+
+How to use:
+
+`python ./queryman.py`
+
+You need flask, elasticsearch_dsl amd textX
+
+This script and any of its functions should NOT be used by the program, but I'm keeping it here for now.
+"""
+
 import os
 from typing import List
 from enum import Enum
