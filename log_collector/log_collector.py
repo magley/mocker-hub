@@ -94,6 +94,11 @@ class FileChangeHandler(FileSystemEventHandler):
     def on_modified(self, event):
         if event.src_path == self.file_path:
             current_size = os.path.getsize(self.file_path)
+
+            if self.previous_size > current_size:
+                logging.warning(f"Irregularity in log size: want ({self.previous_size}) but ({current_size}). Rewinding...")
+                current_size = self.previous_size
+
             if current_size > self.previous_size:
                 with open(self.file_path, 'r') as file:
                     file.seek(self.previous_size)
