@@ -52,7 +52,7 @@ condition:
     field=ID op=Op value=STRING
 ;
 
-Op: '==' | '!=' | '~=' | '>=' | '>' | '<=' | '<';
+Op: '==' | '!=' | '~=' | '~~=' | '>=' | '>' | '<=' | '<';
 '''
 
 meta = metamodel_from_str(query_grammar)
@@ -67,6 +67,8 @@ def to_query(node):
             return Q('bool', must_not=[Q('term', **{field: val})])
         if op == '~=':
             return Q('match', **{field: val})
+        if op == '~~=':
+            return Q('match_phrase', **{field: val})
         if op in ['>', '<', '>=', '<=']:
             op_map = {
                 '>': 'gt', 
@@ -114,7 +116,7 @@ def search(query: Q, page_number: int, page_size: int, sort_by: str, sort_ascend
         page_size = 1
 
     sort_str = f"{'' if sort_ascending else '-'}{sort_by}"
-    if sort_by not in ['date_time', 'log_level', 'text_content']:
+    if sort_by not in ['date_time', 'log_level']: # But not 'text_content' because text is not optimized for aggregation and sorting.
         sort_str = None
 
     print(sort_by, sort_str)
@@ -166,11 +168,11 @@ def doit(query_string: str, page_num: int, page_size: int, sort_by: str, sort_as
 
 
 QUERY = '(log_level == "error" or log_level == "info") and (not text_content ~= "ghuyueyeuyeuriey7327983 2")'
-QUERY = 'date_time > "2025-07-16" and date_time <= "2030-01-01"'
+QUERY = 'log_level == "error" or log_level == "info"'
 
 PAGE_NUM = 1
 PAGE_SIZE = 5
-SORT_BY = 'date_time' # 'date_time', 'log_level', 'text_content', ''
-SORT_ASC = False
+SORT_BY = 'log_level' # 'date_time', 'log_level', ''
+SORT_ASC = True
 
 doit(QUERY, PAGE_NUM, PAGE_SIZE, SORT_BY, SORT_ASC)
