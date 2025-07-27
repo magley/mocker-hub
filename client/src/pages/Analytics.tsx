@@ -9,6 +9,7 @@ import { Pagination } from 'react-bootstrap';
 import "./Analytics.css";
 import ReactMarkdown from 'react-markdown';
 import { AnalyticsSidebar } from '../components/AnalyticsSidebar';
+import { log } from 'console';
 
 export const Analytics = () => {
     const [query, setQuery] = useState("");
@@ -47,7 +48,7 @@ export const Analytics = () => {
             setError('');
             return;
         }
-        if (logs === null) {
+        if (logs === null || logs.hits.length == 0) {
             setLoading(true);
         }
 
@@ -55,6 +56,9 @@ export const Analytics = () => {
 
         LogsService.Search(query, pageNumber, pageSize, sortBy, sortAscending).then((res: AxiosResponse<LogQueryDTO>) => {
             setLogs(res.data);
+            if (res.data.info.page > res.data.info.total_pages) {
+                handlePageChange(res.data.info.total_pages);
+            }
         }).catch((err: AxiosError) => {
             setError(err.message || 'Failed to fetch logs');
             setLogs(null);
@@ -150,7 +154,10 @@ export const Analytics = () => {
                     <i className="bi-graph-up"></i> Log Search
                 </h2>
 
-                <Form className="mb-3">
+                <Form className="mb-3" onSubmit={(e) => {
+                    e.preventDefault(); // Prevent page reload
+                    handleSearch();     // Trigger search logic
+                }}>
                     <Row className="g-3 align-items-end">
                         <Col xs={0}>
                             <Form.Group controlId="searchQuery">
@@ -164,13 +171,13 @@ export const Analytics = () => {
                             </Form.Group>
                         </Col>
 
-                        <Col xs='auto'>
-                            <Button variant="primary" onClick={handleSearch}>
+                        <Col xs="auto">
+                            <Button variant="primary" type="submit">
                                 <i className="bi bi-search"></i>
                             </Button>
                         </Col>
 
-                        <Col xs='auto'>
+                        <Col xs="auto">
                             <Button variant="primary" onClick={() => setShowSidebar(!showSidebar)}>
                                 <i className="bi bi-patch-question-fill"></i>
                             </Button>
@@ -178,78 +185,104 @@ export const Analytics = () => {
                     </Row>
                 </Form>
 
+
                 {loading && <Spinner animation="border" variant="primary" role="status"></Spinner>}
-                {error && <p style={{ color: 'red' }}>{error}</p>}
+                {error &&
+                    <>
+                        <p style={{ color: 'red' }}>
+                            Something went wrong ({error}).
+                            <br />
+                            Check the console for more info.
+                        </p>
+                        <p>
+                            Make sure keywords are <b>not wrapped in quotes</b>.
+                            <br />
+                            Make sure log levels, dates and words/phrases <b>are wrapped in quotes</b>.
+                            <br />
+                            Make sure you don't have dangling parentheses.
+                            <br />
+                        </p>
+                    </>
+                }
 
                 {logs !== null && (
                     <>
-                        <div className="d-flex flex-wrap gap-3 mt-3 align-items-start">
-                            {/* Pagination */}
-                            <div>
-                                {renderPagination()}
+                        {logs.hits.length === 0 ? (
+                            <div className="mt-4 text-muted">
+                                <h5>No results found</h5>
+                                <p>Try adjusting your query or filters to find matching logs.</p>
                             </div>
+                        ) : (
+                            <>
+                                <div className="d-flex flex-wrap gap-3 mt-3 align-items-start">
+                                    {/* Pagination */}
+                                    <div>{renderPagination()}</div>
 
-                            {/* Page size dropdown with inline label */}
-                            <div className="d-flex align-items-center gap-2">
-                                <label htmlFor="pageSizeSelect" className="mb-0">Rows per page:</label>
-                                <Form.Select
-                                    id="pageSizeSelect"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPageNumber(1);
-                                    }}
-                                    style={{ width: '100px' }}
-                                >
-                                    {[5, 10, 25, 50, 100].map((size) => (
-                                        <option key={size} value={size}>
-                                            {size}
-                                        </option>
-                                    ))}
-                                </Form.Select>
-                            </div>
-                        </div>
+                                    {/* Page size dropdown with inline label */}
+                                    <div className="d-flex align-items-center gap-2">
+                                        <label htmlFor="pageSizeSelect" className="mb-0">Rows per page:</label>
+                                        <Form.Select
+                                            id="pageSizeSelect"
+                                            value={pageSize}
+                                            onChange={(e) => {
+                                                setPageSize(Number(e.target.value));
+                                                setPageNumber(1);
+                                            }}
+                                            style={{ width: '100px' }}
+                                        >
+                                            {[5, 10, 25, 50, 100].map((size) => (
+                                                <option key={size} value={size}>{size}</option>
+                                            ))}
+                                        </Form.Select>
+                                    </div>
+                                </div>
 
-                        {/* Log count */}
-                        <div>
-                            Showing <strong>{logs.hits.length}</strong> of <strong>{logs.info.total_hits}</strong> logs
-                        </div>
+                                {/* Log count */}
+                                <div>
+                                    Showing <strong>{logs.hits.length}</strong> of <strong>{logs.info.total_hits}</strong> results on
+                                    page <strong>{logs.info.page}</strong> of <strong>{logs.info.total_pages}</strong>
+                                </div>
 
-                        <div style={{ maxHeight: '600px', overflowY: 'auto', overflowX: 'auto' }}>
-                            <Table striped bordered hover responsive style={{ tableLayout: 'fixed', width: '100%' }}>
-                                <thead>
-                                    <tr>
-                                        <th style={{ width: '200px', cursor: 'pointer' }} onClick={() => handleSort('date_time')}>
-                                            Timestamp {getSortIcon('date_time')}
-                                        </th>
-                                        <th style={{ width: '120px', cursor: 'pointer' }} onClick={() => handleSort('log_level')}>
-                                            Level {getSortIcon('log_level')}
-                                        </th>
-                                        <th style={{ width: '600px' }}>Message</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {logs.hits.map((log, index) => (
-                                        <tr key={index}>
-                                            <td>{new Date(log.date_time).toLocaleString()}</td>
-                                            <td>
-                                                <span className={`badge bg-${getLevelVariant(log.level.toString())}`}>
-                                                    {log.level}
-                                                </span>
-                                            </td>
-                                            <td>{log.text}</td>
-                                        </tr>
-                                    ))}
-                                </tbody>
-                            </Table>
-                        </div>
+                                {/* Table */}
+                                <div style={{ maxHeight: '600px', overflowY: 'auto', overflowX: 'auto' }}>
+                                    <Table striped bordered hover responsive style={{ tableLayout: 'fixed', width: '100%' }}>
+                                        <thead>
+                                            <tr>
+                                                <th style={{ width: '200px', cursor: 'pointer' }} onClick={() => handleSort('date_time')}>
+                                                    Timestamp {getSortIcon('date_time')}
+                                                </th>
+                                                <th style={{ width: '120px', cursor: 'pointer' }} onClick={() => handleSort('log_level')}>
+                                                    Level {getSortIcon('log_level')}
+                                                </th>
+                                                <th style={{ width: '600px' }}>Message</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            {logs.hits.map((log, index) => (
+                                                <tr key={index}>
+                                                    <td>{new Date(log.date_time).toLocaleString()}</td>
+                                                    <td>
+                                                        <span className={`badge bg-${getLevelVariant(log.level.toString())}`}>
+                                                            {log.level}
+                                                        </span>
+                                                    </td>
+                                                    <td>{log.text}</td>
+                                                </tr>
+                                            ))}
+                                        </tbody>
+                                    </Table>
+                                </div>
+                            </>
+                        )}
                     </>
                 )}
-            </div>
+            </div >
 
-            {showSidebar && (
-                <AnalyticsSidebar onClose={() => setShowSidebar(false)} />
-            )}
-        </div>
+            {
+                showSidebar && (
+                    <AnalyticsSidebar onClose={() => setShowSidebar(false)} />
+                )
+            }
+        </div >
     );
 };
