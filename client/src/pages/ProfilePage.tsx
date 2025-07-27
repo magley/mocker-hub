@@ -62,7 +62,7 @@ export const ProfilePage = () => {
 
     const dto: UserDTO = {
       ...updateUser,
-      first_name: updateUser.first_name ?? "",
+      first_name: (updateUser.first_name ?? ""),
       last_name: updateUser.last_name ?? "",
       bio: updateUser.bio ?? "",
       email: updateUser.email ?? "",
@@ -80,6 +80,13 @@ export const ProfilePage = () => {
       })
       .finally(() => setSaving(false));
   };
+
+const sanitizeNameInput = (value: string): string => {
+  let cleaned = value.replace(/[^a-zA-Z0-9.\-_ ]/g, "");
+  cleaned = cleaned.replace(/\s+/g, " ");
+  return cleaned;
+};
+
 
   if (loading) {
     return (
@@ -107,11 +114,12 @@ export const ProfilePage = () => {
             style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={50} 
-            onChange={(e) =>
+            onChange={(e) => {
+              const sanitized = sanitizeNameInput(e.target.value);
               setUpdateUser((prev) =>
-                prev ? { ...prev, first_name: e.target.value } : prev
-              )
-            }
+                prev ? { ...prev, first_name: sanitized } : prev
+              );
+            }}
           />
         </Form.Group>
 
@@ -124,11 +132,12 @@ export const ProfilePage = () => {
             style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={50}
-            onChange={(e) =>
+            onChange={(e) => {
+              const sanitized = sanitizeNameInput(e.target.value);
               setUpdateUser((prev) =>
-                prev ? { ...prev, last_name: e.target.value } : prev
-              )
-            }
+                prev ? { ...prev, last_name: sanitized } : prev
+              );
+            }}
           />
         </Form.Group>
 
