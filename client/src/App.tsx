@@ -2,7 +2,7 @@ import { Navbar } from './components/Navbar';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { RepoCreate } from './pages/RepoCreate';
-import { UserPasswordChangeRequired } from './pages/UserPasswordChangeRequired';
+import { UserPasswordChange } from './pages/UserPasswordChange';
 import { UserRegistration } from './pages/UserRegistration';
 import { UserAdminRegistration } from './pages/UserAdminRegistration';
 import { UserLogin } from './pages/UserLogin';
@@ -16,6 +16,7 @@ import { TheToastContainer } from './components/TheToastContainer';
 import { OrganizationPage } from './pages/OrgPage';
 import { RepoStarred } from './pages/RepoStarred';
 import { OrganisationsOfUser } from './pages/OrgOfUser';
+import { ProfilePage } from './pages/ProfilePage';
 
 // This function converts:
 //
@@ -48,6 +49,7 @@ function App() {
                 <Routes>
                     {authRoute("/register", [""], UserRegistration)}
                     {authRoute("/register-admin", ["superadmin"], UserAdminRegistration)}
+                    {authRoute("/password-change-required", ['superadmin'], UserPasswordChange)}
 
                     {/* Anybody. */}
                     {authRoute("/", [], Home)}
@@ -61,7 +63,8 @@ function App() {
                     {authRoute("/o/*", [], OrganizationPage)}
 
                     {/* Any role. */}
-                    {authRoute("/password-change-required", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}
+                    {authRoute("/password-change", ['user', 'admin', 'superadmin'], UserPasswordChange)}
+                    {authRoute("/u/:username", ['user', 'admin', 'superadmin'], ProfilePage)}
 
                     {/* Protected routes. */}
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}

@@ -1,3 +1,5 @@
+from datetime import datetime
+
 from fastapi.testclient import TestClient
 import pytest
 import unittest.mock as mock
@@ -5,12 +7,13 @@ import unittest.mock as mock
 from sqlmodel import SQLModel, Session
 
 from app.api.config.security import hash_password
-from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO
+from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
 from app.api.org.org_repo import OrganizationRepo
-from app.api.config.exception_handler import NotFoundException, UserException, FieldTakenException
+from app.api.config.exception_handler import NotFoundException, UserException, FieldTakenException, \
+    AccessDeniedException
 from app.api.main import app
 
 
@@ -277,11 +280,29 @@ def test_add___integration():
         
         add_user(username, 400)
 
+def make_user(user_id: int, username: str) -> User:
+    return User(
+        id=user_id,
+        username=username,
+        email=f"{username}@mail.com",
+        role=UserRole.user,
+        hashed_password="hash"
+    )
+
+def make_user_dto(id: int, username: str, email: str, first_name=None, last_name=None, bio=None) -> UserDTO:
+    return UserDTO(
+        id=id,
+        username=username,
+        email=email,
+        role=UserRole.user,
+        join_date=datetime.utcnow(),
+        first_name=first_name,
+        last_name=last_name,
+        bio=bio
+    )
+
 def test_search_by_username_prefix(user_service):
     """ Searching for users by username prefix and filtering those that are already members of specific organization. """
-    def make_user(user_id: int, username: str) -> User:
-        return User(id=user_id, username=username, email=f"{username}@mail.com", role=UserRole.user,
-                    hashed_password="hash")
     org_id = 1
     query = "jo"
     user1 = make_user(1, "john")
@@ -295,3 +316,74 @@ def test_search_by_username_prefix(user_service):
     user_service.user_repo.search_by_username_prefix.assert_called_once_with(query)
     user_service.org_repo.find_members_of_org.assert_called_once_with(org_id)
 
+def test_update_profile_user_not_found(user_service):
+    """ Test case for when the user to update is not found. """
+    dto = make_user_dto(id=99, username="john", email="john@mail.com")
+    user_service.user_repo.find_by_id.return_value = None
+
+    with pytest.raises(NotFoundException):
+        user_service.update_profile(user_id=1, dto=dto)
+
+    user_service.user_repo.find_by_id.assert_called_once_with(dto.id)
+    user_service.user_repo.add.assert_not_called()
+
+def test_update_profile_access_denied(user_service):
+    """ Test case for when a user tries to update another user's profile. """
+    user = make_user(2, "josh")
+    dto = make_user_dto(id=2, username="josh", email="josh@mail.com")
+    user_service.user_repo.find_by_id.return_value = user
+
+    with pytest.raises(AccessDeniedException):
+        user_service.update_profile(user_id=1, dto=dto)
+
+    user_service.user_repo.find_by_id.assert_called_once_with(dto.id)
+    user_service.user_repo.add.assert_not_called()
+
+def test_update_profile_email_taken(user_service):
+    """ Test case for when a user tries to update data with an email that is already taken. """
+    user = make_user(1, "john")
+    dto = make_user_dto(id=1, username="john", email="taken@mail.com")
+
+    user_service.user_repo.find_by_id.return_value = user
+    user_service.user_repo.find_by_email.return_value = make_user(2, "josh")
+
+    with pytest.raises(FieldTakenException):
+        user_service.update_profile(user_id=1, dto=dto)
+
+    user_service.user_repo.find_by_id.assert_called_once_with(dto.id)
+    user_service.user_repo.find_by_email.assert_called_once_with(dto.email)
+    user_service.user_repo.add.assert_not_called()
+
+def test_update_profile_partial_update(user_service):
+    """ Test case for updating only some fields of the user (the email is staying the same). """
+    user = make_user(1, "john")
+    dto = make_user_dto(id=1, username="john", email=user.email, bio="New bio")
+
+    user_service.user_repo.find_by_id.return_value = user
+    updated_user = user_service.update_profile(user_id=1, dto=dto)
+
+    assert updated_user.bio == "New bio"
+    assert updated_user.email == user.email
+    user_service.user_repo.find_by_email.assert_not_called()
+    user_service.user_repo.add.assert_called_once_with(updated_user)
+
+def test_update_profile_all_attributes(user_service):
+    """ Test case for updating all attributes of the user successfully. """
+    user = make_user(1, "john")
+    dto = make_user_dto(
+        id=1,
+        username="john",
+        email="newEmail@mail.com",
+        first_name="John",
+        last_name="Doe",
+        bio="New bio"
+    )
+    user_service.user_repo.find_by_id.return_value = user
+    user_service.user_repo.find_by_email.return_value = None
+    updated_user = user_service.update_profile(user_id=1, dto=dto)
+
+    assert updated_user.email == "newEmail@mail.com"
+    assert updated_user.first_name == "John"
+    assert updated_user.last_name == "Doe"
+    assert updated_user.bio == "New bio"
+    user_service.user_repo.add.assert_called_once_with(updated_user)

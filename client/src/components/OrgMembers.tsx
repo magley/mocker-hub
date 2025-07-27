@@ -5,6 +5,7 @@ import { AxiosError, AxiosResponse } from "axios";
 import { Badge, Button, Form, ListGroup, Modal, Spinner } from "react-bootstrap";
 import { getJwtId } from "../util/localstorage";
 import "./OrgMembers.css";
+import { Link } from "react-router-dom";
 
 export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }> = ({ isActive, org }) => {
     const [members, setMembers] = useState<UserDTO[]>([]);
@@ -153,12 +154,15 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                                 style={{fontSize: "1rem",padding: "12px 0", maxWidth: "90%"}}
                                 >
                                     
-                                <div style={{ width: "20%", paddingLeft: "8px"}} className="fw-bold text-primary">
-                                {member.username}
+                                <div style={{ width: "20%", paddingLeft: "8px"}}>
+                                <Link to={`/u/${member.username}`} className="fw-bold text-primary" 
+                                      style={{ textDecoration: "none", cursor: "pointer" }}>
+                                    {member.username}
+                                </Link>
                                 </div>
 
                                 <div style={{ width: "25%" }} className="text-muted">
-                                {("Ime") + " " + ("Prezime")}
+                                {member.first_name} {member.last_name}
                                 </div>
 
                                 <div style={{ width: "35%" }} className="text-dark">
