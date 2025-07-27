@@ -17,3 +17,5 @@ httpx
 
 pillow
 elasticsearch-dsl
+
+textX==4.2.2

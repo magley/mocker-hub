@@ -29,8 +29,7 @@ export interface LogQueryDTO {
 
 export class LogsService {
     static async Search(query: string, page: number, page_size: number, sort_by: string, sort_ascending: boolean): Promise<AxiosResponse<LogQueryDTO>> {
-        // TODO: Once we put the searching inside the main server, use axiosInstance and the proper endpoint.
-        return await axios.get('http://127.0.0.1:8068/search_logs', {
+        return await axiosInstance.get("/events/", {
             params: {
                 query,
                 page_number: page,
