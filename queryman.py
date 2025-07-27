@@ -119,8 +119,6 @@ def search(query: Q, page_number: int, page_size: int, sort_by: str, sort_ascend
     if sort_by not in ['date_time', 'log_level']: # But not 'text_content' because text is not optimized for aggregation and sorting.
         sort_str = None
 
-    print(sort_by, sort_str)
-
     pag_start = (page_number - 1) * page_size
     pag_end = pag_start + page_size
 
@@ -129,18 +127,6 @@ def search(query: Q, page_number: int, page_size: int, sort_by: str, sort_ascend
         s = s.sort(sort_str)
     s = s[pag_start:pag_end]
 
-
-    # q = Q('bool',
-    #     must = [
-    #         Q("match", text_content="wants"),
-    #         #Q('term', log_level=EventLevel.Error.value),
-    #         Q('range', date_time={"gte": "2025-07-16T07:08:18"}),
-    #     ],
-    #     must_not = [
-    #         Q("match", text_content="Retrying in 5")
-    #     ]
-    # )
-    
     s = s.query(query)
     response = s.execute()
 
@@ -149,30 +135,75 @@ def search(query: Q, page_number: int, page_size: int, sort_by: str, sort_ascend
 ####################################################### "API"
 
 
-def doit(query_string: str, page_num: int, page_size: int, sort_by: str, sort_asc: bool):
+def doit(query_string: str, page_num: int, page_size: int, sort_by: str, sort_asc: bool) -> dict:
     model = meta.model_from_str(query_string)
     query = to_query(model)
-
-    print(query)
 
     res = search(query, page_num, page_size, sort_by, sort_asc)
     total_hits = res.hits.total.value
     total_pages = math.ceil(total_hits / page_size)
 
+    result = {}
+    result["info"] = {
+        "page": page_num,
+        "page_size": page_size,
+        "total_pages": total_pages,
+        "total_hits": total_hits,
+    }
+    result["hits"] = []
     for hit in res:
-        print(f"[{hit.date_time}] [{hit.log_level}] {hit.text_content}")
+        h = {
+            "date_time": hit.date_time,
+            "level": hit.log_level,
+            "text": hit.text_content
+        }
+        result["hits"].append(h)
+    return result
+
+def printme(result: dict):
+    for hit in result["hits"]:
+        print(f"[{hit['date_time']}] [{hit['level']}] {hit['text']}")
 
     print()
-    print(f"Page ({page_num} / {total_pages}) [{page_size} items of {total_hits}]")
+    print(f"Page ({result['info']['page']} / {result['info']['total_pages']}) [{result['info']['page_size']} items of {result['info']['total_hits']}")
 
 
+def local():     
+    QUERY = '(log_level == "error" or log_level == "info") and (not text_content ~= "ghuyueyeuyeuriey7327983 2")'
+    QUERY = 'log_level == "error" or log_level == "info"'
 
-QUERY = '(log_level == "error" or log_level == "info") and (not text_content ~= "ghuyueyeuyeuriey7327983 2")'
-QUERY = 'log_level == "error" or log_level == "info"'
+    PAGE_NUM = 1
+    PAGE_SIZE = 5
+    SORT_BY = 'log_level' # 'date_time', 'log_level', ''
+    SORT_ASC = True
 
-PAGE_NUM = 1
-PAGE_SIZE = 5
-SORT_BY = 'log_level' # 'date_time', 'log_level', ''
-SORT_ASC = True
+    res = doit(QUERY, PAGE_NUM, PAGE_SIZE, SORT_BY, SORT_ASC)
+    printme(res)
 
-doit(QUERY, PAGE_NUM, PAGE_SIZE, SORT_BY, SORT_ASC)
+
+#################### Temp flask server.
+
+from flask import Flask, request, jsonify
+from operator import itemgetter
+from flask_cors import CORS
+
+app = Flask(__name__)
+CORS(app)
+
+
+@app.route('/search_logs', methods=['GET'])
+def search_logs():
+    # Get query parameters
+    query = request.args.get('query', '', type=str)
+    page_number = request.args.get('page_number', 1, type=int)
+    page_size = request.args.get('page_size', 10, type=int)
+    sort_by = request.args.get('sort_by', 'text_content', type=str)
+    sort_ascending = request.args.get('sort_ascending', 'true').lower() == 'true'
+
+    res = doit(query, page_number, page_size, sort_by, sort_ascending)
+    printme(res)
+
+    return jsonify(res)
+
+if __name__ == '__main__':
+    app.run(host='localhost', port=8068)
