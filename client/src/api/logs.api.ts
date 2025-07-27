@@ -2,11 +2,11 @@ import axios, { AxiosResponse } from "axios";
 import { axiosInstance, ENV } from "../util/http";
 
 export enum LogLevel {
-    info,
-    warning,
-    error,
-    trace,
-    debug,
+    info = 'info',
+    warning = 'warning',
+    error = 'error',
+    trace = 'trace',
+    debug = 'debug',
 }
 
 export interface LogDTO {
