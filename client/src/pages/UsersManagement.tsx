@@ -3,7 +3,7 @@ import { AxiosError, AxiosResponse } from 'axios';
 import Spinner from 'react-bootstrap/Spinner';
 import Button from 'react-bootstrap/Button';
 import Form from 'react-bootstrap/Form';
-import { Row, Col, Table } from 'react-bootstrap';
+import { Row, Col, Table, Modal } from 'react-bootstrap';
 import { Pagination } from 'react-bootstrap';
 import "./Analytics.css";
 import { UserBadge, UserDTO, UserQueryDTO, UserService } from '../api/user.api';
@@ -18,6 +18,9 @@ export const UsersManagement = () => {
     const [loading, setLoading] = useState(false);
     const [users, setUsers] = useState<UserQueryDTO | null>(null);
     const [error, setError] = useState('');
+    const [showEditModal, setShowEditModal] = useState(false);
+    const [selectedUser, setSelectedUser] = useState<UserDTO | null>(null);
+    const [selectedBadge, setSelectedBadge] = useState<UserBadge>(UserBadge.none);
 
     const getSortIcon = (column: string) => {
         if (sortBy !== column) return null;
@@ -125,8 +128,21 @@ export const UsersManagement = () => {
     };
 
     function handleEditUser(user: UserDTO): void {
-        throw new Error('Function not implemented.');
+        setSelectedUser(user);
+        setSelectedBadge(user.badge); 
+        setShowEditModal(true);
     }
+
+    const handleSaveBadge = async () => {
+        if (!selectedUser) return;   
+        try {
+            await UserService.UpdateUserBadge(selectedUser.id, selectedBadge);
+            handleSearch();
+        } catch (err) {
+            console.error("Failed to update user badge", err);
+        }
+        setShowEditModal(false);
+    };
 
     return (
         <div className="page-container" style={{ padding: '2rem' }}>
@@ -258,6 +274,36 @@ export const UsersManagement = () => {
                         )}
                     </>
                 )}
+
+                {/* Modal for editing user badge */}
+                <Modal show={showEditModal} onHide={() => setShowEditModal(false)} centered >
+                    <Modal.Header closeButton>
+                        <Modal.Title>Give <b>{selectedUser?.username}</b> a badge</Modal.Title>
+                    </Modal.Header>
+                    <Modal.Body>
+                        <Form.Group controlId="badgeSelect">
+                            <Form.Label className="mb-3">Select a badge</Form.Label>
+                            <Form.Select style={{ minHeight: 'auto', overflowY: 'visible' }}
+                                value={selectedBadge}
+                                onChange={(e) => setSelectedBadge(e.target.value as UserBadge)}>
+                                {Object.values(UserBadge).map((badge) => (
+                                    <option key={badge} value={badge}>
+                                        {UserService.BadgeToHumanText(badge)}
+                                    </option>
+                                ))}
+                            </Form.Select>
+                        </Form.Group>
+                        <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: '1.5rem' }} >
+                            <Button variant="secondary" onClick={() => setShowEditModal(false)}>
+                                Cancel
+                            </Button>
+                            <Button variant="primary" onClick={handleSaveBadge}>
+                                Save
+                            </Button>
+                        </div>
+                    </Modal.Body>
+                </Modal>
+
             </div >
         </div >
     );

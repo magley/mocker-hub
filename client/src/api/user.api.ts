@@ -58,6 +58,7 @@ export interface UserQueryDTO {
 }
 
 export class UserService {
+
     static async RegisterRegularUser(dto: UserRegisterDTO): Promise<void> {
         return await axiosInstance.post(`/users`, dto);
     }
@@ -100,10 +101,13 @@ export class UserService {
         });
     }
 
-    
+    static async UpdateUserBadge(user_id: number, selectedBadge: UserBadge):  Promise<AxiosResponse<UserDTO>>{
+        return await axiosInstance.put(`/users/badge`, { user_id: user_id, badge: selectedBadge });
+    }
+
      static BadgeToHumanText(badge: UserBadge): string {
             switch (badge) {
-                case UserBadge.none: return "";
+                case UserBadge.none: return "None";
                 case UserBadge.verified: return "Verified Publisher";
                 case UserBadge.sponsored_oss: return "Sponsored OSS";
                 default: return `${badge}`;
