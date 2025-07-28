@@ -13,6 +13,12 @@ export enum UserRole {
     superadmin = "superadmin",
 }
 
+export enum UserBadge {
+    none = "none",
+    verified = "verified",
+    sponsored_oss = "sponsored_oss",
+}
+
 export interface UserDTO {
     id: number,
     email: string,
@@ -22,6 +28,7 @@ export interface UserDTO {
     first_name: string | null,
     last_name: string | null,
     bio: string | null,
+    badge: UserBadge | null,
 }
 
 export interface UserPasswordChangeDTO {
@@ -36,6 +43,18 @@ export interface UserLoginDTO {
 
 export interface TokenDTO {
     token: string,
+}
+
+export interface UserQueryInfoDTO {
+    page: number,
+    page_size: number,
+    total_pages: number,
+    total_hits: number,
+}
+
+export interface UserQueryDTO {
+    hits: UserDTO[],
+    info: UserQueryInfoDTO
 }
 
 export class UserService {
@@ -67,5 +86,16 @@ export class UserService {
 
     static async UpdateMyProfile(dto: UserDTO): Promise<AxiosResponse<UserDTO>> {
         return await axiosInstance.put(`/users`, dto);
+    }
+
+    static async SearchUsersPaginated(query: string, page: number, page_size: number, sort_by: string, sort_ascending: boolean): Promise<AxiosResponse<UserQueryDTO>> {
+        return await axiosInstance.get(`/users/paginated/${query}`, {
+            params: {
+                page_number: page,
+                page_size,
+                sort_by,
+                sort_ascending, 
+            },
+        });
     }
 }

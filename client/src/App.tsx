@@ -18,6 +18,7 @@ import { RepoStarred } from './pages/RepoStarred';
 import { OrganisationsOfUser } from './pages/OrgOfUser';
 import { ProfilePage } from './pages/ProfilePage';
 import { Analytics } from './pages/Analytics';
+import { UsersManagement } from './pages/UsersManagement';
 
 // This function converts:
 //
@@ -71,6 +72,7 @@ function App() {
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}
                     {authRoute("/org", ['user', 'admin'], OrganizationCreate)}
                     {authRoute("/analytics", ['admin', 'superadmin'], Analytics)}
+                    {authRoute("/users/management", ['admin', 'superadmin'], UsersManagement)}
 
                     {/* "Not found", must be at the end. */}
                     {authRoute("*", [], NotFound)}
