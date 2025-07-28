@@ -1,6 +1,9 @@
 import datetime
+from typing import List
+
 from pydantic import BaseModel, EmailStr, Field
-from app.api.user.user_model import UserRole
+from app.api.user.user_model import UserRole, UserBadge
+
 
 class UserDTO(BaseModel):
     id: int
@@ -11,6 +14,7 @@ class UserDTO(BaseModel):
     first_name: str | None
     last_name: str | None
     bio: str | None
+    badge: UserBadge | None
 
 class UserTokenDTO(BaseModel):
     token: str
@@ -28,3 +32,12 @@ class UserLoginDTO(BaseModel):
     username: str
     password: str
 
+class UsersResultInfoDTO(BaseModel):
+    page: int
+    page_size: int
+    total_pages: int
+    total_hits: int
+
+class UsersResultDTO(BaseModel):
+    hits: List[UserDTO]
+    info: UsersResultInfoDTO

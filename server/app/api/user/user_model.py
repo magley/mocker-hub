@@ -10,6 +10,13 @@ class UserRole(str, enum.Enum):
     admin = "admin"
     superadmin = "superadmin"
 
+
+class UserBadge(str, enum.Enum):
+    none = "none"
+    verified = "verified"
+    sponsored_oss = "sponsored_oss"
+
+
 class User(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
     email: EmailStr = Field(unique=True, index=True)
@@ -23,6 +30,7 @@ class User(SQLModel, table=True):
     first_name: str | None = Field(default="")
     last_name: str | None = Field(default="")
     bio: str | None = Field(default="")
+    badge: UserBadge | None = Field(default=UserBadge.none)
 
     repositories: list["Repository"] = Relationship(back_populates="owner")
     stars: list["RepositoryStar"] = Relationship(back_populates="starrer")
