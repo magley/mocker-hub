@@ -28,7 +28,7 @@ export interface UserDTO {
     first_name: string | null,
     last_name: string | null,
     bio: string | null,
-    badge: UserBadge | null,
+    badge: UserBadge,
 }
 
 export interface UserPasswordChangeDTO {
@@ -99,4 +99,32 @@ export class UserService {
             }
         });
     }
+
+    
+     static BadgeToHumanText(badge: UserBadge): string {
+            switch (badge) {
+                case UserBadge.none: return "";
+                case UserBadge.verified: return "Verified Publisher";
+                case UserBadge.sponsored_oss: return "Sponsored OSS";
+                default: return `${badge}`;
+            }
+        }
+
+    static BadgeToBootstrapColor(badge: UserBadge): string {
+            switch (badge) {
+                case UserBadge.none: return "bg-light";
+                case UserBadge.verified: return "bg-secondary";
+                case UserBadge.sponsored_oss: return "bg-success";
+                default: return `bg-light`;
+            }
+        }
+
+        static BadgeToHumanBootstrapIcon(badge: UserBadge): string {
+            switch (badge) {
+                case UserBadge.none: return "";
+                case UserBadge.verified: return "bi-patch-check-fill";
+                case UserBadge.sponsored_oss: return "bi-git";
+                default: return ``;
+            }
+        }
 }

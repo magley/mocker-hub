@@ -6,7 +6,7 @@ import Form from 'react-bootstrap/Form';
 import { Row, Col, Table } from 'react-bootstrap';
 import { Pagination } from 'react-bootstrap';
 import "./Analytics.css";
-import { UserQueryDTO, UserService } from '../api/user.api';
+import { UserBadge, UserDTO, UserQueryDTO, UserService } from '../api/user.api';
 import { Link } from 'react-router-dom';
 
 export const UsersManagement = () => {
@@ -124,6 +124,10 @@ export const UsersManagement = () => {
         return <Pagination>{items}</Pagination>;
     };
 
+    function handleEditUser(user: UserDTO): void {
+        throw new Error('Function not implemented.');
+    }
+
     return (
         <div className="page-container" style={{ padding: '2rem' }}>
             <div className="main-content">
@@ -136,7 +140,7 @@ export const UsersManagement = () => {
                     handleSearch();     // Trigger search logic
                 }}>
                     <Row className="g-3 align-items-end">
-                        <Col xs={0}>
+                        <Col xs={0} style={{ maxWidth: '35%' }}>
                             <Form.Group controlId="searchQuery">
                                 <Form.Label>Search users</Form.Label>
                                 <Form.Control
@@ -216,10 +220,10 @@ export const UsersManagement = () => {
                                                 <th style={{ width: '200px', cursor: 'pointer' }} onClick={() => handleSort('full_name')}>
                                                     Full Name {getSortIcon('full_name')}
                                                 </th>
-                                                <th style={{ width: '220px', cursor: 'pointer' }} onClick={() => handleSort('email')}>
+                                                <th style={{ width: '320px', cursor: 'pointer' }} onClick={() => handleSort('email')}>
                                                     Email {getSortIcon('email')}
                                                 </th>
-                                                <th style={{ width: '320px', cursor: 'pointer' }} onClick={() => handleSort('badge')}>
+                                                <th style={{ width: '220px', cursor: 'pointer' }} onClick={() => handleSort('badge')}>
                                                     Badge {getSortIcon('badge')}
                                                 </th>
                                             </tr>
@@ -233,9 +237,18 @@ export const UsersManagement = () => {
                                                     </Link></td>
                                                     <td>{user.first_name} {user.last_name}</td>
                                                     <td>{user.email}</td>
-                                                    //todo decorate the badge
-                                                    <td>{user.badge}</td>
-                                                    //todo add edit button and a correponding dialog
+                                                    <td style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                                                        {user?.badge !== UserBadge.none ? (
+                                                            <span className={`badge rounded-pill ${UserService.BadgeToBootstrapColor(user.badge)}`}
+                                                                style={{ fontSize: '0.5em', marginLeft: '0.5em' }}>
+                                                                <i className={`bi ${UserService.BadgeToHumanBootstrapIcon(user.badge)}`}> </i>
+                                                                {UserService.BadgeToHumanText(user.badge)}
+                                                            </span>
+                                                        ) : <span className="text-muted">None</span>}
+                                                        <Button style={{backgroundColor: 'white', border: '1px solid #ccc', color: '#333', borderRadius: '4px'}} onClick={() => handleEditUser(user)}>
+                                                            <i className="bi-pencil"></i>
+                                                        </Button>
+                                                    </td>
                                                 </tr>
                                             ))}
                                         </tbody>
