@@ -51,7 +51,7 @@ Get logs submitted before the 27th of July 2025 at 08:06:10.
 
 - \`date_time >= "2025-07-01" and date_time < "2025-07-27"\`
 \\
-Get logs submitted before 1st of July 2025 and 27th of July 2025.
+Get logs submitted between 1st of July 2025 and 27th of July 2025.
 
 # Complex queries
 
