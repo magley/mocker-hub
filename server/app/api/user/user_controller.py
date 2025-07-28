@@ -1,7 +1,8 @@
 from typing import Annotated, List
 from fastapi import APIRouter, Depends
 
-from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO
+from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO, \
+    UsersResultDTO, UsersResultInfoDTO
 from app.api.user.user_service import UserService, get_user_service
 from app.api.user.user_model import UserRole, User
 from fastapi_cache.decorator import cache
@@ -59,3 +60,10 @@ def update_user_profile(jwt: JWTDep, dto: UserDTO, user_service: UserService = D
     user_id = get_id_from_jwt(jwt)
     updated_user = user_service.update_profile(user_id, dto)
     return updated_user
+
+@router.get("/paginated/{query}", response_model=UsersResultDTO, status_code=200, summary="Search users with paginated results")
+@pre_authorize([UserRole.admin, UserRole.superadmin])
+async def search_paginated(jwt: JWTDep, query: str,  page_number: int, page_size: int, sort_by: str, sort_ascending: bool,
+                           user_service: UserService = Depends(get_user_service)):
+    result = user_service.search_paginated(query, page_number, page_size, sort_by, sort_ascending)
+    return result
