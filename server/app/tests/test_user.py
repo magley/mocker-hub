@@ -387,3 +387,48 @@ def test_update_profile_all_attributes(user_service):
     assert updated_user.last_name == "Doe"
     assert updated_user.bio == "New bio"
     user_service.user_repo.add.assert_called_once_with(updated_user)
+
+
+def test_update_profile_integration():
+    with TestClient(app) as client:
+        def create_user(username: str, email: str, password: str = "Password123") -> dict:
+            data = {"username": username, "email": email, "password": password}
+            response = client.post("/api/v1/users", json=data)
+            assert response.status_code == 200
+            return response.json()
+
+        def login(username: str, password: str = "Password123") -> dict:
+            data = {"username": username, "password": password}
+            response = client.post("/api/v1/users/login", json=data)
+            assert response.status_code == 200
+            token = response.json()["token"]
+            return {"Authorization": f"Bearer {token}"}
+
+        username = "John"
+        user = create_user(username, "john@mail.com")
+        auth_header = login(username)
+
+        user_dto = {
+            "id": user["id"],
+            "username": username,
+            "first_name": "John",
+            "last_name": "Doe",
+            "bio": "bio bio",
+            "role": "user",
+            "join_date": datetime.now().isoformat(),
+            "email": "newprofile@mail.com"
+        }
+
+        response = client.put("/api/v1/users", json=user_dto, headers=auth_header)
+        assert response.status_code == 200
+        assert response.json()["username"] == user_dto["username"]
+
+        get_response = client.get(f"/api/v1/users/{username}", headers=auth_header)
+        assert get_response.status_code == 200
+        updated_user = get_response.json()
+        assert updated_user["first_name"] == user_dto["first_name"]
+        assert updated_user["last_name"] == user_dto["last_name"]
+        assert updated_user["bio"] == user_dto["bio"]
+        assert updated_user["email"] == user_dto["email"]
+
+

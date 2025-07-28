@@ -27,14 +27,13 @@ export function Navbar() {
                     role === 'superadmin' &&
                     <>
                         <NavLink className={"navlink"} to="/register-admin" end><i className="bi bi-person-plus"></i>New admin</NavLink>
-
                     </>
                 }
                 {
                     role !== '' &&
                     <>
                         <NavLink className={"navlink"} to="/." end><i className="bi bi-search"></i>Explore</NavLink>
-                        <NavLink className={"navlink"} to={`/u/${username}/repos`} end><i className="bi bi-collection"></i>Repositories</NavLink>
+                        <NavLink className={"navlink"} to={`/u/${username}/repos`} end><i className="bi bi-boxes"></i>Repositories</NavLink>
                         <NavLink className={"navlink"} to={`/u/${username}/orgs`} end><i className="bi bi-building"></i>Organizations</NavLink>
                     </>
                 }

@@ -1,11 +1,12 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Form, Spinner } from "react-bootstrap";
-import { useParams, useNavigate } from "react-router-dom";
+import { useParams, useNavigate, Link } from "react-router-dom";
 import { UserService, UserDTO } from "../api/user.api";
 import { AxiosError, AxiosResponse } from "axios";
 import { getJwtUsername } from "../util/localstorage";
 import { get_validation_error_readable } from "../util/http";
 import { ToastType, useToastStore } from "../util/toastStore";
+import { is } from "date-fns/locale";
 
 export const ProfilePage = () => {
   const { username: profileUsername } = useParams<{ username: string }>();
@@ -62,7 +63,7 @@ export const ProfilePage = () => {
 
     const dto: UserDTO = {
       ...updateUser,
-      first_name: updateUser.first_name ?? "",
+      first_name: (updateUser.first_name ?? ""),
       last_name: updateUser.last_name ?? "",
       bio: updateUser.bio ?? "",
       email: updateUser.email ?? "",
@@ -81,6 +82,13 @@ export const ProfilePage = () => {
       .finally(() => setSaving(false));
   };
 
+const sanitizeNameInput = (value: string): string => {
+  let cleaned = value.replace(/[^a-zA-Z0-9.\-_ ]/g, "");
+  cleaned = cleaned.replace(/\s+/g, " ");
+  return cleaned;
+};
+
+
   if (loading) {
     return (
       <div className="d-flex justify-content-center align-items-center mt-5">
@@ -95,9 +103,15 @@ export const ProfilePage = () => {
 
   return (
     <div className="container mt-4" style={{ maxWidth: "600px" }}>
-      <h2 className="mb-4 text-center">{user.username}</h2>
+      
+      <div className="d-flex justify-content-center align-items-center position-relative mb-4">
+        <h1 className="mb-4 text-center">{user.username}</h1>
+        {isMyProfile && !isEditing && (
+            <i className="bi bi-pencil" style={{position: "absolute", right: 0, cursor: "pointer", fontSize: "1.35rem", color: "#007bff"}} onClick={handleEdit}></i>
+        )}
+      </div>
 
-      <Form>
+      <Form style={{ marginBottom: "2rem" }}>
         {/* First Name */}
         <Form.Group className="mb-3">
           <Form.Label style={{ fontWeight: isEditing ? 500 : 400 }}>First Name</Form.Label>
@@ -107,11 +121,12 @@ export const ProfilePage = () => {
             style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={50} 
-            onChange={(e) =>
+            onChange={(e) => {
+              const sanitized = sanitizeNameInput(e.target.value);
               setUpdateUser((prev) =>
-                prev ? { ...prev, first_name: e.target.value } : prev
-              )
-            }
+                prev ? { ...prev, first_name: sanitized } : prev
+              );
+            }}
           />
         </Form.Group>
 
@@ -124,11 +139,12 @@ export const ProfilePage = () => {
             style={{borderColor: isEditing ? "#007bff" : "#ced4da"}}
             readOnly={!isEditing}
             maxLength={50}
-            onChange={(e) =>
+            onChange={(e) => {
+              const sanitized = sanitizeNameInput(e.target.value);
               setUpdateUser((prev) =>
-                prev ? { ...prev, last_name: e.target.value } : prev
-              )
-            }
+                prev ? { ...prev, last_name: sanitized } : prev
+              );
+            }}
           />
         </Form.Group>
 
@@ -171,17 +187,7 @@ export const ProfilePage = () => {
 
       {isMyProfile && (
         <div className="d-flex justify-content-between mt-4">
-          {!isEditing ? (
-            <>
-            <a href="/password-change" rel="noopener noreferrer"
-            style={{ textDecoration: "underline", color: "#007bff", cursor: "pointer" }}>
-            Change Password
-            </a>
-          <Button variant="light" style={{backgroundColor: "white",border: "1px solid #ddd",padding: "8px 16px"}} onClick={handleEdit}>
-             <i className="bi bi-pencil"></i>
-          </Button>
-            </>
-          ) : (
+          {isEditing && (
             <>
               <Button variant="secondary" onClick={handleCancel}>
                 Cancel
@@ -189,8 +195,21 @@ export const ProfilePage = () => {
               <Button variant="primary" onClick={handleSave} disabled={saving}>
                 {saving ? "Saving..." : "Save Changes"}
               </Button>
-            </>
+              </>
           )}
+        </div>
+      )}
+      {!isEditing && (
+        <div className="d-flex justify-content-between">
+          {isMyProfile && (
+          <a href="/password-change" rel="noopener noreferrer" style={{ textDecoration: "underline", color: "#007bff", cursor: "pointer" }}>
+            Change Password
+            </a>
+        )}
+          <Link to={`/u/${user.username}/repos`} className="text-decoration-none" style={{ color: "#007bff", fontWeight: 500 }}>
+            <i className="bi bi-boxes me-2"></i>
+            {isMyProfile ? "View My Repositories" : `View ${user.username}'s Repositories`}
+          </Link>
         </div>
       )}
     </div>
