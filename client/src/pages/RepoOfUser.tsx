@@ -177,11 +177,13 @@ export const RepositoriesOfUser: React.FC = () => {
                     </div>
 
                     {/* Add new repo Button */}
-                    <Link to={`/new`}>
-                        <Button className="btn btn-primary">
-                                Create Repository
-                        </Button>
-                    </Link>
+                    {fullResult?.user_id == myId && (
+                        <Link to={`/new`}>
+                            <Button className="btn btn-primary">
+                                    Create Repository
+                            </Button>
+                        </Link>
+                    )}
                 </div>
         
                 {/* Advanced Search Section */}
@@ -264,11 +266,13 @@ export const RepositoriesOfUser: React.FC = () => {
             ) : ( <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
                 No repositories created yet.
                     <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
+                        {fullResult?.user_id == myId && (
                         <Link to={`/new`}>
                             <Button className="btn btn-primary">
                                     Create Repository
                             </Button>
                         </Link>
+                    )}
                     </div>
                  </div>
              ) }

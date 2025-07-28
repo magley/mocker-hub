@@ -2,7 +2,8 @@ from typing import List
 
 from fastapi import Depends
 from app.api.config.security import hash_password, verify_password
-from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
+from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException, \
+    AccessDeniedException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.org.org_repo import OrganizationRepo
@@ -93,6 +94,26 @@ class UserService:
         users_to_exclude = self.org_repo.find_members_of_org(org_id_to_exclude_members)
         users = [u for u in all_users if u not in users_to_exclude]
         return users
+
+    def update_profile(self, user_id: int, dto: UserDTO) -> User:
+        user = self.user_repo.find_by_id(dto.id)
+        if not user:
+            raise NotFoundException(user, dto.id)
+        if user_id != dto.id:
+            raise AccessDeniedException(f"User {user_id} cannot update another user with id {dto.id}")
+        if user.email != dto.email:
+            if self.user_repo.find_by_email(dto.email) is not None:
+                raise FieldTakenException("Email")
+            user.email = dto.email
+        if dto.first_name is not None:
+            user.first_name = dto.first_name
+        if dto.last_name is not None:
+            user.last_name = dto.last_name
+        if dto.bio is not None:
+            user.bio = dto.bio
+
+        self.user_repo.add(user)
+        return user
 
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:

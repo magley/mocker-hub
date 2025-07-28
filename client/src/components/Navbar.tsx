@@ -34,7 +34,7 @@ export function Navbar() {
                 role !== '' &&
                 <>
                     <NavLink className={"navlink"} to="/." end><i className="bi bi-search"></i>Explore</NavLink>
-                    <NavLink className={"navlink"} to={`/u/${username}/repos`} end><i className="bi bi-collection"></i>Repositories</NavLink>
+                    <NavLink className={"navlink"} to={`/u/${username}/repos`} end><i className="bi bi-boxes"></i>Repositories</NavLink>
                     <NavLink className={"navlink"} to={`/u/${username}/orgs`} end><i className="bi bi-building"></i>Organizations</NavLink>
                 </>
             }
@@ -62,7 +62,7 @@ export function Navbar() {
                     <span className="username"  onClick={() => setShowDropdown(!showDropdown)}>{username} <i className="bi-caret-down-fill"></i> </span>
                     {showDropdown && (
                         <div className="dropdown-menu">
-                            <NavLink to={`/u/${username}/profile`} onClick={handleDropdownClick}><i className="bi bi-person"></i>Profile</NavLink>
+                            <NavLink to={`/u/${username}`} onClick={handleDropdownClick}><i className="bi bi-person"></i>Profile</NavLink>
                             {role === "user" && (
                             <NavLink to={`/u/${username}/starred`} onClick={handleDropdownClick}><i className="bi bi-star"></i>Starred Repositories</NavLink>
                             )}
