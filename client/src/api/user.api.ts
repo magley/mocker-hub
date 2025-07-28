@@ -89,13 +89,14 @@ export class UserService {
     }
 
     static async SearchUsersPaginated(query: string, page: number, page_size: number, sort_by: string, sort_ascending: boolean): Promise<AxiosResponse<UserQueryDTO>> {
-        return await axiosInstance.get(`/users/paginated/${query}`, {
+        return await axiosInstance.get(`/users/paginated/`, {
             params: {
                 page_number: page,
                 page_size,
                 sort_by,
-                sort_ascending, 
-            },
+                sort_ascending,
+                query
+            }
         });
     }
 }

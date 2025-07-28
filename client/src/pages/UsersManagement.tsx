@@ -25,12 +25,6 @@ export const UsersManagement = () => {
     };
 
     const handleSearch = async () => {
-        //todo fetch all users on load?
-        if (searchTerm == "") {
-            setUsers(null);
-            setError('');
-            return;
-        }
         if (users === null || users.hits.length == 0) {
             setLoading(true);
         }

@@ -61,9 +61,9 @@ def update_user_profile(jwt: JWTDep, dto: UserDTO, user_service: UserService = D
     updated_user = user_service.update_profile(user_id, dto)
     return updated_user
 
-@router.get("/paginated/{query}", response_model=UsersResultDTO, status_code=200, summary="Search users with paginated results")
+@router.get("/paginated/", response_model=UsersResultDTO, status_code=200, summary="Search users with paginated results")
 @pre_authorize([UserRole.admin, UserRole.superadmin])
-async def search_paginated(jwt: JWTDep, query: str,  page_number: int, page_size: int, sort_by: str, sort_ascending: bool,
+async def search_paginated(jwt: JWTDep,  page_number: int, page_size: int, sort_by: str, sort_ascending: bool, query: str = "",
                            user_service: UserService = Depends(get_user_service)):
     result = user_service.search_paginated(query, page_number, page_size, sort_by, sort_ascending)
     return result
