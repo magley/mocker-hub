@@ -146,7 +146,7 @@ class EventService:
 
         return response
 
-    def query(self, query_string: str, page_num: int, page_size: int, sort_by: str, sort_asc: bool) -> dict:
+    def query(self, query_string: str, page_num: int, page_size: int, sort_by: str, sort_asc: bool) -> LogsResultDTO:
         """
         High-level method for submitting a query.
         """
