@@ -21,13 +21,13 @@ const markdownContent = `
 ## (1) \`text_content\`
 The text of the log.
 
-- \`text_content ~= "error issue couldn't not"\`
+- \`text_content ~= "not don't couldn't no"\`
 \\
-Search by keywords (any match)
+Search by keywords (if any word is found, it's a match)
 
-- \`text_content ~= "tried to get"\`
+- \`text_content ~~= "tried to get"\`
 \\
-Search by term (whole term must match)
+Search by term (the whole term must match)
 
 ## (2) \`log_level\`
 
@@ -57,6 +57,7 @@ Get logs submitted before 1st of July 2025 and 27th of July 2025.
 
 - \`(log_level == "warning" or log_level == "debug") and text_content ~= "http failure"\`
 - \`(log_level == "info" or log_level == "debug") and (text_content ~~= "HTTP connection" or date_time >= "2025-07-25")\`
+- \`log_level == "error" and not text_content ~= "HTTP"\`
 `;
 
 export const AnalyticsSidebar: React.FC<SidebarProps> = ({ onClose }) => {
