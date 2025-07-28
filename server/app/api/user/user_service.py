@@ -8,6 +8,7 @@ from app.api.config.exception_handler import FieldTakenException, NotFoundExcept
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.org.org_repo import OrganizationRepo
+from app.api.repo.repo_repo import RepositoryRepo
 from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO, UserDTO, \
     UsersResultInfoDTO, UsersResultDTO
 from app.api.user.user_model import User, UserRole
@@ -19,6 +20,7 @@ class UserService:
         self.session = session
         self.user_repo = UserRepo(session)
         self.org_repo = OrganizationRepo(session)
+        self.repo_repo = RepositoryRepo(session)
 
     def add(self, dto: UserRegisterDTO) -> User:
         if self.user_repo.find_by_email(dto.email) is not None:
@@ -138,6 +140,16 @@ class UserService:
         )
         result = UsersResultDTO(hits=users_dto, info=result_info)
         return result
+
+    def update_badge(self, user_id, badge) -> User:
+        user = self.user_repo.find_by_id(user_id)
+        if not user:
+            raise NotFoundException(user, user_id)
+        user = self.user_repo.update_badge(user, badge)
+        repositories = self.repo_repo.get_repositories_for_user(user_id)
+        for repo in repositories:
+            self.repo_repo.set_attribute(repo, "badge", badge)
+        return user
 
 
 def get_user_service(session: Session = Depends(get_database)) -> UserService:

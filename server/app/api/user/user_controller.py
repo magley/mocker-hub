@@ -2,9 +2,9 @@ from typing import Annotated, List
 from fastapi import APIRouter, Depends
 
 from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO, \
-    UsersResultDTO, UsersResultInfoDTO
+    UsersResultDTO, UsersResultInfoDTO, UserBadgeDTO
 from app.api.user.user_service import UserService, get_user_service
-from app.api.user.user_model import UserRole, User
+from app.api.user.user_model import UserRole, User, UserBadge
 from fastapi_cache.decorator import cache
 from app.api.config.auth import JWTBearer, JWTDep, get_id_from_jwt
 from app.api.config.auth import pre_authorize
@@ -67,3 +67,9 @@ async def search_paginated(jwt: JWTDep,  page_number: int, page_size: int, sort_
                            user_service: UserService = Depends(get_user_service)):
     result = user_service.search_paginated(query, page_number, page_size, sort_by, sort_ascending)
     return result
+
+@router.put("/badge", status_code=200, response_model=UserDTO, summary="Update user's badge")
+@pre_authorize([UserRole.admin, UserRole.superadmin])
+def update_user_badge(jwt: JWTDep, dto: UserBadgeDTO, user_service: UserService = Depends(get_user_service)):
+    updated_user = user_service.update_badge(dto.user_id, dto.badge)
+    return updated_user

@@ -32,6 +32,10 @@ class UserLoginDTO(BaseModel):
     username: str
     password: str
 
+class UserBadgeDTO(BaseModel):
+    user_id: int
+    badge: UserBadge
+
 class UsersResultInfoDTO(BaseModel):
     page: int
     page_size: int

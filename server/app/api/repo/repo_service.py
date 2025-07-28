@@ -3,7 +3,7 @@ from fastapi import Depends
 from app.api.config.exception_handler import AccessDeniedException, ConflictException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.user.user_model import User, UserRole
+from app.api.user.user_model import User, UserRole, UserBadge
 from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
@@ -74,7 +74,9 @@ class RepositoryService:
 
         badge = RepositoryBadge.none
         if owner.role == UserRole.admin:
-            badge = RepositoryBadge.official 
+            badge = RepositoryBadge.official
+        elif owner.badge != UserBadge.none:
+            badge = owner.badge
 
         # Create the new repository.
 

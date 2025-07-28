@@ -75,3 +75,12 @@ class UserRepo:
         )
         users = self.session.exec(base_query).all()
         return users, total_hits
+
+    def update_badge(self, user, badge) -> User:
+        user.sqlmodel_update({
+            "badge": badge,
+        })
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
+        return user
