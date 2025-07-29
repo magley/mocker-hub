@@ -79,7 +79,7 @@ export const UsersManagement = () => {
 
         items.push(
             <Pagination.First
-                key="prev"
+                key="first"
                 onClick={() => handlePageChange(1)}
                 style={{ width: '48px', textAlign: 'center' }}
             />
@@ -119,7 +119,7 @@ export const UsersManagement = () => {
 
         items.push(
             <Pagination.Last
-                key="prev"
+                key="last"
                 onClick={() => handlePageChange(users.info.total_pages)}
                 style={{ width: '48px', textAlign: 'center' }}
             />
@@ -232,10 +232,10 @@ export const UsersManagement = () => {
                                         <thead>
                                             <tr>
                                                 <th style={{ width: '180px', cursor: 'pointer' }} onClick={() => handleSort('username')}>
-                                                    Username {getSortIcon('username')}
+                                                    Username {getSortIcon('username')} 
                                                 </th>
-                                                <th style={{ width: '200px', cursor: 'pointer' }} onClick={() => handleSort('full_name')}>
-                                                    Full Name {getSortIcon('full_name')}
+                                                <th style={{ width: '200px', cursor: 'pointer' }} onClick={() => handleSort('name')}>
+                                                    Full Name {getSortIcon('name')}
                                                 </th>
                                                 <th style={{ width: '320px', cursor: 'pointer' }} onClick={() => handleSort('email')}>
                                                     Email {getSortIcon('email')}
