@@ -298,7 +298,8 @@ def make_user_dto(id: int, username: str, email: str, first_name=None, last_name
         join_date=datetime.utcnow(),
         first_name=first_name,
         last_name=last_name,
-        bio=bio
+        bio=bio,
+        badge=None
     )
 
 def test_search_by_username_prefix(user_service):
@@ -416,7 +417,8 @@ def test_update_profile_integration():
             "bio": "bio bio",
             "role": "user",
             "join_date": datetime.now().isoformat(),
-            "email": "newprofile@mail.com"
+            "email": "newprofile@mail.com",
+            "badge": user["badge"]
         }
 
         response = client.put("/api/v1/users", json=user_dto, headers=auth_header)
