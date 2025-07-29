@@ -6,9 +6,12 @@ import unittest.mock as mock
 
 from sqlmodel import SQLModel, Session
 
+from app.api.config.pagination import PaginatedResultDTO
 from app.api.config.security import hash_password
+from app.api.repo.repo_model import Repository
+from app.api.repo.repo_repo import RepositoryRepo
 from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserDTO
-from app.api.user.user_model import User, UserRole
+from app.api.user.user_model import User, UserRole, UserBadge
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
 from app.api.org.org_repo import OrganizationRepo
@@ -30,14 +33,19 @@ def mock_org_repo():
     return mock.MagicMock(spec=OrganizationRepo)
 
 @pytest.fixture
+def mock_repo_repo():
+    return mock.MagicMock(spec=RepositoryRepo)
+
+@pytest.fixture
 def mock_user():
     return mock.MagicMock(User)
 
 @pytest.fixture
-def user_service(mock_session, mock_user_repo, mock_org_repo):
+def user_service(mock_session, mock_user_repo, mock_org_repo, mock_repo_repo):
     service = UserService(mock_session)
     service.user_repo = mock_user_repo
     service.org_repo = mock_org_repo
+    service.repo_repo = mock_repo_repo
     return service
 
 @pytest.fixture(scope="function", autouse=True)
@@ -433,4 +441,95 @@ def test_update_profile_integration():
         assert updated_user["bio"] == user_dto["bio"]
         assert updated_user["email"] == user_dto["email"]
 
+def test_update_badge_user_not_found(user_service):
+    """ Test case for when the user's badge to update is not found. """
+    user_id = 99
+    user_service.user_repo.find_by_id.return_value = None
 
+    with pytest.raises(NotFoundException):
+        user_service.update_badge(user_id, UserBadge.verified)
+
+    user_service.user_repo.find_by_id.assert_called_once_with(user_id)
+    user_service.user_repo.update_badge.assert_not_called()
+
+def test_update_badge_no_repositories_success(user_service):
+    user = make_user(1, "john")
+    user.badge = UserBadge.none
+    expected_user = make_user(1, "john")
+    new_badge = UserBadge.verified
+    expected_user.badge = new_badge
+
+    user_service.user_repo.find_by_id.return_value = user
+    user_service.repo_repo.get_repositories_for_user.return_value = []
+    user_service.user_repo.update_badge.return_value = expected_user
+
+    updated_user = user_service.update_badge(user.id, new_badge)
+    assert updated_user.badge == expected_user.badge
+    user_service.user_repo.find_by_id.assert_called_once_with(expected_user.id)
+    user_service.repo_repo.get_repositories_for_user.assert_called_once()
+    user_service.repo_repo.set_attribute.assert_not_called()
+    user_service.user_repo.update_badge.assert_called_once()
+
+def test_update_badge_and_repositories_success(user_service):
+    user = make_user(1, "john")
+    user.badge = UserBadge.none
+    expected_user = make_user(1, "john")
+    new_badge = UserBadge.verified
+    expected_user.badge = new_badge
+    repository1 = mock.MagicMock(Repository)
+    repository2 = mock.MagicMock(Repository)
+
+    user_service.user_repo.find_by_id.return_value = user
+    user_service.repo_repo.get_repositories_for_user.return_value = [repository1, repository2]
+    user_service.user_repo.update_badge.return_value = expected_user
+
+    updated_user = user_service.update_badge(user.id, new_badge)
+    assert updated_user.badge == expected_user.badge
+    user_service.user_repo.find_by_id.assert_called_once_with(expected_user.id)
+    user_service.repo_repo.get_repositories_for_user.assert_called_once()
+    user_service.repo_repo.set_attribute.assert_has_calls([
+        mock.call(repository1, "badge", new_badge),
+        mock.call(repository2, "badge", new_badge)
+    ])
+    assert user_service.repo_repo.set_attribute.call_count == 2
+
+    user_service.user_repo.update_badge.assert_called_once()
+
+def test_search_paginated_success(user_service):
+    query = "john"
+    page_number = 1
+    page_size = 2
+    sort_by = "username"
+    sort_ascending = True
+
+    user1 = make_user(1, "john")
+    user2 = make_user(2, "johnny")
+    user_list = [user1, user2]
+    total_hits = 5
+
+    user_service.user_repo.search_users_paginated.return_value = (user_list, total_hits)
+    result = user_service.search_paginated(query, page_number, page_size, sort_by, sort_ascending)
+
+    assert isinstance(result, PaginatedResultDTO)
+    assert result.info.page == page_number
+    assert result.info.page_size == page_size
+    assert result.info.total_hits == total_hits
+    assert result.info.total_pages == 3  # ceil(5 / 2)
+    assert len(result.hits) == 2
+    assert all(isinstance(u, UserDTO) for u in result.hits)
+    user_service.user_repo.search_users_paginated.assert_called_once_with(
+        query, page_number, page_size, sort_by, sort_ascending)
+
+def test_search_paginated_min_page_and_size(user_service):
+    user = make_user(1, "john")
+    user_service.user_repo.search_users_paginated.return_value = ([user], 1)
+
+    result = user_service.search_paginated("j", 0, 0, "email", False)
+
+    assert result.info.page == 1
+    assert result.info.page_size == 1
+    assert result.info.total_pages == 1
+    assert result.info.total_hits == 1
+    assert len(result.hits) == 1
+    user_service.user_repo.search_users_paginated.assert_called_once_with(
+        "j", 1, 1, "email", False)
