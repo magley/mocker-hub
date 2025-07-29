@@ -35,13 +35,3 @@ class UserLoginDTO(BaseModel):
 class UserBadgeDTO(BaseModel):
     user_id: int
     badge: UserBadge
-
-class UsersResultInfoDTO(BaseModel):
-    page: int
-    page_size: int
-    total_pages: int
-    total_hits: int
-
-class UsersResultDTO(BaseModel):
-    hits: List[UserDTO]
-    info: UsersResultInfoDTO

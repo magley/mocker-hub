@@ -18,3 +18,13 @@ T = TypeVar('T')
 class PaginatedDTO(BaseModel, Generic[T]):
     items: List[T]
     total_count: int
+
+class PaginatedResultInfoDTO(BaseModel):
+    page: int
+    page_size: int
+    total_pages: int
+    total_hits: int
+
+class PaginatedResultDTO(BaseModel, Generic[T]):
+    hits: List[T]
+    info: PaginatedResultInfoDTO
