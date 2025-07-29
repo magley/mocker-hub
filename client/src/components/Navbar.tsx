@@ -40,7 +40,7 @@ export function Navbar() {
                 {
                     (role === 'admin' || role === 'superadmin') &&
                     <>
-                        <NavLink className={"navlink"} to="" end><i className="bi bi-people"></i>Users</NavLink>
+                        <NavLink className={"navlink"} to="users/management" end><i className="bi bi-people"></i>Users</NavLink>
                         <NavLink className={"navlink"} to="/analytics" end><i className="bi bi-graph-up"></i>Analytics</NavLink>
                     </>
                 }

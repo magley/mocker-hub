@@ -98,7 +98,7 @@ export const Analytics = () => {
 
         items.push(
             <Pagination.First
-                key="prev"
+                key="first"
                 onClick={() => handlePageChange(1)}
                 style={{ width: '48px', textAlign: 'center' }}
             />
@@ -138,7 +138,7 @@ export const Analytics = () => {
 
         items.push(
             <Pagination.Last
-                key="prev"
+                key="last"
                 onClick={() => handlePageChange(logs.info.total_pages)}
                 style={{ width: '48px', textAlign: 'center' }}
             />

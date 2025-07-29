@@ -2,8 +2,10 @@ import logging
 import math
 import os
 from typing import Type
+
+from app.api.config.pagination import PaginatedResultInfoDTO, PaginatedResultDTO
 from app.api.events.event_model import Event, EventLevel
-from app.api.events.event_dto import EventDTO, LogsResultDTO, LogDTO, LogsResultInfoDTO
+from app.api.events.event_dto import EventDTO, LogDTO
 from datetime import datetime
 from app.api.config.logutil import LOGGER
 from elasticsearch_dsl import Document, Text, Date, Keyword, Search, Q, connections
@@ -146,7 +148,7 @@ class EventService:
 
         return response
 
-    def query(self, query_string: str, page_num: int, page_size: int, sort_by: str, sort_asc: bool) -> LogsResultDTO:
+    def query(self, query_string: str, page_num: int, page_size: int, sort_by: str, sort_asc: bool) -> PaginatedResultDTO:
         """
         High-level method for submitting a query.
         """
@@ -158,7 +160,7 @@ class EventService:
         total_hits = res.hits.total.value
         total_pages = math.ceil(total_hits / page_size)
 
-        result_info  =LogsResultInfoDTO(
+        result_info  =PaginatedResultInfoDTO(
             page=page_num,
             page_size=page_size,
             total_pages=total_pages,
@@ -173,7 +175,7 @@ class EventService:
             )
             hits.append(h)
 
-        result = LogsResultDTO(hits=hits, info=result_info)
+        result = PaginatedResultDTO(hits=hits, info=result_info)
         return result
 
 

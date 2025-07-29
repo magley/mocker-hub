@@ -1,9 +1,8 @@
-from typing import List
+from typing import List, Tuple
 
 from sqlmodel import Session, select
 from app.api.user.user_model import User, UserRole
-from app.api.config.exception_handler import NotFoundException
-from sqlalchemy import and_
+from sqlalchemy import func
 
 class UserRepo:
     def __init__(self, session: Session):
@@ -54,3 +53,34 @@ class UserRepo:
             .where(User.username.ilike(f"{query}%"), User.role != UserRole.superadmin)
             .limit(limit)
         ).all()
+
+    def search_users_paginated(self, query: str, page_number: int, page_size: int, sort_by: str, sort_ascending: bool) -> Tuple[List[User], int]:
+        filters = [User.role != UserRole.superadmin, User.role != UserRole.admin]
+        if query is not None and query.strip():
+            filters.append(User.username.ilike(f"{query}%"))
+
+        count_query = select(func.count()).where(*filters)
+        total_hits = self.session.exec(count_query).one()
+
+        sort_column = getattr(User, sort_by, User.username)
+        if not sort_ascending:
+            sort_column = sort_column.desc()
+
+        base_query = (
+            select(User)
+            .where(*filters)
+            .order_by(sort_column)
+            .offset((page_number - 1) * page_size)
+            .limit(page_size)
+        )
+        users = self.session.exec(base_query).all()
+        return users, total_hits
+
+    def update_badge(self, user, badge) -> User:
+        user.sqlmodel_update({
+            "badge": badge,
+        })
+        self.session.add(user)
+        self.session.commit()
+        self.session.refresh(user)
+        return user

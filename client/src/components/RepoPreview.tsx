@@ -4,6 +4,7 @@ import { Card, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
 import { RepositoryService } from '../api/repo.api';
 import { Link } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
+import { BadgeUtils } from '../util/badge';
 
 export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string> | undefined }> = ( {repo, orgNames} ) => {
     return (
@@ -25,11 +26,11 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                         {/* Badge */}   
                         {repo && repo?.badge !== RepositoryBadge.none &&
                             <span
-                                className={`badge rounded-pill ${RepositoryService.BadgeToBootstrapColor(repo?.badge)}`}
+                                className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(repo?.badge)}`}
                                 style={{ fontSize: '0.7rem', marginLeft: '1em' }}
                             >
-                                <i className={`bi ${RepositoryService.BadgeToHumanBootstrapIcon(repo?.badge)}`}> </i>
-                                {RepositoryService.BadgeToHumanText(repo?.badge)}
+                                <i className={`bi ${BadgeUtils.toBootstrapIcon(repo?.badge)}`}> </i>
+                                {BadgeUtils.toHumanText(repo?.badge)}
                             </span>
                         }
                     </Card.Title>

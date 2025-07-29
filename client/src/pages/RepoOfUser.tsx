@@ -6,6 +6,7 @@ import { AxiosError, AxiosResponse } from 'axios';
 import './RepoOfUser.css';
 import { getJwtId } from '../util/localstorage';
 import { RepoPreview } from '../components/RepoPreview';
+import { BadgeUtils } from '../util/badge';
 
 export const RepositoriesOfUser: React.FC = () => {
     const [fullResult, setFullResult] = useState<ReposOfUserDTO>();
@@ -245,9 +246,9 @@ export const RepositoriesOfUser: React.FC = () => {
                                         id={badge.id}
                                     />
                                     <label className="form-check-label fs-5 ms-2" htmlFor={badge.id}>
-                                        <span className={`badge rounded-pill ${RepositoryService.BadgeToBootstrapColor(badge.type)}`}>
-                                            <i className={`bi ${RepositoryService.BadgeToHumanBootstrapIcon(badge.type)}`}> </i>
-                                            {RepositoryService.BadgeToHumanText(badge.type)}
+                                        <span className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(badge.type)}`}>
+                                            <i className={`bi ${BadgeUtils.toBootstrapIcon(badge.type)}`}> </i>
+                                            {BadgeUtils.toHumanText(badge.type)}
                                         </span>
                                     </label>
                                 </div>

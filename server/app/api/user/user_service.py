@@ -1,12 +1,16 @@
+import math
 from typing import List
 
 from fastapi import Depends
+
+from app.api.config.pagination import PaginatedResultInfoDTO, PaginatedResultDTO
 from app.api.config.security import hash_password, verify_password
 from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException, \
     AccessDeniedException
 from sqlmodel import Session
 from app.api.config.database import get_database
 from app.api.org.org_repo import OrganizationRepo
+from app.api.repo.repo_repo import RepositoryRepo
 from app.api.user.user_dto import UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO, UserDTO
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
@@ -17,6 +21,7 @@ class UserService:
         self.session = session
         self.user_repo = UserRepo(session)
         self.org_repo = OrganizationRepo(session)
+        self.repo_repo = RepositoryRepo(session)
 
     def add(self, dto: UserRegisterDTO) -> User:
         if self.user_repo.find_by_email(dto.email) is not None:
@@ -113,6 +118,38 @@ class UserService:
             user.bio = dto.bio
 
         self.user_repo.add(user)
+        return user
+
+    def search_paginated(self, query, page_number, page_size, sort_by, sort_ascending) -> PaginatedResultDTO:
+        if page_number < 1:
+            page_number = 1
+        if page_size < 1:
+            page_size = 1
+
+        users, total_hits = self.user_repo.search_users_paginated(query, page_number, page_size, sort_by, sort_ascending)
+        total_pages = math.ceil(total_hits / page_size)
+        users_dto = []
+        for user in users:
+            u = UserDTO(id=user.id, username=user.username, first_name=user.first_name, bio=user.bio, role=user.role, join_date=user.join_date,
+                        last_name=user.last_name, email=user.email, badge=user.badge)
+            users_dto.append(u)
+        result_info = PaginatedResultInfoDTO(
+            page=page_number,
+            page_size=page_size,
+            total_pages=total_pages,
+            total_hits=total_hits
+        )
+        result = PaginatedResultDTO(hits=users_dto, info=result_info)
+        return result
+
+    def update_badge(self, user_id, badge) -> User:
+        user = self.user_repo.find_by_id(user_id)
+        if not user:
+            raise NotFoundException(user, user_id)
+        user = self.user_repo.update_badge(user, badge)
+        repositories = self.repo_repo.get_repositories_for_user(user_id)
+        for repo in repositories:
+            self.repo_repo.set_attribute(repo, "badge", badge)
         return user
 
 

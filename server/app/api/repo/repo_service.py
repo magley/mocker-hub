@@ -3,7 +3,9 @@ from fastapi import Depends
 from app.api.config.exception_handler import AccessDeniedException, ConflictException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.user.user_model import User, UserRole
+from app.api.events.event_model import EventLevel
+from app.api.events.event_service import EventService
+from app.api.user.user_model import User, UserRole, UserBadge
 from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
@@ -33,6 +35,17 @@ class RepositoryService:
         elif isinstance(dto, RepositoryVisibilityUpdateDTO):
             repo = self.repo_repo.set_visibility(repo, dto.public)
         return repo
+
+    def _map_user_badge_to_repo_badge(self, user_badge: UserBadge) -> RepositoryBadge:
+        if user_badge == UserBadge.verified:
+            return RepositoryBadge.verified
+        elif user_badge == UserBadge.sponsored_oss:
+            return RepositoryBadge.sponsored_oss
+        elif user_badge == UserBadge.none:
+            return RepositoryBadge.none
+        else:
+            EventService.log(EventLevel.Warning, f"Unexpected UserBadge value: {user_badge}")
+            return RepositoryBadge.none
 
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
@@ -74,7 +87,9 @@ class RepositoryService:
 
         badge = RepositoryBadge.none
         if owner.role == UserRole.admin:
-            badge = RepositoryBadge.official 
+            badge = RepositoryBadge.official
+        elif owner.badge != UserBadge.none:
+            badge = self._map_user_badge_to_repo_badge(owner.badge)
 
         # Create the new repository.
 

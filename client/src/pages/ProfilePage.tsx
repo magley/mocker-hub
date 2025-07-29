@@ -1,12 +1,13 @@
 import { useEffect, useState } from "react";
 import { Alert, Button, Form, Spinner } from "react-bootstrap";
 import { useParams, useNavigate, Link } from "react-router-dom";
-import { UserService, UserDTO } from "../api/user.api";
+import { UserService, UserDTO, UserBadge } from "../api/user.api";
 import { AxiosError, AxiosResponse } from "axios";
 import { getJwtUsername } from "../util/localstorage";
 import { get_validation_error_readable } from "../util/http";
 import { ToastType, useToastStore } from "../util/toastStore";
 import { is } from "date-fns/locale";
+import { BadgeUtils } from "../util/badge";
 
 export const ProfilePage = () => {
   const { username: profileUsername } = useParams<{ username: string }>();
@@ -104,10 +105,18 @@ const sanitizeNameInput = (value: string): string => {
   return (
     <div className="container mt-4" style={{ maxWidth: "600px" }}>
       
-      <div className="d-flex justify-content-center align-items-center position-relative mb-4">
-        <h1 className="mb-4 text-center">{user.username}</h1>
+      <div className="position-relative mb-4" style={{marginTop: "2rem"}}>
+        <h1 className="text-center">{user.username}</h1>
         {isMyProfile && !isEditing && (
-            <i className="bi bi-pencil" style={{position: "absolute", right: 0, cursor: "pointer", fontSize: "1.35rem", color: "#007bff"}} onClick={handleEdit}></i>
+            <i className="bi bi-pencil" style={{position: "absolute", right: 0, cursor: "pointer", fontSize: "1.35rem", color: "#007bff", top: "0.5em"}} onClick={handleEdit}></i>
+          )}
+        {user.badge !== UserBadge.none && ( 
+          <div className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(user.badge)}`}
+              style={{ fontSize: '0.7em', maxHeight: "20px", display: 'block', width: 'fit-content', margin: "0 auto" }}
+          >
+              <i className={`bi ${BadgeUtils.toBootstrapIcon(user.badge)}`}> </i>
+              {BadgeUtils.toHumanText(user.badge)}
+          </div>
         )}
       </div>
 
