@@ -61,39 +61,6 @@ export interface DeleteRepoResponseDTO {
 }
 
 export class RepositoryService {
-    static BadgeToHumanText(badge: RepositoryBadge): string {
-        switch (badge) {
-            case RepositoryBadge.none: return "";
-            case RepositoryBadge.official: return "Official";
-            case RepositoryBadge.verified: return "Verified Publisher";
-            case RepositoryBadge.sponsored_oss: return "Sponsored OSS";
-            default: return `${badge}`;
-        }
-    }
-
-    static BadgeToBootstrapColor(badge: RepositoryBadge): string {
-        switch (badge) {
-            case RepositoryBadge.none: return "bg-light";
-            case RepositoryBadge.official: return "bg-primary";
-            case RepositoryBadge.verified: return "bg-secondary";
-            case RepositoryBadge.sponsored_oss: return "bg-success";
-            default: return `bg-light`;
-        }
-    }
-
-    /**
-     * 
-     * Usage: <i className={`bi ${BadgeToBootstrapIcon(...)}`}></i>
-     */
-    static BadgeToHumanBootstrapIcon(badge: RepositoryBadge): string {
-        switch (badge) {
-            case RepositoryBadge.none: return "";
-            case RepositoryBadge.official: return "bi-award";
-            case RepositoryBadge.verified: return "bi-patch-check-fill";
-            case RepositoryBadge.sponsored_oss: return "bi-git";
-            default: return ``;
-        }
-    }
 
     static async CreateRepository(dto: RepoCreateDTO): Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.post(`/repositories`, dto);

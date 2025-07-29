@@ -104,31 +104,4 @@ export class UserService {
     static async UpdateUserBadge(user_id: number, selectedBadge: UserBadge):  Promise<AxiosResponse<UserDTO>>{
         return await axiosInstance.put(`/users/badge`, { user_id: user_id, badge: selectedBadge });
     }
-
-     static BadgeToHumanText(badge: UserBadge): string {
-            switch (badge) {
-                case UserBadge.none: return "None";
-                case UserBadge.verified: return "Verified Publisher";
-                case UserBadge.sponsored_oss: return "Sponsored OSS";
-                default: return `${badge}`;
-            }
-        }
-
-    static BadgeToBootstrapColor(badge: UserBadge): string {
-            switch (badge) {
-                case UserBadge.none: return "bg-light";
-                case UserBadge.verified: return "bg-secondary";
-                case UserBadge.sponsored_oss: return "bg-success";
-                default: return `bg-light`;
-            }
-        }
-
-        static BadgeToHumanBootstrapIcon(badge: UserBadge): string {
-            switch (badge) {
-                case UserBadge.none: return "";
-                case UserBadge.verified: return "bi-patch-check-fill";
-                case UserBadge.sponsored_oss: return "bi-git";
-                default: return ``;
-            }
-        }
 }

@@ -9,6 +9,7 @@ import { AxiosError, AxiosResponse } from 'axios';
 import "./RepoPage.css";
 import { formatDistanceToNow } from 'date-fns';
 import { ToastType, useToastStore } from '../util/toastStore';
+import { BadgeUtils } from '../util/badge';
 
 interface RepoOwner {
     name: string,
@@ -89,11 +90,11 @@ export const RepositoryPage: React.FC = () => {
                     {/* Badge */}
                     {repo && repo?.badge !== RepositoryBadge.none &&
                         <span
-                            className={`badge rounded-pill ${RepositoryService.BadgeToBootstrapColor(repo?.badge)}`}
+                            className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(repo?.badge)}`}
                             style={{ fontSize: '0.5em', marginLeft: '0.5em' }}
                         >
-                            <i className={`bi ${RepositoryService.BadgeToHumanBootstrapIcon(repo?.badge)}`}> </i>
-                            {RepositoryService.BadgeToHumanText(repo?.badge)}
+                            <i className={`bi ${BadgeUtils.toBootstrapIcon(repo?.badge)}`}> </i>
+                            {BadgeUtils.toHumanText(repo?.badge)}
                         </span>
                     }
                     {/* Private badge */}

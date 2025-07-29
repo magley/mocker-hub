@@ -8,6 +8,7 @@ import { Pagination } from 'react-bootstrap';
 import "./Analytics.css";
 import { UserBadge, UserDTO, UserQueryDTO, UserService } from '../api/user.api';
 import { Link } from 'react-router-dom';
+import { BadgeUtils } from '../util/badge';
 
 export const UsersManagement = () => {
     const [searchTerm, setSearchTerm] = useState("");
@@ -255,10 +256,10 @@ export const UsersManagement = () => {
                                                     <td>{user.email}</td>
                                                     <td style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         {user?.badge !== UserBadge.none ? (
-                                                            <span className={`badge rounded-pill ${UserService.BadgeToBootstrapColor(user.badge)}`}
+                                                            <span className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(user.badge)}`}
                                                                 style={{ fontSize: '0.8em', marginLeft: '0.5em' }}>
-                                                                <i className={`bi ${UserService.BadgeToHumanBootstrapIcon(user.badge)}`}> </i>
-                                                                {UserService.BadgeToHumanText(user.badge)}
+                                                                <i className={`bi ${BadgeUtils.toBootstrapIcon(user.badge)}`}> </i>
+                                                                {BadgeUtils.toHumanText(user.badge)}
                                                             </span>
                                                         ) : <span className="text-muted">None</span>}
                                                         <Button style={{backgroundColor: 'white', border: '1px solid #ccc', color: '#333', borderRadius: '4px'}} onClick={() => handleEditUser(user)}>
@@ -280,7 +281,7 @@ export const UsersManagement = () => {
                     <Modal.Header closeButton>
                         <Modal.Title>Give <b>{selectedUser?.username}</b> a badge</Modal.Title>
                     </Modal.Header>
-                    <Modal.Body>
+                    <Modal.Body> 
                         <Form.Group controlId="badgeSelect">
                             <Form.Label className="mb-3">Select a badge</Form.Label>
                             <Form.Select style={{ minHeight: 'auto', overflowY: 'visible' }}
@@ -288,7 +289,7 @@ export const UsersManagement = () => {
                                 onChange={(e) => setSelectedBadge(e.target.value as UserBadge)}>
                                 {Object.values(UserBadge).map((badge) => (
                                     <option key={badge} value={badge}>
-                                        {UserService.BadgeToHumanText(badge)}
+                                        {BadgeUtils.toHumanText(badge)}
                                     </option>
                                 ))}
                             </Form.Select>
