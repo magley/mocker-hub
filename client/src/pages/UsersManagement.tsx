@@ -55,7 +55,6 @@ export const UsersManagement = () => {
             setSortBy(column);
             setSortAscending(true);
         }
-        handleSearch();
     };
 
     const handlePageChange = (page: number) => {
@@ -64,10 +63,7 @@ export const UsersManagement = () => {
 
     useEffect(() => {
         handleSearch();
-    }, [pageNumber]);
-    useEffect(() => {
-        handleSearch();
-    }, [pageSize]);
+    }, [pageNumber, pageSize, sortAscending]);
 
     const renderPagination = () => {
         if (!users || users.info.total_pages <= 1) return null;
