@@ -256,7 +256,7 @@ export const UsersManagement = () => {
                                                     <td style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                                                         {user?.badge !== UserBadge.none ? (
                                                             <span className={`badge rounded-pill ${UserService.BadgeToBootstrapColor(user.badge)}`}
-                                                                style={{ fontSize: '0.5em', marginLeft: '0.5em' }}>
+                                                                style={{ fontSize: '0.8em', marginLeft: '0.5em' }}>
                                                                 <i className={`bi ${UserService.BadgeToHumanBootstrapIcon(user.badge)}`}> </i>
                                                                 {UserService.BadgeToHumanText(user.badge)}
                                                             </span>
