@@ -533,3 +533,78 @@ def test_search_paginated_min_page_and_size(user_service):
     assert len(result.hits) == 1
     user_service.user_repo.search_users_paginated.assert_called_once_with(
         "j", 1, 1, "email", False)
+
+def test_update_user_badge_and_search_paginated_integration():
+    with TestClient(app) as client:
+        def login(data: dict) -> dict:
+            response = client.post("/api/v1/users/login", json=data)
+            assert response.status_code == 200
+            jwt = response.json()["token"]
+            return {"Authorization": f"Bearer {jwt}"}
+
+        # Login as superadmin using password from file
+        superadmin_creds = {
+            "username": "admin",
+            "password": ""
+        }
+        with open("./volume-server-cfg/superadmin_password.txt", "r") as f:
+            superadmin_creds["password"] = old_password = f.readline()
+
+        superadmin_header = login(superadmin_creds)
+
+        # Change superadmin password
+        change_pw_payload = {
+            "old_password": old_password,
+            "new_password": "Password1"
+        }
+        response = client.post("/api/v1/users/password", json=change_pw_payload, headers=superadmin_header)
+        assert response.status_code == 204
+
+        superadmin_creds["password"] = "Password1"
+        superadmin_header = login(superadmin_creds)
+
+        # Register an admin
+        new_admin_data = {
+            "username": "TestAdmin",
+            "email": "admin@example.com",
+            "password": "AdminPass123"
+        }
+        response = client.post("/api/v1/users/register-admin", json=new_admin_data, headers=superadmin_header)
+        assert response.status_code == 200
+        admin = response.json()
+        admin_auth = login({"username": new_admin_data["username"], "password": new_admin_data["password"]})
+
+        # Register a regular user (to later update badge)
+        user_data = {
+            "username": "TestUser",
+            "email": "testuser@example.com",
+            "password": "UserPass123"
+        }
+        response = client.post("/api/v1/users", json=user_data)
+        assert response.status_code == 200
+        user = response.json()
+        user_id = user["id"]
+
+        # Update badge
+        badge_update_dto = {
+            "user_id": user_id,
+            "badge": "verified"
+        }
+        response = client.put("/api/v1/users/badge", json=badge_update_dto, headers=admin_auth)
+        assert response.status_code == 200
+        updated_user = response.json()
+        assert updated_user["badge"] == "verified"
+
+        # Search paginated and verify badge is included
+        params = {
+            "query": "Test",
+            "page_number": 1,
+            "page_size": 10,
+            "sort_by": "username",
+            "sort_ascending": True
+        }
+        response = client.get("/api/v1/users/paginated/", headers=admin_auth, params=params)
+        assert response.status_code == 200
+        paginated = response.json()
+        assert any(u["id"] == user_id and u["badge"] == "verified" for u in paginated["hits"])
+
