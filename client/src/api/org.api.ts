@@ -41,6 +41,10 @@ export interface OrgDescUpdateDTO {
     desc: string
 }
 
+export interface OrgImageUpdateDTO {
+    image: string
+}
+
 export class OrganizationService {
 
     static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
@@ -58,16 +62,16 @@ export class OrganizationService {
     static GetImageURI = (filename: string): string => {
         return `${ENV.IMG}${filename}`;
     }
-        
+
     static async AmIMemberOfOrg(org_id: number): Promise<AxiosResponse<OrganizationHasMemberDTO>> {
         return await axiosInstance.get(`/organizations/me/${org_id}`);
     }
 
-    static async DeleteOrg(orgName: string) : Promise<AxiosResponse<DeleteOrgResponseDTO>> {
+    static async DeleteOrg(orgName: string): Promise<AxiosResponse<DeleteOrgResponseDTO>> {
         return await axiosInstance.delete(`/registry/organization/${orgName}`)
     }
 
-    static async UpdateOrgDescByName(orgName: string, dto: OrgDescUpdateDTO) : Promise<AxiosResponse<OrganizationDTOBasic>> {
+    static async UpdateOrgDescByName(orgName: string, dto: OrgDescUpdateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.put(`/organizations/${orgName}/desc`, dto)
     }
 
@@ -77,6 +81,14 @@ export class OrganizationService {
 
     static async AddUsersToOrg(org_id: number, user_ids: number[]) {
         return await axiosInstance.post(`/organizations/${org_id}/addMember`, user_ids);
+    }
+
+    static async UpdateOrgImageByName(orgName: string, dto: OrgImageUpdateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
+        return await axiosInstance.put(`/organizations/${orgName}/image`, dto)
+    }
+
+    static async ClearOrgImageByName(orgName: string): Promise<AxiosResponse<OrganizationDTOBasic>> {
+        return await axiosInstance.put(`/organizations/${orgName}/image/clear`)
     }
 }
 
