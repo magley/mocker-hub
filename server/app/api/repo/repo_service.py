@@ -1,15 +1,18 @@
+import math
 from typing import List, Tuple
 from fastapi import Depends
 from app.api.config.exception_handler import AccessDeniedException, ConflictException, FieldTakenException, NotFoundException, InvalidInputException
 from sqlmodel import Session
 from app.api.config.database import get_database
+from app.api.config.pagination import PaginatedResultInfoDTO
 from app.api.events.event_model import EventLevel
 from app.api.events.event_service import EventService
 from app.api.user.user_model import User, UserRole, UserBadge
 from app.api.user.user_repo import UserRepo
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
-from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
+from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, \
+    RepositoriesResultDTO
 from app.api.org.org_repo import OrganizationRepo
 from app.api.team.team_repo import TeamRepo
 from app.api.access_control.access_control_service import AccessControlService
@@ -162,6 +165,25 @@ class RepositoryService:
     
     def remove_repo(self, repo: Repository) -> None:
         self.repo_repo.remove(repo)
-    
+
+    def search_public_repositories(self, query, page_number, page_size, show_badge_official, show_badge_sponsored,
+                                   show_badge_verified) -> tuple[list[Repository], PaginatedResultInfoDTO]:
+        if page_number < 1:
+            page_number = 1
+        if page_size < 1:
+            page_size = 1
+
+        repositories, total_hits = self.repo_repo.search_public_repositories(query, page_number, page_size,
+                                                    show_badge_official, show_badge_sponsored, show_badge_verified)
+        total_pages = math.ceil(total_hits / page_size)
+        result_info = PaginatedResultInfoDTO(
+            page=page_number,
+            page_size=page_size,
+            total_pages=total_pages,
+            total_hits=total_hits
+        )
+        return repositories, result_info
+
+
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)
