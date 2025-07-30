@@ -265,7 +265,7 @@ export const Explore: React.FC = () => {
                         {/* Show repositories */}
                         <>
                             {repositories.hits.map((repo) => (
-                                <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} />
+                                <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} showCanonical={true} />
                             ))}
                         </>
                     </>

@@ -61,7 +61,7 @@ export const RepoStarred: React.FC = () => {
 
             { fullResult!.repos.length >= 1 ? (
                 fullResult!.repos.map((repo) => (
-                    <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} />
+                    <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} showCanonical={true} />
                 ))
             ) : ( <div>No repositories starred yet.</div> ) }
         </Row >

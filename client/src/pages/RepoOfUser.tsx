@@ -269,7 +269,7 @@ export const RepositoriesOfUser: React.FC = () => {
 
                 {
                     filteredRepos.map((repo) => (
-                        <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} />
+                        <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} showCanonical={false} />
                     ))
                 }
                 </>
