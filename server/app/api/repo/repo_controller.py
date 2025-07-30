@@ -152,8 +152,7 @@ def get_starred_repositories_of_user(
     return ReposOfUserDTO(user_id=user.id, user_name=user.username, repos=repos, organization_names=org_names)
 
 @router.get("/public/", response_model=RepositoriesResultDTO, status_code=200, summary="Search all public repositories with paginated results")
-@pre_authorize([UserRole.user, UserRole.admin, UserRole.superadmin])
-async def search_public_repositories(jwt: JWTDep,  page_number: int, page_size: int, show_badge_official: bool, show_badge_sponsored: bool,
+async def search_public_repositories(page_number: int, page_size: int, show_badge_official: bool, show_badge_sponsored: bool,
                                      show_badge_verified: bool, query: str = "", repo_service: RepositoryService = Depends(get_repo_service),
                                      org_service: OrganizationService = Depends(get_org_service)):
     repos, result_info = repo_service.search_public_repositories(query, page_number, page_size, show_badge_official, show_badge_sponsored, show_badge_verified)

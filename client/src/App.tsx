@@ -55,7 +55,7 @@ function App() {
                     {authRoute("/password-change-required", ['superadmin'], UserPasswordChange)}
 
                     {/* Anybody. */}
-                    {authRoute("/", [], Home)}
+                    {authRoute("/", [], Explore)}
                     {authRoute("/login", [], UserLogin)}
                     {authRoute("/logout", [], UserLogout)}
 
@@ -68,7 +68,6 @@ function App() {
                     {/* Any role. */}
                     {authRoute("/password-change", ['user', 'admin', 'superadmin'], UserPasswordChange)}
                     {authRoute("/u/:username", ['user', 'admin', 'superadmin'], ProfilePage)}
-                    {authRoute("/explore", ['user', 'admin', 'superadmin'], Explore)}
 
                     {/* Protected routes. */}
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}
