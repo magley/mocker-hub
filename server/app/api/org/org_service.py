@@ -2,7 +2,7 @@ from typing import Dict, List
 from fastapi import Depends
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDescUpdateDTO
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDescUpdateDTO, OrganizationImageUpdateDTO
 from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.org.org_repo import OrganizationRepo
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
@@ -10,6 +10,8 @@ from app.api.config.images import generate_inline_image, save_image
 from app.api.repo.repo_model import Repository
 from app.api.user.user_model import User
 from app.api.user.user_repo import UserRepo
+from app.api.events.event_service import EventService
+from app.api.events.event_model import EventLevel
 
 
 class OrganizationService:
@@ -17,6 +19,7 @@ class OrganizationService:
         self.session = session
         self.org_repo = OrganizationRepo(session)
         self.user_repo = UserRepo(session)
+        self.event_service = EventService()
 
     def add(self, user_id: int, dto: OrganizationCreateDTO) -> Organization:
         # Check if the name is available.
@@ -101,6 +104,22 @@ class OrganizationService:
         if user_id != org.owner.id:
             raise AccessDeniedException(f"User {user_id} cannot update organization description with identifier {name}")
         self.update_org_attrs(name, desc=dto.desc)
+        return org
+    
+    def update_image_by_name(self, name: str, dto: OrganizationImageUpdateDTO, user_id: int) -> Organization:
+        org = self.find_by_name(name)
+        if user_id != org.owner.id:
+            raise AccessDeniedException(f"User {user_id} cannot update organization image with identifier {name}")
+
+
+        if dto.image is None or dto.image == "":
+            self.event_service.log(EventLevel.Info, f"User {user_id} is clearing image from org {name}")
+            dto.image = generate_inline_image(name)
+        else:
+            self.event_service.log(EventLevel.Info, f"User {user_id} is setting image for org {name}")
+            
+        save_image(dto.image, f"org-{name}")[1]
+
         return org
 
     def update_org_attrs(self, name: str, **kwargs) -> Organization:
