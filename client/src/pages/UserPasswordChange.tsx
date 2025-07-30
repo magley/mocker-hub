@@ -3,8 +3,9 @@ import { Form, Button, Alert } from 'react-bootstrap';
 import { UserPasswordChangeDTO, UserService } from '../api/user.api';
 import { useLocation, useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
-import { clearJWT } from '../util/localstorage';
+import { clearJWT, setJWT } from '../util/localstorage';
 import { get_validation_error_readable } from '../util/http';
+import { useAuthStore } from '../util/store';
 
 export const UserPasswordChange = () => {
     let navigate = useNavigate();
@@ -14,6 +15,7 @@ export const UserPasswordChange = () => {
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [error, setError] = useState('');
     const isRequired = location.pathname === "/password-change-required";
+    const setRole = useAuthStore((state) => state.setRole);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -29,6 +31,7 @@ export const UserPasswordChange = () => {
 
         UserService.ChangePassword(dto).then(() => {
             clearJWT();
+            setRole("");
             navigate("/login", { replace: true });
         }).catch((err: AxiosError) => {
             setError(get_validation_error_readable(err));
