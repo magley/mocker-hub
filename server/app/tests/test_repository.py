@@ -6,6 +6,7 @@ from typing import Callable
 
 from sqlmodel import SQLModel, Session
 
+from app.api.config.pagination import PaginatedResultDTO, PaginatedResultInfoDTO
 from app.api.config.security import hash_password
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
@@ -1294,4 +1295,50 @@ class TestUpdateRepoAttrs():
             mock.call(repo, "public", False),
         ]
         assert repo_service.repo_repo.set_attribute.call_args_list == expected_calls
-    
+
+
+def test_search_public_repositories_success(repo_service):
+    query = "re"
+    page_number = 1
+    page_size = 2
+
+    repo1 = mock.MagicMock(spec=Repository)
+    repo1.id = 1
+    repo1.name = "repo"
+    repo1.public = True
+    repo1.badge = None
+    repo2 = mock.MagicMock(spec=Repository)
+    repo2.id = 2
+    repo2.name = "repo2"
+    repo2.public = True
+    repo2.badge = RepositoryBadge.verified
+    repo_list = [repo1, repo2]
+    total_hits = 5
+
+    repo_service.repo_repo.search_public_repositories.return_value = (repo_list, total_hits)
+    repos, info = repo_service.search_public_repositories(query, page_number, page_size, False, False, False)
+
+    assert isinstance(info, PaginatedResultInfoDTO)
+    assert info.page == page_number
+    assert info.page_size == page_size
+    assert info.total_hits == total_hits
+    assert info.total_pages == 3  # ceil(5 / 2)
+    repo_service.repo_repo.search_public_repositories.assert_called_once_with(
+        query, page_number, page_size, False, False, False)
+
+def test_search_public_repositories_min_page_and_size(repo_service):
+    repo1 = mock.MagicMock(spec=Repository)
+    repo1.id = 1
+    repo1.name = "repo"
+    repo1.public = True
+    repo1.badge = None
+    repo_service.repo_repo.search_public_repositories.return_value = ([repo1], 1)
+
+    repos, info = repo_service.search_public_repositories("r", 0, 0, False, False, False)
+
+    assert info.page == 1
+    assert info.page_size == 1
+    assert info.total_pages == 1
+    assert info.total_hits == 1
+    repo_service.repo_repo.search_public_repositories.assert_called_once_with(
+        "r", 1, 1, False, False, False)
