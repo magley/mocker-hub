@@ -1,7 +1,7 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { OrganizationDTOBasic, OrganizationService, OrgDescUpdateDTO } from '../api/org.api';
 import { ToastType, useToastStore } from '../util/toastStore';
-import { Alert } from 'react-bootstrap';
+import { Alert, FloatingLabel } from 'react-bootstrap';
 import { AxiosError } from 'axios';
 import { getJwtId } from '../util/localstorage';
 import { fileToBase64 } from '../util/image';
@@ -93,10 +93,10 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
     };
 
     return (
-        <>
+        <div style={{ width: '80%', margin: 'auto' }}>
             {error && <Alert variant="danger">{error}</Alert>}
 
-            <div className="mb-3 ktext-center">
+            <div className="mb-3 text-center">
                 <img
                     src={imagePreview || '/default-org.png'}
                     alt="Organization"
@@ -119,6 +119,8 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
                 />
             </div>
 
+            <hr />
+
             <div className="tab-pane fade show active" id="overview">
                 {isEditing ? (
                     <div>
@@ -140,7 +142,11 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
                     </div>
                 ) : (
                     <div className="d-flex align-items-center">
-                        <div className='repo-page-desc'>{props.org.desc}</div>
+                        {props.org.desc !== "" ? (
+                            <div className='repo-page-desc'>{props.org.desc}</div>
+                        ) : (
+                            <i className='repo-page-desc'>No description provided</i>
+                        )}
                         {amOwnerOfOrg && (
                             <button className="btn btn-link p-0 ms-2" onClick={() => setIsEditing(true)}>
                                 <i className="bi bi-pencil"></i>
@@ -149,6 +155,6 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
                     </div>
                 )}
             </div>
-        </>
+        </div>
     );
 };
