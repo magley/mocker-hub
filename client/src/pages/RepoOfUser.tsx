@@ -22,12 +22,12 @@ export const RepositoriesOfUser: React.FC = () => {
     const [searchTerm, setSearchTerm] = useState('');
     const [showAdvancedSearch, setShowAdvancedSearch] = useState(false);
     const [selectedOrg, setSelectedOrg] = useState<number | undefined>(undefined);
-    const [showPublic, setShowPublic] = useState(true);
-    const [showPrivate, setShowPrivate] = useState(true);
+    const [showPublic, setShowPublic] = useState(false);
+    const [showPrivate, setShowPrivate] = useState(false);
 
-    const [showBadgeOfficial, setShowBadgeOfficial] = useState(true);
-    const [showBadgeVerified, setShowBadgeVerified] = useState(true);
-    const [showBadgeSponsoredOSS, setShowBadgeSponsoredOSS] = useState(true);
+    const [showBadgeOfficial, setShowBadgeOfficial] = useState(false);
+    const [showBadgeVerified, setShowBadgeVerified] = useState(false);
+    const [showBadgeSponsoredOSS, setShowBadgeSponsoredOSS] = useState(false);
 
     let navigate = useNavigate();
 
@@ -100,21 +100,30 @@ export const RepositoriesOfUser: React.FC = () => {
     };
 
     const filterRepos = (searchTerm: string, orgId?: number, showPublic?: boolean, showPrivate?: boolean, showBadgeOfficial?: boolean, showBadgeVerified?: boolean, showBadgeSponsoredOSS?: boolean) => {
-        let filtered = repositories.filter((repo) => {
-            const matchesSearch =
-                repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
-                (repo.desc && repo.desc.toLowerCase().includes(searchTerm.toLowerCase()));
-            const matchesOrg = orgId ? repo.organization_id === orgId : true;
-            const matchesVisibility = (showPublic && repo.public) || (showPrivate && !repo.public);
-            const matchesBadge =
-                (repo.badge == RepositoryBadge.none)
-                || (repo.badge == RepositoryBadge.official && showBadgeOfficial)
-                || (repo.badge == RepositoryBadge.verified && showBadgeVerified)
-                || (repo.badge == RepositoryBadge.sponsored_oss && showBadgeSponsoredOSS);
-            return matchesSearch && matchesOrg && matchesVisibility && matchesBadge;
-        });
-        setFilteredRepos(filtered);
-    };
+    const noBadgeFiltersSelected = !showBadgeOfficial && !showBadgeVerified && !showBadgeSponsoredOSS;
+    const noVisibilityFiltersSelected = !showPublic && !showPrivate;
+
+    const filtered = repositories.filter((repo) => {
+        const matchesSearch =
+            repo.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+            (repo.desc && repo.desc.toLowerCase().includes(searchTerm.toLowerCase()));
+        const matchesOrg = orgId ? repo.organization_id === orgId : true;
+        const matchesVisibility = noVisibilityFiltersSelected
+            || (showPublic && repo.public)
+            || (showPrivate && !repo.public);
+        const matchesBadge = noBadgeFiltersSelected
+            || (repo.badge === RepositoryBadge.official && showBadgeOfficial)
+            || (repo.badge === RepositoryBadge.verified && showBadgeVerified)
+            || (repo.badge === RepositoryBadge.sponsored_oss && showBadgeSponsoredOSS);
+
+        return (matchesSearch && matchesOrg && matchesVisibility && matchesBadge && (noBadgeFiltersSelected || repo.badge !== RepositoryBadge.none)
+        );
+    });
+
+    setFilteredRepos(filtered);
+};
+
+
 
     // Respecting DRY.
     // TODO: `checked` stores reactive state, but `badgeDataBundle` is a regular array,
