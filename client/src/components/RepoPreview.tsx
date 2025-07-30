@@ -70,11 +70,10 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                     )}
 
                     {/* Description */}
-                    {repo.desc && (
-                        <Card.Text style={{ fontSize: '0.9rem' }}>
-                            {repo.desc.length > 201 ? `${repo.desc.slice(0, 201)}...` : repo.desc}
-                        </Card.Text>
-                    )}
+                    <Card.Text
+                        style={{ fontSize: '0.9rem', minHeight: '3em', overflow: 'hidden' }}>
+                        {repo.desc ? (repo.desc.length > 99 ? `${repo.desc.slice(0, 99)}...` : repo.desc) : '\u00A0'}
+                    </Card.Text>
 
                     <div className="d-flex">
                         {/* Download Count */}

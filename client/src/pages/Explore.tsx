@@ -1,8 +1,8 @@
 import React, { useEffect, useState } from 'react';
-import { Row, Spinner, Button, Pagination, Form } from 'react-bootstrap';
+import { Row, Spinner, Button, Pagination, Form, Col } from 'react-bootstrap';
 import { RepositoryBadge, RepositoryQueryDTO, RepositoryService } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
-import './RepoOfUser.css';
+import './Explore.css';
 import { RepoPreview } from '../components/RepoPreview';
 import { BadgeUtils } from '../util/badge';
 
@@ -21,7 +21,7 @@ export const Explore: React.FC = () => {
     const [showBadgeSponsoredOSS, setShowBadgeSponsoredOSS] = useState(false);
 
     const [pageNumber, setPageNumber] = useState(1);
-    const [pageSize, setPageSize] = useState(10);
+    const [pageSize, setPageSize] = useState(6);
 
     useEffect(() => {
         fetchRepos();
@@ -172,111 +172,117 @@ export const Explore: React.FC = () => {
     }
 
     return (
-        <Row className="g-4 repo-of-user">
+        <Row className="g-4">
             {/* Page Title */}
-            <h1>Explore Repositories</h1>
-            <>
-                <Form onSubmit={(e) => {
-                    e.preventDefault(); // Prevent page reload
-                    handleSearch();     // Trigger search logic
-                }}>
-                    <div className="d-flex justify-content-between">
-                        <div className="d-flex align-items-center flex-grow-1 me-3">
-                            {/* Search Bar */}
-                            <input
-                                type="text"
-                                className="form-control me-2"
-                                placeholder="Search repositories"
-                                value={searchTerm}
-                                onChange={handleSearchChange}
-                            />
-                            <Button variant="primary" className="me-5" type="submit" onClick={handleSearch}>
-                                <i className="bi bi-search"></i>
-                            </Button>
-                            {/* Advanced Search Button */}
-                            <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
-                                {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
-                            </Button>
+            <div className="header-repositories">
+                <h1 className='mb-4'>Explore Repositories</h1>
+                <>
+                    <Form onSubmit={(e) => {
+                        e.preventDefault(); // Prevent page reload
+                        handleSearch();     // Trigger search logic
+                    }}>
+                        <div className="d-flex justify-content-between">
+                            <div className="d-flex align-items-center flex-grow-1 me-3">
+                                {/* Search Bar */}
+                                <input
+                                    type="text"
+                                    className="form-control me-2"
+                                    placeholder="Search repositories"
+                                    value={searchTerm}
+                                    onChange={handleSearchChange}
+                                />
+                                <Button variant="primary" className="me-5" type="submit" onClick={handleSearch}>
+                                    <i className="bi bi-search"></i>
+                                </Button>
+                                {/* Advanced Search Button */}
+                                <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
+                                    {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
+                                </Button>
+                            </div>
                         </div>
-                    </div>
-                </Form>
-    
-                {/* Advanced Search Section */}
-                {showAdvancedSearch && (
-                    <div className="advanced-search">
+                    </Form>
+        
+                    {/* Advanced Search Section */}
+                    {showAdvancedSearch && (
+                        <div className="advanced-search" style={{ marginTop: '20px' }}>
 
-                        {/* Badges - Checkbox for each badge type. */}
-                        {badgeDataBundle.map((badge) => (
-                            <div className="mb-3">
-                                <div className="form-check ms-2 d-flex align-items-center">
-                                    <input
-                                        type="checkbox"
-                                        className="form-check-input form-check-lg"
-                                        checked={badge.checked}
-                                        onChange={badge.onChange}
-                                        id={badge.id}
-                                    />
-                                    <label className="form-check-label fs-5 ms-2" htmlFor={badge.id}>
-                                        <span className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(badge.type)}`}>
-                                            <i className={`bi ${BadgeUtils.toBootstrapIcon(badge.type)}`}> </i>
-                                            {BadgeUtils.toHumanText(badge.type)}
-                                        </span>
-                                    </label>
+                            {/* Badges - Checkbox for each badge type. */}
+                            {badgeDataBundle.map((badge) => (
+                                <div className="mb-3">
+                                    <div className="form-check ms-2 d-flex align-items-center">
+                                        <input
+                                            type="checkbox"
+                                            className="form-check-input form-check-lg"
+                                            checked={badge.checked}
+                                            onChange={badge.onChange}
+                                            id={badge.id}
+                                        />
+                                        <label className="form-check-label fs-5 ms-2" htmlFor={badge.id}>
+                                            <span className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(badge.type)}`}>
+                                                <i className={`bi ${BadgeUtils.toBootstrapIcon(badge.type)}`}> </i>
+                                                {BadgeUtils.toHumanText(badge.type)}
+                                            </span>
+                                        </label>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                        ) 
+                    }
+                </>
+            </div>
+
+            <div className="explore-repositories">
+                {repositories !== null && (
+                    <>
+                        {repositories.hits.length === 0 ? (
+                            <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
+                                Not found any repositories.
+                            </div>
+                        ) : (
+                        <>
+                        {/* Pagination */}
+                            <div className="d-flex flex-wrap gap-3 mt-3 align-items-start">
+                                <div>{renderPagination()}</div>
+
+                                {/* Page size dropdown with inline label */}
+                                <div className="d-flex align-items-center gap-2">
+                                    <label htmlFor="pageSizeSelect" className="mb-0">Results per page:</label>
+                                    <Form.Select
+                                        id="pageSizeSelect"
+                                        value={pageSize}
+                                        onChange={(e) => {
+                                            setPageSize(Number(e.target.value));
+                                            setPageNumber(1);
+                                        }}
+                                        style={{ width: '100px' }}
+                                    >
+                                        {[6, 15, 30, 60, 100].map((size) => (
+                                            <option key={size} value={size}>{size}</option>
+                                        ))}
+                                    </Form.Select>
                                 </div>
                             </div>
-                        ))}
-                    </div>
-                    ) 
-                }
-            </>
 
-            {repositories !== null && (
-                <>
-                    {repositories.hits.length === 0 ? (
-                        <div style={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
-                            Not found any repositories.
-                        </div>
-                    ) : (
-                    <>
-                    {/* Pagination */}
-                        <div className="d-flex flex-wrap gap-3 mt-3 align-items-start">
-                            <div>{renderPagination()}</div>
-
-                            {/* Page size dropdown with inline label */}
-                            <div className="d-flex align-items-center gap-2">
-                                <label htmlFor="pageSizeSelect" className="mb-0">Rows per page:</label>
-                                <Form.Select
-                                    id="pageSizeSelect"
-                                    value={pageSize}
-                                    onChange={(e) => {
-                                        setPageSize(Number(e.target.value));
-                                        setPageNumber(1);
-                                    }}
-                                    style={{ width: '100px' }}
-                                >
-                                    {[5, 10, 25, 50, 100].map((size) => (
-                                        <option key={size} value={size}>{size}</option>
-                                    ))}
-                                </Form.Select>
+                            {/* Repo count */}
+                            <div className='mb-3 mt-2 ms-3' >
+                                Showing <strong>{repositories.hits.length}</strong> of <strong>{repositories.info.total_hits}</strong> results on
+                                page <strong>{repositories.info.page}</strong> of <strong>{repositories.info.total_pages}</strong>
                             </div>
-                        </div>
 
-                        {/* Repo count */}
-                        <div>
-                            Showing <strong>{repositories.hits.length}</strong> of <strong>{repositories.info.total_hits}</strong> results on
-                            page <strong>{repositories.info.page}</strong> of <strong>{repositories.info.total_pages}</strong>
-                        </div>
-
-                        {/* Show repositories */}
-                        <>
-                            {repositories.hits.map((repo) => (
-                                <RepoPreview key={repo.id} repo={repo} orgNames={orgNames} showCanonical={true} />
-                            ))}
+                            {/* Show repositories */}
+                            <Row>
+                                {repositories.hits.map((repo) => (
+                                    <Col key={repo.id} md={4} className="mb-4">
+                                        <RepoPreview repo={repo} orgNames={orgNames} showCanonical={true} />
+                                    </Col>
+                                ))}
+                            </Row>
                         </>
+                        )}
                     </>
-                    )}
-                </>
-            )}
+                )}
+            </div>
         </Row>
     );
 };
