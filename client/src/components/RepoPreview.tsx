@@ -72,7 +72,7 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                     {/* Description */}
                     {repo.desc && (
                         <Card.Text style={{ fontSize: '0.9rem' }}>
-                            {repo.desc}
+                            {repo.desc.length > 201 ? `${repo.desc.slice(0, 201)}...` : repo.desc}
                         </Card.Text>
                     )}
 

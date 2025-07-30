@@ -176,25 +176,30 @@ export const Explore: React.FC = () => {
             {/* Page Title */}
             <h1>Explore Repositories</h1>
             <>
-                <div className="d-flex justify-content-between">
-                    <div className="d-flex align-items-center flex-grow-1 me-3">
-                        {/* Search Bar */}
-                        <input
-                            type="text"
-                            className="form-control me-2"
-                            placeholder="Search repositories"
-                            value={searchTerm}
-                            onChange={handleSearchChange}
-                        />
-                         <Button variant="primary" className="me-5" type="submit" onClick={handleSearch}>
-                            <i className="bi bi-search"></i>
-                        </Button>
-                        {/* Advanced Search Button */}
-                        <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
-                            {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
-                        </Button>
+                <Form onSubmit={(e) => {
+                    e.preventDefault(); // Prevent page reload
+                    handleSearch();     // Trigger search logic
+                }}>
+                    <div className="d-flex justify-content-between">
+                        <div className="d-flex align-items-center flex-grow-1 me-3">
+                            {/* Search Bar */}
+                            <input
+                                type="text"
+                                className="form-control me-2"
+                                placeholder="Search repositories"
+                                value={searchTerm}
+                                onChange={handleSearchChange}
+                            />
+                            <Button variant="primary" className="me-5" type="submit" onClick={handleSearch}>
+                                <i className="bi bi-search"></i>
+                            </Button>
+                            {/* Advanced Search Button */}
+                            <Button className="btn btn-primary" onClick={toggleAdvancedSearch}>
+                                {showAdvancedSearch ? <i className="bi bi-funnel-fill"></i> : <i className="bi bi-funnel"></i>}
+                            </Button>
+                        </div>
                     </div>
-                </div>
+                </Form>
     
                 {/* Advanced Search Section */}
                 {showAdvancedSearch && (

@@ -116,8 +116,7 @@ export const RepositoriesOfUser: React.FC = () => {
             || (repo.badge === RepositoryBadge.verified && showBadgeVerified)
             || (repo.badge === RepositoryBadge.sponsored_oss && showBadgeSponsoredOSS);
 
-        return (matchesSearch && matchesOrg && matchesVisibility && matchesBadge && (noBadgeFiltersSelected || repo.badge !== RepositoryBadge.none)
-        );
+        return (matchesSearch && matchesOrg && matchesVisibility && matchesBadge);
     });
 
     setFilteredRepos(filtered);
