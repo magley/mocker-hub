@@ -19,6 +19,7 @@ import { OrganisationsOfUser } from './pages/OrgOfUser';
 import { ProfilePage } from './pages/ProfilePage';
 import { Analytics } from './pages/Analytics';
 import { UsersManagement } from './pages/UsersManagement';
+import { Explore } from './pages/Explore';
 
 // This function converts:
 //
@@ -67,6 +68,7 @@ function App() {
                     {/* Any role. */}
                     {authRoute("/password-change", ['user', 'admin', 'superadmin'], UserPasswordChange)}
                     {authRoute("/u/:username", ['user', 'admin', 'superadmin'], ProfilePage)}
+                    {authRoute("/explore", ['user', 'admin', 'superadmin'], Explore)}
 
                     {/* Protected routes. */}
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}

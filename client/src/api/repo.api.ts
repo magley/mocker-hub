@@ -36,6 +36,19 @@ export interface ReposOfUserDTO {
     organization_names: { [key: number]: string };
 }
 
+export interface RepositoryQueryInfoDTO {
+    page: number,
+    page_size: number,
+    total_pages: number,
+    total_hits: number,
+}
+
+export interface RepositoryQueryDTO {
+    hits: RepoDTO[],
+    info: RepositoryQueryInfoDTO,
+    organization_names: { [key: number]: string };
+}
+
 export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
@@ -92,5 +105,19 @@ export class RepositoryService {
 
     static async DeleteRepo(repoId: number) : Promise<AxiosResponse<DeleteRepoResponseDTO>> {
         return await axiosInstance.delete(`/registry/repository/${repoId}`)
+    }
+
+    static async GetPublicRepositories(query: string, page: number, page_size: number, show_badge_official: boolean, show_badge_sponsored: boolean,
+         show_badge_verified: boolean): Promise<AxiosResponse<RepositoryQueryDTO>> {
+        return await axiosInstance.get(`/repositories/public/`, {
+            params: {
+                page_number: page,
+                page_size,
+                show_badge_official,
+                show_badge_sponsored,
+                show_badge_verified,
+                query
+            }
+        });
     }
 }
