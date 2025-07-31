@@ -117,6 +117,17 @@ class TeamService:
         self._ensure_user_is_member_of_org(org.id, user_id)
 
         return self.team_repo.find_all_by_organization(org_id)
+
+    def find_members_of_team(self, team_id: int, user_id: int) -> List[User]:
+        team = self.team_repo.get(team_id)   # Ensure team with that id exists
+        if team is None:
+            raise NotFoundException(Team, team_id)
+
+        """ Only team members or organization owners can access the given team. """
+        existing_membership = self.team_repo.find_member(team_id, user_id)
+        if existing_membership is None:  # If the user is not a member of the team, check if they are an org owner.
+            self._ensure_user_is_owner_of_org(team.organization, user_id)
+        return self.team_repo.find_members_of_team(team_id)
     
 
 def get_team_service(session: Session = Depends(get_database)) -> TeamService:

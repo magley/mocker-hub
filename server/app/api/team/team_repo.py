@@ -2,6 +2,9 @@ from sqlmodel import Session, select
 from app.api.team.team_model import Team, TeamMember, TeamPermission
 from typing import List, Optional
 
+from app.api.user.user_model import User
+
+
 class TeamRepo:
     def __init__(self, session: Session):
         self.session = session
@@ -61,3 +64,10 @@ class TeamRepo:
             Team.organization_id == org_id
         )
         return self.session.exec(statement).all()
+
+    def find_members_of_team(self, team_id: int) -> List[User]:
+        return self.session.exec(
+            select(User)
+            .join(TeamMember, User.id == TeamMember.user_id)
+            .where(TeamMember.team_id == team_id)
+        ).all()
