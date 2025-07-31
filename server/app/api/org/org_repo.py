@@ -65,3 +65,15 @@ class OrganizationRepo:
         self.session.commit()
         self.session.refresh(org)
         return org
+
+    def search_members_by_username_prefix(self, query: str, org_id: int, limit: int = 7) -> List[User]:
+        stmt = (
+            select(User)
+            .join(OrganizationMembers, OrganizationMembers.user_id == User.id)
+            .where(
+                OrganizationMembers.organization_id == org_id,
+                User.username.ilike(f"{query}%")
+            )
+            .limit(limit)
+        )
+        return self.session.exec(stmt).all()

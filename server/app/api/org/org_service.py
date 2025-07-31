@@ -8,6 +8,7 @@ from app.api.org.org_repo import OrganizationRepo
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from app.api.config.images import generate_inline_image, save_image
 from app.api.repo.repo_model import Repository
+from app.api.team.team_repo import TeamRepo
 from app.api.user.user_model import User
 from app.api.user.user_repo import UserRepo
 
@@ -17,6 +18,7 @@ class OrganizationService:
         self.session = session
         self.org_repo = OrganizationRepo(session)
         self.user_repo = UserRepo(session)
+        self.team_repo = TeamRepo(session)
 
     def add(self, user_id: int, dto: OrganizationCreateDTO) -> Organization:
         # Check if the name is available.
@@ -136,6 +138,17 @@ class OrganizationService:
             self.org_repo.add_user_to_org(org_id, uid)
             new_members.append(user)
         return new_members
+
+    def search_members_by_username_prefix(self, query: str, team_id_to_exclude_members: int = 0) -> List[User]:
+        team = self.team_repo.get(team_id_to_exclude_members)
+        if not team:
+            raise NotFoundException("Team", team_id_to_exclude_members)
+        org_members = self.org_repo.search_members_by_username_prefix(query, team.organization_id)
+        filtered_users = [
+            u for u in org_members
+            if u not in team.members and u.id != team.organization.owner_id
+        ]
+        return filtered_users
 
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
