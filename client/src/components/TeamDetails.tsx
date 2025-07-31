@@ -2,10 +2,10 @@ import React, { useState } from "react";
 import { Tab, Nav } from "react-bootstrap";
 import "./OrgTeams.css"; // You can add styling here
 import { OrgMembers } from "./OrgMembers";
-import { TeamDTOFull } from "../api/team.api";
+import { TeamDTOBasic } from "../api/team.api";
 import { OrganizationDTOBasic } from "../api/org.api";
 
-export const TeamDetails: React.FC<{ team: TeamDTOFull, org: OrganizationDTOBasic, onBack: () => void }> = ({ team, org, onBack }) => {
+export const TeamDetails: React.FC<{ team: TeamDTOBasic, org: OrganizationDTOBasic, onBack: () => void }> = ({ team, org, onBack }) => {
     const [tabKey, setTabKey] = useState("members");
 
     return (

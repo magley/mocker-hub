@@ -146,7 +146,7 @@ class OrganizationService:
         org_members = self.org_repo.search_members_by_username_prefix(query, team.organization_id)
         filtered_users = [
             u for u in org_members
-            if u not in team.members and u.id != team.organization.owner_id
+            if u.id != team.organization.owner_id and u.id not in [tm.user_id for tm in team.members]
         ]
         return filtered_users
 

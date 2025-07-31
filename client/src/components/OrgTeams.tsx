@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { OrganizationDTOBasic } from "../api/org.api";
-import { TeamCreateDTO, TeamDTOFull, TeamService } from "../api/team.api";
+import { TeamCreateDTO, TeamDTOBasic, TeamService } from "../api/team.api";
 import { AxiosError, AxiosResponse } from "axios";
 import { Button, Form, Modal, Spinner } from "react-bootstrap";
 import { getJwtId } from "../util/localstorage";
@@ -8,10 +8,10 @@ import "./OrgTeams.css";
 import { TeamDetails } from "./TeamDetails";
 
 export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }> = ({ isActive, org }) => {
-    const [teams, setTeams] = useState<TeamDTOFull[]>([]);
+    const [teams, setTeams] = useState<TeamDTOBasic[]>([]);
     const [loading, setLoading] = useState(true);
     const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false);
-    const [selectedTeam, setSelectedTeam] = useState<TeamDTOFull | null>(null);
+    const [selectedTeam, setSelectedTeam] = useState<TeamDTOBasic | null>(null);
 
 
     // -------------------------------------------
@@ -68,7 +68,7 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
         setLoading(true);
         setTeams([]);
 
-        TeamService.FindByOrganizationId(org.id).then((res: AxiosResponse<TeamDTOFull[]>) => {
+        TeamService.FindByOrganizationId(org.id).then((res: AxiosResponse<TeamDTOBasic[]>) => {
             setTeams(res.data);
         }).catch((err: AxiosError) => {
             console.error(err);
@@ -137,7 +137,7 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
                                 </div>  
  
                                 <div style={{ width: "20%", paddingLeft: "30px"}} className="text-dark">
-                                    {team.members.length}
+                                    {team.members_count}
                                 </div>
                             </div>
                             );
