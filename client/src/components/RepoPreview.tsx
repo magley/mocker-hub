@@ -1,12 +1,23 @@
 import React from 'react';
 import { RepoDTO, RepositoryBadge } from '../api/repo.api';
 import { Card, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
-import { RepositoryService } from '../api/repo.api';
-import { Link } from 'react-router-dom';
+import { Link, NavLink } from 'react-router-dom';
 import { formatDistanceToNow } from 'date-fns';
 import { BadgeUtils } from '../util/badge';
 
-export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string> | undefined }> = ( {repo, orgNames} ) => {
+export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string> | undefined, showCanonical : boolean }> = ( {repo, orgNames, showCanonical} ) => {
+
+    const constructSubtitle = () => {
+        if (repo.organization_id && orgNames && orgNames.has(repo.organization_id)) {
+            {/* If the repository is part of an organization, link to the organization page. */}
+            return <NavLink style={{ textDecoration: 'none'}} to={`/o/${orgNames.get(repo.organization_id)}`}>{orgNames.get(repo.organization_id)}</NavLink>;
+        } else if (repo.badge === RepositoryBadge.official) {
+            {/* If the repository was created by an admin, then it's official*/}
+            return <span>Official repository</span>;
+            {/* If the repository was created by a user, link to user's repositories. */}
+        } else return <NavLink style={{ textDecoration: 'none'}} to={`/u/${repo.canonical_name.split("/")[0]}/repos`}>{repo.canonical_name.split("/")[0]}</NavLink>;
+    }
+
     return (
         <Col key={repo.id} xs={12}>
             <Card>
@@ -14,7 +25,7 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                     {/* Repository Title with React Router Link */}
                     <Card.Title>
                         <Link to={`/r/${repo.canonical_name}`} className="text-primary">
-                            <span>{repo.name}</span>
+                            {showCanonical ? <span>{repo.canonical_name}</span> : <span>{repo.name}</span>}
                         </Link>
                         {/* Private */}
                         {!repo.public && (
@@ -35,12 +46,17 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                         }
                     </Card.Title>
 
-                    {/* Organization Name (if exists) */}
-                    {repo.organization_id && (
-                        <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
-                            Part of organization {orgNames?.get(repo.organization_id)}
-                        </Card.Subtitle>
+                    {/* Subtitle */}
+                    {showCanonical ? (
+                        <div style={{color: '#0264c5ff', fontWeight: 'bolder', marginBottom: '0.3em' }}>{constructSubtitle()}</div>
+                    ) : (
+                        repo.organization_id && (
+                            <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
+                                Part of organization {orgNames?.get(repo.organization_id)}
+                            </Card.Subtitle>
+                        )
                     )}
+
 
                     {/* Last update */}
                     {repo.last_updated && (
@@ -54,11 +70,10 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                     )}
 
                     {/* Description */}
-                    {repo.desc && (
-                        <Card.Text style={{ fontSize: '0.9rem' }}>
-                            {repo.desc}
-                        </Card.Text>
-                    )}
+                    <Card.Text
+                        style={{ fontSize: '0.9rem', minHeight: '3em', overflow: 'hidden' }}>
+                        {repo.desc ? (repo.desc.length > 99 ? `${repo.desc.slice(0, 99)}...` : repo.desc) : '\u00A0'}
+                    </Card.Text>
 
                     <div className="d-flex">
                         {/* Download Count */}

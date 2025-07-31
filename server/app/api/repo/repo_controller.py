@@ -1,7 +1,8 @@
 from datetime import datetime
 from typing import List
 from fastapi import APIRouter, Depends
-from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, ToggleStarRepoDTO
+from app.api.repo.repo_dto import ReposOfUserDTO, RepositoryCreateDTO, RepositoryDTO, RepositoryExtDTO, \
+    RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO, ToggleStarRepoDTO, RepositoriesResultDTO
 from app.api.repo.repo_service import RepositoryService, get_repo_service
 from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_authorize
 from app.api.user.user_model import User, UserRole
@@ -149,3 +150,12 @@ def get_starred_repositories_of_user(
     org_names = org_service.get_org_names_from_repos(repos)
 
     return ReposOfUserDTO(user_id=user.id, user_name=user.username, repos=repos, organization_names=org_names)
+
+@router.get("/public/", response_model=RepositoriesResultDTO, status_code=200, summary="Search all public repositories with paginated results")
+async def search_public_repositories(page_number: int, page_size: int, show_badge_official: bool, show_badge_sponsored: bool,
+                                     show_badge_verified: bool, query: str = "", repo_service: RepositoryService = Depends(get_repo_service),
+                                     org_service: OrganizationService = Depends(get_org_service)):
+    repos, result_info = repo_service.search_public_repositories(query, page_number, page_size, show_badge_official, show_badge_sponsored, show_badge_verified)
+    org_names = org_service.get_org_names_from_repos(repos)
+    repos = [_repo_model_to_dto(repo) for repo in repos]
+    return RepositoriesResultDTO(hits=repos, info=result_info, organization_names=org_names)

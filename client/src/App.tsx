@@ -19,6 +19,7 @@ import { OrganisationsOfUser } from './pages/OrgOfUser';
 import { ProfilePage } from './pages/ProfilePage';
 import { Analytics } from './pages/Analytics';
 import { UsersManagement } from './pages/UsersManagement';
+import { Explore } from './pages/Explore';
 
 // This function converts:
 //
@@ -54,7 +55,7 @@ function App() {
                     {authRoute("/password-change-required", ['superadmin'], UserPasswordChange)}
 
                     {/* Anybody. */}
-                    {authRoute("/", [], Home)}
+                    {authRoute("/", [], Explore)}
                     {authRoute("/login", [], UserLogin)}
                     {authRoute("/logout", [], UserLogout)}
 
