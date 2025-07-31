@@ -38,4 +38,13 @@ def find_members_of_team(jwt: JWTDep, team_id: int, team_service: TeamService = 
     members = team_service.find_members_of_team(team_id, user_id)
     return members
 
-
+@router.post("/{team_id}/addMember", response_model=List[TeamAddMemberDTO], status_code=200, summary="Add multiple users to the team")
+@pre_authorize([UserRole.user, UserRole.admin])
+def add_members_to_team(jwt: JWTDep, team_id: int, user_ids: List[int], team_service: TeamService = Depends(get_team_service)):
+    owner_id = get_id_from_jwt(jwt)
+    results = []
+    for uid in user_ids:
+        dto = TeamAddMemberDTO(team_id=team_id, user_id=uid)
+        result = team_service.add_member(dto, owner_id)
+        results.append(result)
+    return results
