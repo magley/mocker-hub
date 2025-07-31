@@ -1,16 +1,11 @@
 import React, { useState } from "react";
 import { Tab, Nav } from "react-bootstrap";
 import "./OrgTeams.css"; // You can add styling here
+import { OrgMembers } from "./OrgMembers";
+import { TeamDTOFull } from "../api/team.api";
+import { OrganizationDTOBasic } from "../api/org.api";
 
-interface TeamDetailsProps {
-    team: {
-        name: string;
-        desc?: string;
-    };
-    onBack: () => void;
-}
-
-export const TeamDetails: React.FC<TeamDetailsProps> = ({ team, onBack }) => {
+export const TeamDetails: React.FC<{ team: TeamDTOFull, org: OrganizationDTOBasic, onBack: () => void }> = ({ team, org, onBack }) => {
     const [tabKey, setTabKey] = useState("members");
 
     return (
@@ -48,8 +43,7 @@ export const TeamDetails: React.FC<TeamDetailsProps> = ({ team, onBack }) => {
 
                 <Tab.Content>
                     <Tab.Pane eventKey="members">
-                        {/* Placeholder members content */}
-                        <p>This is the <strong>Members</strong> tab content. List team members here.</p>
+                        <OrgMembers isActive={tabKey === "members"} org={org} teamId={team.id} />
                     </Tab.Pane>
 
                     <Tab.Pane eventKey="permissions">

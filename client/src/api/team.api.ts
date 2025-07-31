@@ -1,5 +1,6 @@
 import { AxiosResponse } from "axios";
 import { axiosInstance } from "../util/http";
+import { UserDTO } from "./user.api";
 
 export enum TeamPermissionKind {
     read = "read",
@@ -43,12 +44,20 @@ export interface TeamAddMemberDTO {
 
 export interface TeamAddPermissionDTO extends TeamPermissionsDTO {}
 
-export class TeamService {
+export class TeamService { 
     static async FindByOrganizationId(org_id: number): Promise<AxiosResponse<TeamDTOFull[]>> {
         return await axiosInstance.get(`/teams/o/${org_id}`);
     }
 
     static async Create(dto: TeamCreateDTO): Promise<AxiosResponse<TeamDTOBasic>> {
         return await axiosInstance.post(`/teams`, dto);
+    }
+
+    static async GetMembersOfTeam(team_id: number): Promise<AxiosResponse<UserDTO[]>> {
+        return await axiosInstance.get(`/teams/${team_id}/members`);
+    }
+
+    static async AddMembersToTeam(team_id: number, user_ids: number[]) {
+        return await axiosInstance.post(`/teams/${team_id}/addMember`, user_ids);
     }
 }

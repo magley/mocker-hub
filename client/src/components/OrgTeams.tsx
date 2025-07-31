@@ -5,7 +5,6 @@ import { AxiosError, AxiosResponse } from "axios";
 import { Button, Form, Modal, Spinner } from "react-bootstrap";
 import { getJwtId } from "../util/localstorage";
 import "./OrgTeams.css";
-import { Link } from "react-router-dom";
 import { TeamDetails } from "./TeamDetails";
 
 export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }> = ({ isActive, org }) => {
@@ -89,7 +88,7 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
     return (
         <>
         {selectedTeam ? (
-            <TeamDetails team={selectedTeam} onBack={() => setSelectedTeam(null)} />
+            <TeamDetails team={selectedTeam} org={org} onBack={() => setSelectedTeam(null)} />
         ) : (
             <>
             {/* No teams */}
