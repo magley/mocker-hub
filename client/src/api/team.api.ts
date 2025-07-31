@@ -44,7 +44,7 @@ export interface TeamAddMemberDTO {
 export interface TeamAddPermissionDTO extends TeamPermissionsDTO {}
 
 export class TeamService {
-    static async FindByOrganizationId(org_id: number): Promise<AxiosResponse<TeamDTOBasic[]>> {
+    static async FindByOrganizationId(org_id: number): Promise<AxiosResponse<TeamDTOFull[]>> {
         return await axiosInstance.get(`/teams/o/${org_id}`);
     }
 
