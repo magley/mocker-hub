@@ -14,6 +14,7 @@ from app.api.repo.repo_model import Repository
 from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
 from app.api.events.event_service import EventService, get_event_service
 from app.api.events.event_model import EventLevel
+from app.api.config.cache import cache
 
 router = APIRouter(prefix="/repositories", tags=["repositories"])
 
@@ -28,6 +29,7 @@ def register_repo(jwt: JWTDep, dto: RepositoryCreateDTO, repo_service: Repositor
     return repo
 
 @router.get("/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get repositories of user")
+@cache(expire=10)
 def get_repositories_of_user(
     jwt: JWTDepOptional, 
     username: str, 
@@ -52,6 +54,7 @@ def get_repositories_of_user(
     return ReposOfUserDTO(user_id=user_id, user_name=user.username, repos=repos, organization_names=org_names)
 
 @router.get("/name/{repo_canonical_name:path}", response_model=RepositoryExtDTO, status_code=200, summary="Find repository by its full name")
+@cache(expire=60)
 def get_repo_by_canonical_name(
     jwt: JWTDepOptional, 
     repo_canonical_name: str, 
@@ -133,6 +136,7 @@ def toggle_repo_star(
     return ToggleStarRepoDTO(**repo.model_dump(), starred=starred)
 
 @router.get("/starred/u/{username}", response_model=ReposOfUserDTO, status_code=200, summary="Get starred repositories of user")
+@cache(expire=10)
 def get_starred_repositories_of_user(
     username: str, 
     user_service: UserService = Depends(get_user_service),
@@ -152,6 +156,7 @@ def get_starred_repositories_of_user(
     return ReposOfUserDTO(user_id=user.id, user_name=user.username, repos=repos, organization_names=org_names)
 
 @router.get("/public/", response_model=RepositoriesResultDTO, status_code=200, summary="Search all public repositories with paginated results")
+@cache(expire=10)
 async def search_public_repositories(page_number: int, page_size: int, show_badge_official: bool, show_badge_sponsored: bool,
                                      show_badge_verified: bool, query: str = "", repo_service: RepositoryService = Depends(get_repo_service),
                                      org_service: OrganizationService = Depends(get_org_service)):

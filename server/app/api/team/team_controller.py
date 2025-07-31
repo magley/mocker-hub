@@ -6,6 +6,7 @@ from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTDep
 from app.api.team.team_dto import TeamAddMemberDTO, TeamCreateDTO, TeamDTOBasic
 from app.api.team.team_service import TeamService, get_team_service
+from app.api.config.cache import cache
 
 router = APIRouter(prefix="/teams", tags=["teams"])
 
@@ -17,6 +18,7 @@ def create_team(jwt: JWTDep, dto: TeamCreateDTO, team_service: TeamService = Dep
     return team
 
 @router.get("/o/{org_id}", response_model=List[TeamDTOBasic], status_code=200, summary="Find all teams by organization")
+@cache(expire=5)
 @pre_authorize([UserRole.user, UserRole.admin])
 def find_by_org_id(jwt: JWTDep, org_id: int, team_service: TeamService = Depends(get_team_service)):
     user_id = get_id_from_jwt(jwt)

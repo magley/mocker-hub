@@ -8,6 +8,7 @@ from app.api.config.auth import JWTDep, JWTDepOptional
 from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDTO, OrganizationDTOBasic, OrganizationDescUpdateDTO, OrganizationHasMemberDTO
 from app.api.org.org_service import OrganizationService, get_org_service
 from app.api.access_control.access_control_service import AccessControlService
+from app.api.config.cache import cache
 
 router = APIRouter(prefix="/organizations", tags=["organizations"])
 
@@ -24,6 +25,7 @@ def get_by_name(org_name: str, org_service: OrganizationService = Depends(get_or
     return org
 
 @router.get("/my", response_model=List[OrganizationDTOBasic], status_code=200, summary="Find all organizations that I am a member of")
+@cache(expire=10)
 @pre_authorize([UserRole.user, UserRole.admin])
 def find_my_orgs(jwt: JWTDep, org_service: OrganizationService = Depends(get_org_service)):
     user_id = get_id_from_jwt(jwt)

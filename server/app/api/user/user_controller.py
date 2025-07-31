@@ -6,9 +6,9 @@ from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDT
      UserBadgeDTO
 from app.api.user.user_service import UserService, get_user_service
 from app.api.user.user_model import UserRole, User, UserBadge
-from fastapi_cache.decorator import cache
 from app.api.config.auth import JWTBearer, JWTDep, get_id_from_jwt
 from app.api.config.auth import pre_authorize
+from app.api.config.cache import cache
 
 router = APIRouter(prefix="/users", tags=["users"])
 
@@ -44,12 +44,14 @@ def test(jwt: JWTDep):
     ]
 
 @router.get("/search/{query}", status_code=200, response_model=List[UserDTO], summary="Search users by username prefix")
+@cache(expire=5)
 @pre_authorize([UserRole.user, UserRole.admin])
 def search_by_username_prefix(jwt: JWTDep, query: str, org_id_to_exclude_members: int = 0, user_service: UserService = Depends(get_user_service)):
     users = user_service.search_by_username_prefix(query, org_id_to_exclude_members)
     return users
 
 @router.get("/{username}", status_code=200, response_model=UserDTO, summary="Get user's profile info")
+@cache(expire=10)
 @pre_authorize([UserRole.user, UserRole.admin, UserRole.superadmin])
 def get_user_profile(jwt: JWTDep, username: str, user_service: UserService = Depends(get_user_service)):
     user = user_service.find_by_username(username)
