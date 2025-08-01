@@ -159,7 +159,7 @@ class TeamService:
             raise NotFoundException(permission, dto.team_id)
         team = self.team_repo.get(dto.team_id)
         self._ensure_user_is_owner_of_org(team.organization, user_id)
-        self.team_repo.delete(permission)
+        self.team_repo.delete_permission(permission)
 
 
 def get_team_service(session: Session = Depends(get_database)) -> TeamService:

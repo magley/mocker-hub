@@ -258,11 +258,13 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                                                             <Badge bg="secondary" className="text-uppercase mb-1">{item.kind}</Badge>
                                                             <div className="text-muted small">{permissionDescriptions[item.kind]}</div>
                                                         </Col>
-                                                        <Col md={1} className="text-end">
-                                                            <Button variant="link" className="text-danger p-0 delete-button" onClick={() => removePermission(item)}>
-                                                                <i className="bi bi-trash"></i>
-                                                            </Button>
-                                                        </Col>
+                                                        {amOwnerOfOrg && (
+                                                            <Col md={1} className="text-end">
+                                                                <Button variant="link" className="text-danger p-0 delete-button" onClick={() => removePermission(item)}>
+                                                                    <i className="bi bi-trash"></i>
+                                                                </Button>
+                                                            </Col>
+                                                        )}
                                                     </Row>
                                                 );
                                             })}

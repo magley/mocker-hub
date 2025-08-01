@@ -10,7 +10,8 @@ from sqlmodel import SQLModel
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, NotInRelationshipException, UserException
 from app.api.org.org_model import Organization
 from app.api.repo.repo_model import Repository
-from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO, TeamDTOBasic
+from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO, TeamDTOBasic, \
+    TeamPermissionsDTO
 from app.api.team.team_model import Team, TeamMember, TeamPermission
 from app.api.team.team_service import TeamService
 from app.api.user.user_model import User
@@ -567,14 +568,14 @@ class TestFindMembersOfTeam:
 
 
 class TestGetPermissionsByTeam:
-    def test_team_not_found(self, team_service: TeamService):
+    def test_get_permissions_team_not_found(self, team_service: TeamService):
         team_service.team_repo.get.return_value = None
         with pytest.raises(NotFoundException):
             team_service.get_permissions_by_team(team_id=1, user_id=2)
         team_service.team_repo.get.assert_called_once_with(1)
         team_service.team_repo.get_permissions_by_team.assert_not_called()
 
-    def test_team_access_denied(self, team_service: TeamService):
+    def test_get_permissions_team_access_denied(self, team_service: TeamService):
         user_id = 1
         team = mock.Mock(spec=Team)
         team_service.team_repo.get.return_value = team
@@ -589,7 +590,7 @@ class TestGetPermissionsByTeam:
         team_service.team_repo.find_member.assert_called_once()
         team_service.team_repo.get_permissions_by_team.assert_not_called()
 
-    def test_success_when_user_is_member(self, team_service: TeamService):
+    def test_get_permissions_success_when_user_is_member(self, team_service: TeamService):
         user1 = mock.Mock(spec=User)
         user2 = mock.Mock(spec=User)
         expected_result = [user1, user2]
@@ -604,7 +605,7 @@ class TestGetPermissionsByTeam:
         team_service.team_repo.find_member.assert_called_once()
         team_service.team_repo.get_permissions_by_team.assert_called_once()
 
-    def test_success_when_user_is_org_owner(self, team_service: TeamService):
+    def test_get_permissions_success_when_user_is_org_owner(self, team_service: TeamService):
         user_id = 1
         team = Team(id=1, organization_id=10)
         org = mock.Mock(spec=Organization)
@@ -653,3 +654,47 @@ class TestUpdateTeam:
 
         # All other cases have been covered with the create_team tests, so we don't need to repeat them here.
 
+
+class TestDeletePermission:
+    def test_delete_permission_not_found(self, team_service: "TeamService"):
+        team_service.team_repo.find_permission.return_value = None
+        dto = TeamPermissionsDTO(team_id=1, repo_id=1, kind="read_write")
+        with pytest.raises(NotFoundException):
+            team_service.delete_team_permission(dto, user_id=2)
+        team_service.team_repo.find_permission.assert_called_once()
+        team_service.team_repo.add.assert_not_called()
+
+    def test_delete_permission_access_denied(self, team_service: TeamService):
+        dto = TeamPermissionsDTO(team_id=1, repo_id=1, kind="read_write")
+        team = mock.Mock(spec=Team)
+        team.id = dto.team_id
+        permission = TeamPermission(team_id=dto.team_id, repo_id=dto.repo_id, kind=dto.kind)
+        org = mock.Mock(spec=Organization)
+
+        org.owner_id = 99
+        team.organization = org
+        team_service.team_repo.find_permission.return_value = permission
+        team_service.team_repo.get.return_value = team
+
+        with pytest.raises(AccessDeniedException):
+            team_service.delete_team_permission(dto, user_id=1)
+        team_service.team_repo.get.assert_called_once()
+        team_service.team_repo.delete_team_permission.assert_not_called()
+
+
+    def test_delete_permission_success(self, team_service: "TeamService"):
+        dto = TeamPermissionsDTO(team_id=1, repo_id=1, kind="read_write")
+        team = mock.Mock(spec=Team)
+        team.id = dto.team_id
+        permission = TeamPermission(team_id=dto.team_id, repo_id=dto.repo_id, kind=dto.kind)
+        org = mock.Mock(spec=Organization)
+
+        org.owner_id = 1
+        team.organization = org
+        team_service.team_repo.find_permission.return_value = permission
+        team_service.team_repo.get.return_value = team
+
+        team_service.delete_team_permission(dto, 1)
+
+        team_service.team_repo.get.assert_called_once()
+        team_service.team_repo.delete_permission.assert_called_once()
