@@ -140,6 +140,24 @@ class TeamService:
             self._ensure_user_is_owner_of_org(team.organization, user_id)
         return self.team_repo.get_permissions_by_team(team_id)
 
+    def update_team(self, dto, user_id):
+        if len(dto.name) == 0:
+            raise UserException("Name is required")
+        if dto.name[0].isspace():
+            raise UserException("Name must not begin with whitespace characters")
+
+        team_db = self.team_repo.get(dto.id)
+        if team_db is None:
+            raise NotFoundException(Team, dto.id)
+        team_db.name = dto.name
+        team_db.desc = dto.desc
+        self._ensure_team_with_that_name_not_in_org(team_db.name, team_db.organization_id)
+        org = self._get_org_by_id(team_db.organization_id)
+        self._ensure_user_is_owner_of_org(org, user_id)
+
+        self.team_repo.add(team_db)
+        return team_db
+
 
 def get_team_service(session: Session = Depends(get_database)) -> TeamService:
     return TeamService(session)

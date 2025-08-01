@@ -6,6 +6,7 @@ import { OrganizationDTOBasic } from "../api/org.api";
 import { RepoDTO, RepositoryService } from "../api/repo.api";
 import { AxiosError, AxiosResponse } from "axios";
 import { getJwtId } from "../util/localstorage";
+import { ToastType, useToastStore } from "../util/toastStore";
 
 
 const permissionDescriptions: Record<TeamPermissionKind, string> = {
@@ -25,6 +26,13 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
     const [submitting, setSubmitting] = useState(false);
     const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false); 
     const filteredRepos = repositories.filter(repo => !teamPermissions.some(tp => tp.repo_id === repo.id));
+
+    const [editing, setEditing] = useState(false);
+    const [editedName, setEditedName] = useState(team.name);
+    const [editedDesc, setEditedDesc] = useState(team.desc || "");
+    const [updating, setUpdating] = useState(false);
+    const [error, setError] = useState('');
+    const addToast = useToastStore((state) => state.addToast);
 
 
     useEffect(() => {
@@ -72,20 +80,71 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
         });
     };
 
+    const handleStartEdit = () => {
+        setEditedName(team.name);
+        setEditedDesc(team.desc || "");
+        setEditing(true);
+        setError('');
+    };
+
+    const handleCancelEdit = () => {
+        setEditing(false);
+        setError('');
+    };
+
+    const handleUpdateTeam = async () => {
+        setUpdating(true);
+        setError('');
+        try {
+            const res = await TeamService.UpdateTeam({...team, name: editedName.trim(), desc: editedDesc.trim()});
+            team.name = res.data.name;
+            team.desc = res.data.desc;
+            setEditing(false);
+            addToast(`Updated team name and description.`, ToastType.success);
+        } catch (error: any) {
+            console.error("Failed to update team:", error);
+            setError(error["response"]["data"]["detail"]["message"]);
+        } finally {
+            setUpdating(false);
+        }
+    };
+
     return (
         <div className="p-4">
             {/* Header */}
-            <div className="d-flex align-items-center mb-4" style={{ gap: "12px" }}>
-                <i
-                    className="bi bi-arrow-left"
-                    style={{ fontSize: "1.5rem", cursor: "pointer" }}
-                    onClick={onBack}
-                ></i>
-                <div>
-                    <h2 className="m-0">{team.name}</h2>
-                    {team.desc && <p className="text-muted mb-0">{team.desc}</p>}
-                </div>
+            <div className="d-flex align-items-start mb-4" style={{ gap: "1.5rem" }}>
+                <i className="bi bi-arrow-left" style={{ fontSize: "1.5rem", cursor: "pointer", marginTop: "6px" }} onClick={onBack}></i>
+
+                {!editing ? (
+                    <div>
+                        <div className="d-flex align-items-center">
+                            <h2 className="m-0 me-2">{team.name}</h2>
+                            {amOwnerOfOrg && (
+                                <button className="btn btn-link p-0" onClick={handleStartEdit}>
+                                    <i className="bi bi-pencil" style={{ marginLeft: "5px" }}></i>
+                                </button>
+                            )}
+                        </div>
+                        {team.desc && <p className="text-muted mb-0 mt-1">{team.desc}</p>}
+                    </div>
+                ) : (
+                    <div style={{ maxWidth: "600px", width: "100%" }}>
+                        <Form.Group className="mb-3">
+                            <Form.Label className="bold">Team Name</Form.Label>
+                            <Form.Control value={editedName} onChange={(e) => setEditedName(e.target.value)} placeholder="Team name" />
+                        </Form.Group>
+                        <Form.Group className="mb-3">
+                            <Form.Label className="bold">Team Description</Form.Label>
+                            <Form.Control as="textarea" rows={2} value={editedDesc} onChange={(e) => setEditedDesc(e.target.value)} placeholder="Team description" />
+                        </Form.Group>
+                        <div>
+                            <Button variant="primary" disabled={updating} onClick={handleUpdateTeam}>{updating ? "Updating..." : "Update"}</Button>
+                            <Button variant="secondary" className="me-2" onClick={handleCancelEdit}>Cancel</Button>
+                        </div>
+                    </div>
+                )}
             </div>
+            {error && <Alert variant="danger">{error}</Alert>}
 
             {/* Tabs */}
             <Tab.Container activeKey={tabKey} onSelect={(k) => setTabKey(k || "members")}>

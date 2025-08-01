@@ -87,7 +87,8 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
     return (
         <>
         {selectedTeam ? (
-            <TeamDetails team={selectedTeam} org={org} onBack={() => setSelectedTeam(null)} />
+            <TeamDetails team={selectedTeam} org={org}onBack={() => { setSelectedTeam(null); getTeams(); // Refresh team list after returning
+    }} />
         ) : (
             <>
             {/* No teams */}

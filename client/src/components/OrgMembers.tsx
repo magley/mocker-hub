@@ -163,7 +163,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                         </div>
                     )}
 
-                    <div className="ms-4 me-5" style={{ maxWidth: "85%" }}>
+                    <div className="ms-4 me-5" style={{ maxWidth: "85%", marginBottom: "1.5rem" }}>
 
                         {/* Table Header */}
                         <div

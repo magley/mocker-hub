@@ -47,6 +47,10 @@ export interface TeamAddPermissionDTO extends TeamPermissionsDTO {}
 
 export class TeamService {
 
+    static async UpdateTeam(dto: TeamDTOBasic) : Promise<AxiosResponse<TeamDTOBasic>> {
+        return await axiosInstance.put(`/teams`, dto)
+    }
+
     static async AddPermission(team_id: number, repo_id: number, kind: TeamPermissionKind): Promise<AxiosResponse<TeamPermissionsDTO>> {
         return await axiosInstance.post(`/teams/permission`, { team_id, repo_id, kind });
     }

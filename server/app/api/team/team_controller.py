@@ -65,3 +65,10 @@ def get_permissions_by_team(jwt: JWTDep, team_id: int, team_service: TeamService
     user_id = get_id_from_jwt(jwt)
     members = team_service.get_permissions_by_team(team_id, user_id)
     return members
+
+@router.put("/", response_model=TeamDTOBasic, status_code=200, summary="Update team name and description")
+@pre_authorize([UserRole.user, UserRole.admin])
+def update_team(jwt: JWTDep, dto: TeamDTOBasic, team_service: TeamService = Depends(get_team_service)):
+    user_id = get_id_from_jwt(jwt)
+    team = team_service.update_team(dto, user_id)
+    return team
