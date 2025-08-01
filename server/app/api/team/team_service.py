@@ -60,18 +60,20 @@ class TeamService:
         
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
-    def create_team(self, dto: TeamCreateDTO, user_id: int) -> Team:
-        if len(dto.name) == 0:
-            raise UserException("Name is required")  # Validate server-side too.
+    def validate_team(self, team: Team, user_id: int):
+        if len(team.name) == 0:
+            raise UserException("Name is required")
 
-        if dto.name[0].isspace():
+        if team.name[0].isspace():
             raise UserException("Name must not begin with whitespace characters")
-        
-        self._ensure_team_with_that_name_not_in_org(dto.name, dto.organization_id)
-        org = self._get_org_by_id(dto.organization_id)
+
+        self._ensure_team_with_that_name_not_in_org(team.name, team.organization_id)
+        org = self._get_org_by_id(team.organization_id)
         self._ensure_user_is_owner_of_org(org, user_id)
 
+    def create_team(self, dto: TeamCreateDTO, user_id: int) -> Team:
         new_team = Team.model_validate(dto)
+        self.validate_team(new_team, user_id)
         new_team = self.team_repo.add(new_team)
         return new_team
     
@@ -141,20 +143,12 @@ class TeamService:
         return self.team_repo.get_permissions_by_team(team_id)
 
     def update_team(self, dto, user_id):
-        if len(dto.name) == 0:
-            raise UserException("Name is required")
-        if dto.name[0].isspace():
-            raise UserException("Name must not begin with whitespace characters")
-
         team_db = self.team_repo.get(dto.id)
         if team_db is None:
             raise NotFoundException(Team, dto.id)
         team_db.name = dto.name
         team_db.desc = dto.desc
-        self._ensure_team_with_that_name_not_in_org(team_db.name, team_db.organization_id)
-        org = self._get_org_by_id(team_db.organization_id)
-        self._ensure_user_is_owner_of_org(org, user_id)
-
+        self.validate_team(team_db, user_id)
         self.team_repo.add(team_db)
         return team_db
 

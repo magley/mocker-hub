@@ -10,7 +10,7 @@ from sqlmodel import SQLModel
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, NotInRelationshipException, UserException
 from app.api.org.org_model import Organization
 from app.api.repo.repo_model import Repository
-from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO
+from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO, TeamDTOBasic
 from app.api.team.team_model import Team, TeamMember, TeamPermission
 from app.api.team.team_service import TeamService
 from app.api.user.user_model import User
@@ -621,4 +621,35 @@ class TestGetPermissionsByTeam:
         team_service.team_repo.get.assert_called_once_with(1)
         team_service.team_repo.find_member.assert_called_once()
         team_service.team_repo.get_permissions_by_team.assert_called_once()
+
+
+class TestUpdateTeam:
+    def test_update_team_not_found(self, team_service: "TeamService"):
+        team_service.team_repo.get.return_value = None
+        dto = mock.Mock(spec=TeamDTOBasic)
+        dto.id = 1
+        with pytest.raises(NotFoundException):
+            team_service.update_team(dto, user_id=2)
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.add.assert_not_called()
+
+    def test_update_team_success(self, team_service: "TeamService"):
+        dto = TeamDTOBasic(id=1, organization_id=1, name="New Team", desc="")
+        old_team = Team(id=1, name="Old Team", desc="", organization_id=1)
+        excpected_team = Team(id=1, name="New Team", desc="", organization_id=1)
+        user_id = 1
+
+        org = Organization(id=1, owner_id=1)
+        team_service.team_repo.get.return_value = old_team
+        team_service.team_repo.find_by_name_in_org.return_value = None
+        team_service.org_repo.find_by_id.return_value = org
+        team_service.team_repo.add.return_value = excpected_team
+
+        result = team_service.update_team(dto, user_id)
+
+        assert result == excpected_team
+        team_service.org_repo.find_by_id.assert_called_once_with(1)
+        team_service.team_repo.add.assert_called_once_with(excpected_team)
+
+        # All other cases have been covered with the create_team tests, so we don't need to repeat them here.
 
