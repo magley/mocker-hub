@@ -71,3 +71,7 @@ class TeamRepo:
             .join(TeamMember, User.id == TeamMember.user_id)
             .where(TeamMember.team_id == team_id)
         ).all()
+
+    def get_permissions_by_team(self, team_id) -> List[TeamPermission]:
+        statement = select(TeamPermission).where(TeamPermission.team_id == team_id)
+        return self.session.exec(statement).all()

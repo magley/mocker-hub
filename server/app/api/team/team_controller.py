@@ -58,3 +58,10 @@ def add_permission(jwt: JWTDep, dto: TeamPermissionsDTO, team_service: TeamServi
     add_dto = TeamAddPermissionDTO(team_id=dto.team_id, repo_id=dto.repo_id, kind=dto.kind)
     result = team_service.add_permission(add_dto, owner_id)
     return result
+
+@router.get("/{team_id}/permissions", response_model=List[TeamPermissionsDTO], status_code=200, summary="Find all permissions of a team")
+@pre_authorize([UserRole.user, UserRole.admin])
+def get_permissions_by_team(jwt: JWTDep, team_id: int, team_service: TeamService = Depends(get_team_service)):
+    user_id = get_id_from_jwt(jwt)
+    members = team_service.get_permissions_by_team(team_id, user_id)
+    return members

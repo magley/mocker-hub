@@ -155,28 +155,33 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                                                 {selectedPermission && permissionDescriptions[selectedPermission]}
                                             </small>
                                         </div>
-                                    )}
-
-                                    <div>
-                                        {teamPermissions.length === 0 ? (
-                                            <p>No permissions assigned yet.</p>
-                                        ) : (
-                                            teamPermissions.map((item, index) => {
-                                            const repo = repositories.find((r) => r.id === item.repo_id);
-                                            return (
-                                                <div key={index} className="border rounded p-2 mb-2">
-                                                <strong>{repo?.name || "Unknown repository"}</strong>{" "}
-                                                <Badge bg="secondary" className="ms-2 text-uppercase">
-                                                    {item.kind}
-                                                </Badge>
-                                                <div className="text-muted small">
-                                                    {permissionDescriptions[item.kind]}
-                                                </div>
-                                                </div>
-                                            );
-                                            })
                                         )}
-                                    </div>
+                                    {teamPermissions.length === 0 ? (
+                                        <p>No permissions assigned yet.</p>
+                                            ) : (
+                                            <div className="mt-4">
+                                                <Row className="fw-bold mb-2">
+                                                </Row>
+                                                {teamPermissions.map((item, index) => {
+                                                const repo = repositories.find((r) => r.id === item.repo_id);
+                                                return (
+                                                    <Row key={index} className="align-items-start border rounded p-2 mb-2 hover-shadow">
+                                                    <Col md={5}>
+                                                        <div className="fw-semibold">{repo?.name || "Unknown repository"}</div>
+                                                    </Col>
+                                                    <Col md={7}>
+                                                        <Badge bg="secondary" className="text-uppercase mb-1">
+                                                        {item.kind}
+                                                        </Badge>
+                                                        <div className="text-muted small">
+                                                        {permissionDescriptions[item.kind]}
+                                                        </div>
+                                                    </Col>
+                                                    </Row>
+                                                );
+                                            })}
+                                        </div>
+                                    )}
                                 </div>
                             </>
                         )}
