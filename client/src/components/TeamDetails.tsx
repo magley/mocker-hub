@@ -10,7 +10,7 @@ import { getJwtId } from "../util/localstorage";
 
 const permissionDescriptions: Record<TeamPermissionKind, string> = {
   [TeamPermissionKind.read]: "View repository info and pull tags.",
-  [TeamPermissionKind.read_write]: "Pull and push tags, aside from viewing repository info.",
+  [TeamPermissionKind.read_write]: "View repository info, push and pull tags.",
   [TeamPermissionKind.admin]: "Full access. Includes changing the description, visibility, deleting the repository and pushing/pulling tags",
 };
 
@@ -164,7 +164,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                                         <div className="mb-3">
                                             <small className="text-muted">
                                                 <strong>Description:</strong>{" "}
-                                                {selectedPermission && permissionDescriptions[selectedPermission]}
+                                                {permissionDescriptions[selectedPermission]}
                                             </small>
                                         </div>
                                         )}
