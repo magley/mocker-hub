@@ -184,6 +184,10 @@ class RepositoryService:
         )
         return repositories, result_info
 
+    def get_repositories_by_org(self, org_id, user_id):
+        # TODO with the next issue, check user role and permissions (access_control) here to fetch corresponding repositoires
+        # Now all repos of the org are returned (that should be the case only when owner is requesting)
+        return self.repo_repo.get_repositories_by_org(org_id)
 
 def get_repo_service(session: Session = Depends(get_database)) -> RepositoryService:
     return RepositoryService(session)

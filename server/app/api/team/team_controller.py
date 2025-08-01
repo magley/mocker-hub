@@ -5,7 +5,8 @@ from app.api.config.auth import get_id_from_jwt, pre_authorize
 from app.api.user.user_dto import UserDTO
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTDep
-from app.api.team.team_dto import TeamAddMemberDTO, TeamCreateDTO, TeamDTOBasic
+from app.api.team.team_dto import TeamAddMemberDTO, TeamCreateDTO, TeamDTOBasic, TeamPermissionsDTO, \
+    TeamAddPermissionDTO
 from app.api.team.team_service import TeamService, get_team_service
 
 router = APIRouter(prefix="/teams", tags=["teams"])
@@ -48,3 +49,12 @@ def add_members_to_team(jwt: JWTDep, team_id: int, user_ids: List[int], team_ser
         result = team_service.add_member(dto, owner_id)
         results.append(result)
     return results
+
+@router.post("/permission", response_model=TeamPermissionsDTO, status_code=200, summary="Add team permission")
+@pre_authorize([UserRole.user, UserRole.admin])
+def add_permission(jwt: JWTDep, dto: TeamPermissionsDTO, team_service: TeamService = Depends(get_team_service)):
+    owner_id = get_id_from_jwt(jwt)
+    print(dto)
+    add_dto = TeamAddPermissionDTO(team_id=dto.team_id, repo_id=dto.repo_id, kind=dto.kind)
+    result = team_service.add_permission(add_dto, owner_id)
+    return result
