@@ -1,3 +1,5 @@
+from unittest import mock
+
 from fastapi import Response
 from fastapi.testclient import TestClient
 import pytest
@@ -505,3 +507,118 @@ class TestAddPermission:
         team_service.repo_repo.find_by_id.assert_called_once_with(dto.repo_id)
         team_service.team_repo.get.assert_called_once_with(dto.team_id)
         team_service.team_repo.add_permission.assert_called_once_with(dto.team_id, dto.repo_id, dto.kind)
+
+
+class TestFindMembersOfTeam:
+    def test_team_not_found(self, team_service: TeamService):
+        team_service.team_repo.get.return_value = None
+        with pytest.raises(NotFoundException):
+            team_service.find_members_of_team(team_id=1, user_id=2)
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_members_of_team.assert_not_called()
+
+    def test_team_access_denied(self, team_service: TeamService):
+        user_id = 1
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 99
+        team.organization = org
+
+        with pytest.raises(AccessDeniedException):
+            team_service.find_members_of_team(team_id=team.id, user_id=user_id)
+        team_service.team_repo.get.assert_called_once_with(team.id)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.find_members_of_team.assert_not_called()
+
+    def test_success_when_user_is_member(self, team_service: TeamService):
+        user1 = mock.Mock(spec=User)
+        user2 = mock.Mock(spec=User)
+        expected_result = [user1, user2]
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = MagicMock()
+        team_service.team_repo.find_members_of_team.return_value = [user1, user2]
+
+        result = team_service.find_members_of_team(team_id=1, user_id=2)
+        assert result == expected_result
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.find_members_of_team.assert_called_once()
+
+    def test_success_when_user_is_org_owner(self, team_service: TeamService):
+        user_id = 1
+        team = Team(id=1, organization_id=10)
+        org = mock.Mock(spec=Organization)
+        org.id = 10
+        org.owner_id = user_id
+        team.organization = org
+        expected_user = User(id=2, name="Member")
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        team_service.team_repo.find_members_of_team.return_value = [expected_user]
+
+        result = team_service.find_members_of_team(team_id=team.id, user_id=user_id)
+        assert result == [expected_user]
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.find_members_of_team.assert_called_once()
+
+
+class TestGetPermissionsByTeam:
+    def test_team_not_found(self, team_service: TeamService):
+        team_service.team_repo.get.return_value = None
+        with pytest.raises(NotFoundException):
+            team_service.get_permissions_by_team(team_id=1, user_id=2)
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.get_permissions_by_team.assert_not_called()
+
+    def test_team_access_denied(self, team_service: TeamService):
+        user_id = 1
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 99
+        team.organization = org
+
+        with pytest.raises(AccessDeniedException):
+            team_service.get_permissions_by_team(team_id=team.id, user_id=user_id)
+        team_service.team_repo.get.assert_called_once_with(team.id)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.get_permissions_by_team.assert_not_called()
+
+    def test_success_when_user_is_member(self, team_service: TeamService):
+        user1 = mock.Mock(spec=User)
+        user2 = mock.Mock(spec=User)
+        expected_result = [user1, user2]
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = MagicMock()
+        team_service.team_repo.get_permissions_by_team.return_value = [user1, user2]
+
+        result = team_service.get_permissions_by_team(team_id=1, user_id=2)
+        assert result == expected_result
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.get_permissions_by_team.assert_called_once()
+
+    def test_success_when_user_is_org_owner(self, team_service: TeamService):
+        user_id = 1
+        team = Team(id=1, organization_id=10)
+        org = mock.Mock(spec=Organization)
+        org.id = 10
+        org.owner_id = user_id
+        team.organization = org
+        expected_user = User(id=2, name="Member")
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        team_service.team_repo.get_permissions_by_team.return_value = [expected_user]
+
+        result = team_service.get_permissions_by_team(team_id=team.id, user_id=user_id)
+        assert result == [expected_user]
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.get_permissions_by_team.assert_called_once()
+

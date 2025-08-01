@@ -139,14 +139,15 @@ class OrganizationService:
             new_members.append(user)
         return new_members
 
-    def search_members_by_username_prefix(self, query: str, team_id_to_exclude_members: int = 0) -> List[User]:
+    def search_members_by_username_prefix(self, query: str, team_id_to_exclude_members: int) -> List[User]:
         team = self.team_repo.get(team_id_to_exclude_members)
         if not team:
             raise NotFoundException("Team", team_id_to_exclude_members)
         org_members = self.org_repo.search_members_by_username_prefix(query, team.organization_id)
+        members_to_exclude = self.team_repo.find_members_of_team(team_id_to_exclude_members)
         filtered_users = [
             u for u in org_members
-            if u.id != team.organization.owner_id and u.id not in [tm.user_id for tm in team.members]
+            if u.id != team.organization.owner_id and u not in members_to_exclude
         ]
         return filtered_users
 

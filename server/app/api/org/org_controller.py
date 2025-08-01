@@ -66,6 +66,6 @@ def add_members_to_org(jwt: JWTDep, org_id: int, user_ids: List[int], org_servic
 
 @router.get("/search/{query}", status_code=200, response_model=List[UserDTO], summary="Search members by username prefix")
 @pre_authorize([UserRole.user, UserRole.admin])
-def search_members_by_username_prefix(jwt: JWTDep, query: str, team_id_to_exclude_members: int = 0, org_service: OrganizationService = Depends(get_org_service)):
+def search_members_by_username_prefix(jwt: JWTDep, query: str, team_id_to_exclude_members: int, org_service: OrganizationService = Depends(get_org_service)):
     users = org_service.search_members_by_username_prefix(query, team_id_to_exclude_members)
     return users

@@ -1,3 +1,4 @@
+from unittest import mock
 from unittest.mock import MagicMock, call
 from fastapi.testclient import TestClient
 import pytest
@@ -8,7 +9,9 @@ from app.api.config.exception_handler import FieldTakenException
 from app.api.main import app
 from app.api.repo.repo_model import Repository
 from app.api.org.org_model import Organization
+from app.api.team.team_model import Team
 from app.api.user.user_model import User
+from app.tests.test_user import make_user
 
 
 @pytest.fixture
@@ -19,6 +22,7 @@ def org_service():
     service.org_repo = MagicMock()
     service.add_user_to_org = MagicMock()
     service.user_repo = MagicMock()
+    service.team_repo = MagicMock()
     return service
 
 
@@ -626,4 +630,32 @@ class TestAddMembersToOrg:
             assert "jane" not in member_usernames
 
 
+class TestSearchMembersByUsernamePrefix:
+    def test_team_not_found(self, org_service):
+        team_id = 99
+        prefix = "j"
+        org_service.team_repo.get.return_value = None
+
+        with pytest.raises(NotFoundException):
+            org_service.search_members_by_username_prefix(prefix, team_id)
+
+        org_service.team_repo.get.assert_called_once_with(team_id)
+        org_service.org_repo.search_members_by_username_prefix.assert_not_called()
+
+    def test_successfully_search_members(self, org_service):
+        team = mock.MagicMock(spec=Team)
+        query = "jo"
+        user1 = make_user(1, "john")
+        user2 = make_user(2, "josh")
+        user3 = make_user(3, "jonny")
+        team.organization.owner_id = user1.id
+        team.members = [user3]
+        org_service.org_repo.search_members_by_username_prefix.return_value = [user1, user2, user3]
+        org_service.team_repo.get.return_value = team
+        org_service.team_repo.find_members_of_team.return_value = [user3]
+
+        result = org_service.search_members_by_username_prefix(query, team.id)
+        assert result == [user2]
+        org_service.team_repo.get.assert_called_once_with(team.id)
+        org_service.org_repo.search_members_by_username_prefix.assert_called_once()
 
