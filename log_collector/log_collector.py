@@ -97,9 +97,10 @@ class FileChangeHandler(FileSystemEventHandler):
 
             if self.previous_size > current_size:
                 logging.warning(f"Irregularity in log size: want ({self.previous_size}) but ({current_size}). Rewinding...")
-                current_size = self.previous_size
-
-            if current_size > self.previous_size:
+                self.previous_size = 0
+                self.save_previous_size()
+                
+            if current_size >= self.previous_size:
                 with open(self.file_path, 'r') as file:
                     file.seek(self.previous_size)
                     new_content = file.read()
