@@ -7,6 +7,7 @@ import { RepoDTO, RepositoryService } from "../api/repo.api";
 import { AxiosError, AxiosResponse } from "axios";
 import { getJwtId } from "../util/localstorage";
 import { ToastType, useToastStore } from "../util/toastStore";
+import "./TeamDetails.css";
 
 
 const permissionDescriptions: Record<TeamPermissionKind, string> = {
@@ -109,6 +110,19 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
         }
     };
 
+    const removePermission = (item: TeamPermissionsDTO) => {
+        setLoading(true);
+        TeamService.RemovePermission(item).then(() => {
+            fetchPermissions();
+            addToast(`Removed ${item.kind} permission for ${repositories.find(r => r.id === item.repo_id)?.name}.`, ToastType.success);
+        }).catch((err: AxiosError) => {
+            console.error(err);
+            addToast(`Failed to remove permission: ${err.message}`, ToastType.error);
+        }).finally(() => {
+            setLoading(false);
+        });
+    };
+
     return (
         <div className="p-4">
             {/* Header */}
@@ -139,7 +153,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                         </Form.Group>
                         <div>
                             <Button variant="primary" disabled={updating} onClick={handleUpdateTeam}>{updating ? "Updating..." : "Update"}</Button>
-                            <Button variant="secondary" className="me-2" onClick={handleCancelEdit}>Cancel</Button>
+                            <Button variant="secondary" className="me-2 mx-2" onClick={handleCancelEdit}>Cancel</Button>
                         </div>
                     </div>
                 )}
@@ -173,7 +187,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                             </div>
                         ) : (
                             <>
-                                <div className="mb-3" style={{maxWidth: "70%"}}>
+                                <div className="mb-3" style={{maxWidth: "70%", marginTop: "2rem"}}>
                                     {amOwnerOfOrg && (
                                     <Row className="align-items-end mb-3">
                                         <Col md={5}>
@@ -236,18 +250,19 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                                                 {teamPermissions.map((item, index) => {
                                                 const repo = repositories.find((r) => r.id === item.repo_id);
                                                 return (
-                                                    <Row key={index} className="align-items-start border rounded p-2 mb-2 hover-shadow">
-                                                    <Col md={5}>
-                                                        <div className="fw-semibold">{repo?.name || "Unknown repository"}</div>
-                                                    </Col>
-                                                    <Col md={7}>
-                                                        <Badge bg="secondary" className="text-uppercase mb-1">
-                                                        {item.kind}
-                                                        </Badge>
-                                                        <div className="text-muted small">
-                                                        {permissionDescriptions[item.kind]}
-                                                        </div>
-                                                    </Col>
+                                                    <Row key={index} className="align-items-center border rounded p-3 mb-2 hover-shadow">
+                                                        <Col md={5}>
+                                                            <div className="fw-semibold mb-1">{repo?.name || "Unknown repository"}</div>
+                                                        </Col>
+                                                        <Col md={6}>
+                                                            <Badge bg="secondary" className="text-uppercase mb-1">{item.kind}</Badge>
+                                                            <div className="text-muted small">{permissionDescriptions[item.kind]}</div>
+                                                        </Col>
+                                                        <Col md={1} className="text-end">
+                                                            <Button variant="link" className="text-danger p-0 delete-button" onClick={() => removePermission(item)}>
+                                                                <i className="bi bi-trash"></i>
+                                                            </Button>
+                                                        </Col>
                                                     </Row>
                                                 );
                                             })}

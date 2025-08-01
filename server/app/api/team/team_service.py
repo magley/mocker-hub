@@ -7,7 +7,8 @@ from app.api.team.team_repo import TeamRepo
 from typing import List
 
 from app.api.team.team_model import Team, TeamMember, TeamPermission
-from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO
+from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO, TeamPermissionsDTO, \
+    TeamDTOBasic
 from app.api.user.user_model import User
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, NotInRelationshipException, UserException
 from app.api.org.org_model import Organization
@@ -131,7 +132,7 @@ class TeamService:
             self._ensure_user_is_owner_of_org(team.organization, user_id)
         return self.team_repo.find_members_of_team(team_id)
 
-    def get_permissions_by_team(self, team_id, user_id):
+    def get_permissions_by_team(self, team_id: int, user_id: int):
         team = self.team_repo.get(team_id)  # Ensure team with that id exists
         if team is None:
             raise NotFoundException(Team, team_id)
@@ -142,7 +143,7 @@ class TeamService:
             self._ensure_user_is_owner_of_org(team.organization, user_id)
         return self.team_repo.get_permissions_by_team(team_id)
 
-    def update_team(self, dto, user_id):
+    def update_team(self, dto: TeamDTOBasic, user_id: int):
         team_db = self.team_repo.get(dto.id)
         if team_db is None:
             raise NotFoundException(Team, dto.id)
@@ -151,6 +152,14 @@ class TeamService:
         self.validate_team(team_db, user_id)
         self.team_repo.add(team_db)
         return team_db
+
+    def delete_team_permission(self, dto: TeamPermissionsDTO, user_id: int):
+        permission = self.team_repo.find_permission(dto.team_id, dto.repo_id)
+        if permission is None:
+            raise NotFoundException(permission, dto.team_id)
+        team = self.team_repo.get(dto.team_id)
+        self._ensure_user_is_owner_of_org(team.organization, user_id)
+        self.team_repo.delete(permission)
 
 
 def get_team_service(session: Session = Depends(get_database)) -> TeamService:

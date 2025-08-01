@@ -72,3 +72,9 @@ def update_team(jwt: JWTDep, dto: TeamDTOBasic, team_service: TeamService = Depe
     user_id = get_id_from_jwt(jwt)
     team = team_service.update_team(dto, user_id)
     return team
+
+@router.delete("/permission", status_code=202, summary="Delete team permission")
+@pre_authorize([UserRole.user, UserRole.admin])
+def delete_team_permission(jwt: JWTDep, dto: TeamPermissionsDTO, team_service: TeamService = Depends(get_team_service)):
+    user_id = get_id_from_jwt(jwt)
+    team_service.delete_team_permission(dto, user_id)
