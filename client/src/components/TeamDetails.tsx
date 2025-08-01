@@ -1,16 +1,69 @@
-import React, { useState } from "react";
-import { Tab, Nav } from "react-bootstrap";
-import "./OrgTeams.css"; // You can add styling here
+import React, { useEffect, useState } from "react";
+import { Tab, Nav, Form, Button, Row, Col, Badge, Spinner, Alert } from "react-bootstrap";
 import { OrgMembers } from "./OrgMembers";
-import { TeamDTOBasic } from "../api/team.api";
+import { TeamDTOBasic, TeamPermissionKind, TeamPermissionsDTO, TeamService } from "../api/team.api";
 import { OrganizationDTOBasic } from "../api/org.api";
+import { RepoDTO, RepositoryService } from "../api/repo.api";
+import { AxiosError, AxiosResponse } from "axios";
 
-export const TeamDetails: React.FC<{ team: TeamDTOBasic, org: OrganizationDTOBasic, onBack: () => void }> = ({ team, org, onBack }) => {
+
+const permissionDescriptions: Record<TeamPermissionKind, string> = {
+  [TeamPermissionKind.read]: "View repository info and pull tags.",
+  [TeamPermissionKind.read_write]: "Pull and push tags, aside from viewing repository info.",
+  [TeamPermissionKind.admin]: "Full access. Includes changing the description, visibility, deleting the repository and pushing/pulling tags",
+};
+
+
+export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasic; onBack: () => void;}> = ({ team, org, onBack }) => {
     const [tabKey, setTabKey] = useState("members");
+    const [selectedRepoId, setSelectedRepoId] = useState<number | null>(null);
+    const [selectedPermission, setSelectedPermission] = useState<TeamPermissionKind | "">("");
+    const [repositories, setRepositories] = useState<RepoDTO[]>([]);
+    const [teamPermissions, setTeamPermissions] = useState<TeamPermissionsDTO[]>([]);
+    const [loading, setLoading] = useState(true);
+    const [error, setError] = useState<string | null>(null);  // todo show error (do this when you do editing of the team)
+    const [submitting, setSubmitting] = useState(false);
+
+    useEffect(() => {
+        fetchPermissions();
+        fetchRepositories();
+    }, []);
+
+    const fetchRepositories = async () => { 
+        setLoading(true);
+        RepositoryService.GetAllByOrganizationId(org.id).then((res: AxiosResponse<RepoDTO[]>) => {
+            setRepositories(res.data);
+        }).catch((err: AxiosError) => {
+            console.error(err);
+        }).finally(() => { 
+            setLoading(false);
+        })
+    };
+
+    const fetchPermissions = async () => {
+        TeamService.GetPermissionsByTeamId(team.id).then((res: AxiosResponse<TeamPermissionsDTO[]>) => {
+            setTeamPermissions(res.data || []);
+        }).catch((err: AxiosError) => {
+            console.error(err);
+        });
+    };
+
+    const handleAddPermission = async () => {
+        if (!selectedRepoId || !selectedPermission) return;
+        setSubmitting(true);
+        TeamService.AddPermission(team.id, selectedRepoId, selectedPermission as TeamPermissionKind).then(() => {
+            fetchPermissions();
+            setSelectedRepoId(null);
+            setSelectedPermission("");
+        }).catch((err: AxiosError) => {
+            console.error(err);
+        }).finally(() => {
+            setSubmitting(false);
+        });
+    };
 
     return (
         <div className="p-4">
-
             {/* Header */}
             <div className="d-flex align-items-center mb-4" style={{ gap: "12px" }}>
                 <i
@@ -29,14 +82,12 @@ export const TeamDetails: React.FC<{ team: TeamDTOBasic, org: OrganizationDTOBas
                 <Nav variant="tabs" className="mb-3">
                     <Nav.Item>
                         <Nav.Link eventKey="members" className={tabKey === "members" ? "active" : ""}>
-                            <i className="bi bi-person"> </i>
-                            Members
+                            <i className="bi bi-person"> </i> Members
                         </Nav.Link>
                     </Nav.Item>
                     <Nav.Item>
                         <Nav.Link eventKey="permissions" className={tabKey === "permissions" ? "active" : ""}>
-                            <i className="bi bi-shield-lock"> </i>
-                            Permissions
+                            <i className="bi bi-shield-lock"> </i> Permissions
                         </Nav.Link>
                     </Nav.Item>
                 </Nav>
@@ -47,8 +98,88 @@ export const TeamDetails: React.FC<{ team: TeamDTOBasic, org: OrganizationDTOBas
                     </Tab.Pane>
 
                     <Tab.Pane eventKey="permissions">
-                        {/* Placeholder permissions content */}
-                        <p>This is the <strong>Permissions</strong> tab content. Show permission roles here.</p>
+                        {loading ? (
+                            <div className="text-center my-4">
+                                <Spinner animation="border" />
+                            </div>
+                        ) : (
+                            <>
+                                <div className="mb-3" style={{maxWidth: "70%"}}>
+                                    <Row className="align-items-end mb-3">
+                                        <Col md={5}>
+                                            <Form.Group controlId="repositorySelect">
+                                                <Form.Select
+                                                    value={selectedRepoId ?? ""}
+                                                    onChange={(e) => setSelectedRepoId(Number(e.target.value))}
+                                                    >
+                                                    <option value="" disabled hidden>Select repository</option>
+                                                    {repositories.map((repo) => (
+                                                        <option key={repo.id} value={repo.id}>
+                                                        {repo.name}
+                                                        </option>
+                                                    ))}
+                                                    </Form.Select>
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={4}>
+                                            <Form.Group controlId="permissionSelect">
+                                                <Form.Select
+                                                    value={selectedPermission}
+                                                    onChange={(e) => setSelectedPermission(e.target.value as TeamPermissionKind | "")}
+                                                    >
+                                                    <option value="" disabled hidden>Select permission</option>
+                                                    {Object.values(TeamPermissionKind).map((perm) => (
+                                                        <option key={perm} value={perm}>
+                                                        {perm.charAt(0).toUpperCase() + perm.slice(1).replace("_", " ")}
+                                                        </option>
+                                                    ))}
+                                                    </Form.Select>
+
+                                            </Form.Group>
+                                        </Col>
+                                        <Col md={3}>
+                                            <Button
+                                                variant="primary"
+                                                disabled={!selectedRepoId || !selectedPermission || submitting}
+                                                onClick={handleAddPermission}
+                                            >
+                                                {submitting ? "Adding..." : "Add"}
+                                            </Button>
+                                        </Col>
+                                    </Row>
+
+                                    {selectedPermission && (
+                                        <div className="mb-3">
+                                            <small className="text-muted">
+                                                <strong>Description:</strong>{" "}
+                                                {selectedPermission && permissionDescriptions[selectedPermission]}
+                                            </small>
+                                        </div>
+                                    )}
+
+                                    <div>
+                                        {teamPermissions.length === 0 ? (
+                                            <p>No permissions assigned yet.</p>
+                                        ) : (
+                                            teamPermissions.map((item, index) => {
+                                            const repo = repositories.find((r) => r.id === item.repo_id);
+                                            return (
+                                                <div key={index} className="border rounded p-2 mb-2">
+                                                <strong>{repo?.name || "Unknown repository"}</strong>{" "}
+                                                <Badge bg="secondary" className="ms-2 text-uppercase">
+                                                    {item.kind}
+                                                </Badge>
+                                                <div className="text-muted small">
+                                                    {permissionDescriptions[item.kind]}
+                                                </div>
+                                                </div>
+                                            );
+                                            })
+                                        )}
+                                    </div>
+                                </div>
+                            </>
+                        )}
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>
