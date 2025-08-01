@@ -13,7 +13,6 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
     const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false);
     const [selectedTeam, setSelectedTeam] = useState<TeamDTOBasic | null>(null);
 
-
     // -------------------------------------------
     // Modal window properties.
     //
@@ -133,9 +132,9 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
                                 </div>
 
                                 <div style={{ width: "50%", paddingLeft: "4px" }} className="text-muted">
-                                    {team.desc}
-                                </div>  
- 
+                                    {(team.desc.length > 99 ? `${team.desc.slice(0, 99)}...` : team.desc)}
+                                </div>
+
                                 <div style={{ width: "20%", paddingLeft: "30px"}} className="text-dark">
                                     {team.members_count}
                                 </div>

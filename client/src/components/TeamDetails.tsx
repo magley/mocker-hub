@@ -5,6 +5,7 @@ import { TeamDTOBasic, TeamPermissionKind, TeamPermissionsDTO, TeamService } fro
 import { OrganizationDTOBasic } from "../api/org.api";
 import { RepoDTO, RepositoryService } from "../api/repo.api";
 import { AxiosError, AxiosResponse } from "axios";
+import { getJwtId } from "../util/localstorage";
 
 
 const permissionDescriptions: Record<TeamPermissionKind, string> = {
@@ -21,13 +22,22 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
     const [repositories, setRepositories] = useState<RepoDTO[]>([]);
     const [teamPermissions, setTeamPermissions] = useState<TeamPermissionsDTO[]>([]);
     const [loading, setLoading] = useState(true);
-    const [error, setError] = useState<string | null>(null);  // todo show error (do this when you do editing of the team)
     const [submitting, setSubmitting] = useState(false);
+    const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false); 
+    const filteredRepos = repositories.filter(repo => !teamPermissions.some(tp => tp.repo_id === repo.id));
+
 
     useEffect(() => {
+        checkIfIamOwnerOfOrg();
         fetchPermissions();
         fetchRepositories();
     }, []);
+
+    const checkIfIamOwnerOfOrg = () => {
+        if (getJwtId() === org.owner_id) {
+            setAmOwnerOfOrg(true);
+        }
+    }
 
     const fetchRepositories = async () => { 
         setLoading(true);
@@ -105,6 +115,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                         ) : (
                             <>
                                 <div className="mb-3" style={{maxWidth: "70%"}}>
+                                    {amOwnerOfOrg && (
                                     <Row className="align-items-end mb-3">
                                         <Col md={5}>
                                             <Form.Group controlId="repositorySelect">
@@ -113,7 +124,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                                                     onChange={(e) => setSelectedRepoId(Number(e.target.value))}
                                                     >
                                                     <option value="" disabled hidden>Select repository</option>
-                                                    {repositories.map((repo) => (
+                                                    {filteredRepos.map((repo) => (
                                                         <option key={repo.id} value={repo.id}>
                                                         {repo.name}
                                                         </option>
@@ -147,6 +158,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                                             </Button>
                                         </Col>
                                     </Row>
+                                    )}
 
                                     {selectedPermission && (
                                         <div className="mb-3">
