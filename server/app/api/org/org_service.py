@@ -151,6 +151,18 @@ class OrganizationService:
         ]
         return filtered_users
 
+    def remove_org_member(self, member_id: int, org_id: int, user_id: int):
+        om = self.org_repo.find_member(org_id, member_id)
+        if om is None:
+            raise NotFoundException(OrganizationMembers, member_id)
+        org = self.org_repo.find_by_id(org_id)
+        if org.owner_id != user_id:
+            raise AccessDeniedException(f"User {user_id} cannot remove member {member_id} from organization {org_id}")
+        team_members = self.team_repo.find_teams_of_member(member_id)
+        for tm in team_members:
+            self.team_repo.delete_team_member(tm)
+        self.org_repo.delete_org_member(om)
+
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:
     return OrganizationService(session)

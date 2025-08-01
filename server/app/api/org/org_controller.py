@@ -69,3 +69,9 @@ def add_members_to_org(jwt: JWTDep, org_id: int, user_ids: List[int], org_servic
 def search_members_by_username_prefix(jwt: JWTDep, query: str, team_id_to_exclude_members: int, org_service: OrganizationService = Depends(get_org_service)):
     users = org_service.search_members_by_username_prefix(query, team_id_to_exclude_members)
     return users
+
+@router.delete("/member", status_code=202, summary="Delete organization member")
+@pre_authorize([UserRole.user, UserRole.admin])
+def remove_org_member(jwt: JWTDep, dto: OrganizationHasMemberDTO, org_service: OrganizationService = Depends(get_org_service)):
+    user_id = get_id_from_jwt(jwt)
+    org_service.remove_org_member(dto.user_id, dto.org_id, user_id)

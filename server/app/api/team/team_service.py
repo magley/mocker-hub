@@ -161,6 +161,14 @@ class TeamService:
         self._ensure_user_is_owner_of_org(team.organization, user_id)
         self.team_repo.delete_permission(permission)
 
+    def remove_team_member(self, member_id: int, team_id: int, user_id: int):
+        tm = self.team_repo.find_member(team_id, member_id)
+        if tm is None:
+            raise NotFoundException(TeamMember, member_id)
+        team = self.team_repo.get(team_id)
+        self._ensure_user_is_owner_of_org(team.organization, user_id)
+        self.team_repo.delete_team_member(tm)
+
 
 def get_team_service(session: Session = Depends(get_database)) -> TeamService:
     return TeamService(session)

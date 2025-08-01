@@ -51,6 +51,13 @@ class TeamRepo:
         )
         return self.session.exec(statement).first()
 
+    def find_teams_of_member(self, user_id: int) -> List[TeamMember]:
+        statement = select(TeamMember).filter(
+            TeamMember.user_id == user_id
+        )
+        return self.session.exec(statement).all()
+
+
     def find_permission(self, team_id: int, repo_id: int) -> Optional[TeamPermission]:
         statement = select(TeamPermission).filter(
             TeamPermission.team_id == team_id,
@@ -78,4 +85,8 @@ class TeamRepo:
 
     def delete_permission(self, permission: TeamPermission) -> None:
         self.session.delete(permission)
+        self.session.commit()
+
+    def delete_team_member(self, tm: TeamMember) -> None:
+        self.session.delete(tm)
         self.session.commit()
