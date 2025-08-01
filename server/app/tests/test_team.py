@@ -681,7 +681,6 @@ class TestDeletePermission:
         team_service.team_repo.get.assert_called_once()
         team_service.team_repo.delete_team_permission.assert_not_called()
 
-
     def test_delete_permission_success(self, team_service: "TeamService"):
         dto = TeamPermissionsDTO(team_id=1, repo_id=1, kind="read_write")
         team = mock.Mock(spec=Team)
@@ -698,3 +697,45 @@ class TestDeletePermission:
 
         team_service.team_repo.get.assert_called_once()
         team_service.team_repo.delete_permission.assert_called_once()
+
+class TestRemoveTeamMember:
+    def test_remove_team_member_not_found(self, team_service: "TeamService"):
+        team_service.team_repo.find_member.return_value = None
+
+        with pytest.raises(NotFoundException):
+            team_service.remove_team_member(member_id=42, team_id=1, user_id=10)
+
+        team_service.team_repo.find_member.assert_called_once_with(1, 42)
+        team_service.team_repo.get.assert_not_called()
+        team_service.team_repo.delete_team_member.assert_not_called()
+
+    def test_remove_team_member_access_denied(self, team_service: "TeamService"):
+        tm = mock.Mock()
+        team = mock.Mock(spec=Team)
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 999
+        team.organization = org
+
+        team_service.team_repo.find_member.return_value = tm
+        team_service.team_repo.get.return_value = team
+
+        with pytest.raises(AccessDeniedException):
+            team_service.remove_team_member(member_id=42, team_id=1, user_id=123)
+
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.delete_team_member.assert_not_called()
+
+    def test_remove_team_member_success(self, team_service: "TeamService"):
+        tm = mock.Mock()
+        team = mock.Mock(spec=Team)
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 123
+        team.organization = org
+
+        team_service.team_repo.find_member.return_value = tm
+        team_service.team_repo.get.return_value = team
+
+        team_service.remove_team_member(member_id=42, team_id=1, user_id=123)
+
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.delete_team_member.assert_called_once_with(tm)

@@ -659,3 +659,44 @@ class TestSearchMembersByUsernamePrefix:
         org_service.team_repo.get.assert_called_once_with(team.id)
         org_service.org_repo.search_members_by_username_prefix.assert_called_once()
 
+class TestRemoveOrgMember:
+    def test_remove_org_member_not_found(self, org_service):
+        org_service.org_repo.find_member.return_value = None
+
+        with pytest.raises(NotFoundException):
+            org_service.remove_org_member(member_id=42, org_id=1, user_id=123)
+
+        org_service.org_repo.find_member.assert_called_once_with(1, 42)
+        org_service.team_repo.find_teams_of_member.assert_not_called()
+        org_service.org_repo.delete_org_member.assert_not_called()
+
+    def test_remove_org_member_access_denied(self, org_service):
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 99
+
+        org_service.org_repo.find_member.return_value = mock.Mock()
+        org_service.org_repo.find_by_id.return_value = org
+
+        with pytest.raises(AccessDeniedException):
+            org_service.remove_org_member(member_id=42, org_id=1, user_id=123)
+
+        org_service.team_repo.find_teams_of_member.assert_not_called()
+        org_service.org_repo.delete_org_member.assert_not_called()
+
+    def test_remove_org_member_success(self, org_service):
+        org_member = mock.Mock()
+        team_member_1 = mock.Mock()
+        team_member_2 = mock.Mock()
+
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 123
+
+        org_service.org_repo.find_member.return_value = org_member
+        org_service.org_repo.find_by_id.return_value = org
+        org_service.team_repo.find_teams_of_member.return_value = [team_member_1, team_member_2]
+
+        org_service.remove_org_member(member_id=42, org_id=1, user_id=123)
+
+        org_service.team_repo.delete_team_member.assert_any_call(team_member_1)
+        org_service.team_repo.delete_team_member.assert_any_call(team_member_2)
+        org_service.org_repo.delete_org_member.assert_called_once_with(org_member)
