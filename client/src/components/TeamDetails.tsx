@@ -117,7 +117,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
             addToast(`Removed ${item.kind} permission for ${repositories.find(r => r.id === item.repo_id)?.name}.`, ToastType.success);
         }).catch((err: AxiosError) => {
             console.error(err);
-            addToast(`Failed to remove permission: ${err.message}`, ToastType.error);
+            addToast(`${err.message}`, ToastType.error);
         }).finally(() => {
             setLoading(false);
         });

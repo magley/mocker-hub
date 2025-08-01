@@ -7,6 +7,7 @@ import { getJwtId } from "../util/localstorage";
 import "./OrgMembers.css";
 import { Link } from "react-router-dom";
 import { TeamService } from "../api/team.api";
+import { ToastType, useToastStore } from "../util/toastStore";
 
 export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic, teamId : number | null }> = ({ isActive, org, teamId = -1 }) => {
     const [members, setMembers] = useState<UserDTO[]>([]);
@@ -14,6 +15,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
     const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false); 
 
     const [showModal, setShowModal] = useState(false);
+    const addToast = useToastStore((state) => state.addToast);
     
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<UserDTO[]>([]);
@@ -130,6 +132,31 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                 console.error("Failed to add members", err);
             }
         }
+    }; 
+
+    const removeMember = (user: UserDTO) => {
+        setLoading(true);
+        if ((teamId === null || teamId === -1)) {
+            OrganizationService.RemoveMember(user.id, org.id).then(() => {
+                getMembers();
+                addToast(`Removed member ${user.username} from organization.`, ToastType.success);
+            }).catch((err: AxiosError) => {
+                console.error(err);
+                addToast(`${err.message}`, ToastType.error);
+            }).finally(() => {
+                setLoading(false);
+            });
+        } else{
+            TeamService.RemoveMember(user.id, teamId).then(() => {
+                getMembers();
+                addToast(`Removed member ${user.username} from team.`, ToastType.success);
+            }).catch((err: AxiosError) => {
+                console.error(err);
+                addToast(`${err.message}`, ToastType.error);
+            }).finally(() => {
+                setLoading(false);
+            });
+        }
     };
 
     if (loading) {
@@ -201,12 +228,20 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                                 <i className="bi bi-envelope me-1 text-secondary"></i> {member.email || "—"}
                                 </div>
 
-                                {(teamId === null || teamId === -1) && <div style={{ width: "10%" }}>
+                                {(teamId === null || teamId === -1) &&
+                                 <div style={{ width: "10%" }}>
                                     {isOwner ? (<Badge className="custom-owner-badge">Owner</Badge>) : (
                                         <Badge className="custom-member-badge">Member</Badge>
                                     )}
                                     </div>
                                 }
+                                {amOwnerOfOrg && (
+                                    <div className="text-end" style={{ width: "10%", paddingRight: "15px" }}>
+                                        <Button variant="link" className="text-danger p-0 delete-button" onClick={() => removeMember(member)}>
+                                            <i className="bi bi-trash"></i>
+                                        </Button>
+                                    </div>
+                                )}
                             </div>
                             );
                         })}

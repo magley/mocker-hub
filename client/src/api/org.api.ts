@@ -43,6 +43,10 @@ export interface OrgDescUpdateDTO {
 
 export class OrganizationService {
 
+    static async RemoveMember(user_id: number, org_id: number) : Promise<AxiosResponse<void>> {
+        return await axiosInstance.delete(`/organizations/member`, { data: { user_id, org_id } })
+    }
+
     static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.post(`/organizations`, dto);
     }

@@ -47,7 +47,11 @@ export interface TeamAddPermissionDTO extends TeamPermissionsDTO {}
 
 export class TeamService {
 
-    static async RemovePermission(dto: TeamPermissionsDTO) : Promise<AxiosResponse<TeamPermissionsDTO>> {
+    static async RemoveMember(user_id: number, team_id: number) : Promise<AxiosResponse<void>> {
+        return await axiosInstance.delete(`/teams/member`, { data: { user_id, team_id } })
+    }
+   
+    static async RemovePermission(dto: TeamPermissionsDTO) : Promise<AxiosResponse<void>> {
         return await axiosInstance.delete(`/teams/permission`, { data: dto })
     }
 
