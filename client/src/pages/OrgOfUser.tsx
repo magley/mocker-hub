@@ -5,6 +5,7 @@ import { OrganizationDTOBasic, OrganizationService } from '../api/org.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import './OrgOfUser.css';
 import { OrgPreview } from '../components/OrgPreview';
+import { getJwtRole } from '../util/localstorage';
 
 export const OrganisationsOfUser: React.FC = () => {
     const [loading, setLoading] = useState<boolean>(true);
@@ -66,6 +67,11 @@ export const OrganisationsOfUser: React.FC = () => {
 
     if (error) {
         return <div className="alert alert-danger">{error}</div>;
+    }
+
+    if (username === 'admin')
+    { 
+        return <div className="alert alert-warning">Superadmin does not have organizations.</div>;
     }
 
     return (

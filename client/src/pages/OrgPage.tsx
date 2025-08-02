@@ -9,6 +9,7 @@ import { OrgRepositories } from "../components/OrgRepositories";
 import { OrgTeams } from "../components/OrgTeams";
 import { OrgSettings } from "../components/OrgSettings";
 import { OrgOverview } from "../components/OrgOverview";
+import { getJwtId } from "../util/localstorage";
 
 export const OrganizationPage = () => {
     const { "*": orgName } = useParams();
@@ -94,7 +95,7 @@ export const OrganizationPage = () => {
                                 Teams
                             </Nav.Link>
                         </Nav.Item>}
-                        {amMemberOfOrg && <Nav.Item>
+                        {amMemberOfOrg && org.owner_id === getJwtId() &&<Nav.Item>
                             <Nav.Link eventKey="settings" className={key === 'settings' ? 'active' : ''}>
                                 <i className="bi bi-gear"> </i>
                                 Settings
@@ -110,12 +111,12 @@ export const OrganizationPage = () => {
                             <OrgMembers isActive={key === 'members'} org={org} teamId={-1} />
                         </Tab.Pane>
                         <Tab.Pane eventKey="repositories">
-                            <OrgRepositories isActive={key === 'repositories'} />
+                            <OrgRepositories isActive={key === 'repositories'} org={org} amIMemberOfOrg={amMemberOfOrg} />
                         </Tab.Pane>
                         {amMemberOfOrg && <Tab.Pane eventKey="teams">
                             <OrgTeams isActive={key === 'teams'} org={org} />
                         </Tab.Pane>}
-                        {amMemberOfOrg && <Tab.Pane eventKey="settings">
+                        {amMemberOfOrg && org.owner_id === getJwtId() && <Tab.Pane eventKey="settings">
                             <OrgSettings isActive={key === 'settings'} org={org} />
                         </Tab.Pane>}
                     </Tab.Content>

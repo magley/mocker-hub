@@ -58,14 +58,14 @@ class AccessControlService:
         if org is None:
             return False
 
-        # Case 7: Repo is in org and org has no team permissions for that repo.
+        # Case 7: Repo is in org and user is owner of the organization
 
-        team_permissions = self.team_repo.find_permissions_by_repo_and_org(repo.id, org.id)
-        if not team_permissions:
-            return self.org_repo.user_is_in_org(user_id, org.id)
+        if org.owner_id == user_id:
+            return True
 
         # Case 8: Repo is in org and org has team permissions for that repo.
 
+        team_permissions = self.team_repo.find_permissions_by_repo_and_org(repo.id, org.id)
         for team_permission in team_permissions:
             if self.team_repo.find_member(team_permission.team_id, user_id) is not None:
                 return True
@@ -100,17 +100,65 @@ class AccessControlService:
         org = repo.organization
         if org is None:
             return False
-        
-        # Case 6: Repo is in org but has no teams, fallback again.
+
+        # Case 6: Repo is in org and user is owner of the organization
+
+        if org.owner_id == user_id:
+            return True
+
+        # Case 7: Repo is in org but has no teams, fallback again.
 
         team_permissions = self.team_repo.find_permissions_by_repo_and_org(repo.id, org.id)
         if not team_permissions:
             return False
 
-        # Case 7: Repo is in org and org has team permissions for that repo.
+        # Case 8: Repo is in org and org has team permissions for that repo.
 
         for team_permission in team_permissions:
             if team_permission.kind in [TeamPermissionKind.read_write, TeamPermissionKind.admin]:
+                if self.team_repo.find_member(team_permission.team_id, user_id) is not None:
+                    return True
+
+        return False
+
+    def has_admin_access(self, user_id: int | None, repo_id: int) -> bool:
+        # Case 1: Repo doesn't exist.
+
+        repo = self.repo_repo.find_by_id(repo_id)
+        if repo is None:
+            return False
+
+        # Case 2: User is not provided.
+        # user_id MUST NOT be None, but we'll leave `int | None` for consistency.
+
+        if user_id is None:
+            return False
+
+        # Case 3: User doesn't exist.
+
+        if self.user_repo.find_by_id(user_id) is None:
+            return False
+
+        # Case 4: Owner of the repo always has admin access.
+
+        if user_id == repo.owner_id:
+            return True
+
+        # Case 5: Repo is not in an org, fallback to 'denied access'.
+
+        org = repo.organization
+        if org is None:
+            return False
+
+        # Case 6: Repo is in org and user is owner of the organization
+        if org.owner_id == user_id:
+            return True
+
+        # Case 7: Repo is in org and org has team permissions for that repo.
+
+        team_permissions = self.team_repo.find_permissions_by_repo_and_org(repo.id, org.id)
+        for team_permission in team_permissions:
+            if team_permission.kind == TeamPermissionKind.admin:
                 if self.team_repo.find_member(team_permission.team_id, user_id) is not None:
                     return True
 
@@ -164,17 +212,11 @@ class AccessControlService:
 
     # A user must satisfy one of the following conditions:
     # - Be the owner of the repository.
+    # - Be the owner of the organization.
     # - Belong to a team that has either 'admin' or 'read_write' permissions.
     # The same conditions apply to the `has_write_access` method.    
-    # This method handles permission checks for both repository and tag deletions.
-    def has_delete_access(self, user_id: int | None, repo_id: int) -> bool:
+    def has_delete_tag_access(self, user_id: int | None, repo_id: int) -> bool:
         return self.has_write_access(user_id, repo_id)    
-    
-    # This method is introduced to handle even the special case where the organization owner  
-    # is eligible to delete a repository as part of the broader organization deletion process.
-    def has_delete_repo_access(self, user_id: int | None, repo: Repository) -> bool:
-        org_owner_delete = repo.organization is not None and repo.organization.deleting and repo.organization.owner.id == user_id
-        return org_owner_delete or self.has_delete_access(user_id, repo.id)
 
 def get_access_control_service(session: Session = Depends(get_database)) -> AccessControlService:
     return AccessControlService(session)

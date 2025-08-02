@@ -35,6 +35,7 @@ class RepositoryExtDTO(RepositoryDTO):
     owner_name: str
     org_name: str | None
     can_update: bool
+    can_delete_tag: bool | None
     can_star: bool
     starred: bool
 

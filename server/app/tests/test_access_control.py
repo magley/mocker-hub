@@ -248,6 +248,8 @@ class TestHasReadAccess:
                 assert result is True
 
             def test_private_repo_org_no_team_permission_user_is_member_of_org(self, service: AccessControlService):
+                """ User doesn't have access to private repositories of the organizations he is a member of, unless he was given
+                 a permission or if he is an organization owner"""
                 repo = MagicMock(spec=Repository)
                 repo.public = False
                 org = MagicMock(spec=Organization)
@@ -257,7 +259,7 @@ class TestHasReadAccess:
                 service.team_repo.find_permissions_by_repo_and_org.return_value = []
                 service.org_repo.user_is_in_org.return_value = True
                 result = service.has_read_access(user_id=1, repo_id=123)
-                assert result is True
+                assert result is False
 
             def test_private_repo_org_no_team_permission_user_is_outsider_of_org(self, service: AccessControlService):
                 repo = MagicMock(spec=Repository)

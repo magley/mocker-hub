@@ -37,11 +37,11 @@ export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, setRe
     };
 
     return (
-        <div className="tab-pane fade show active" id="overview">
+        <div className="tab-pane fade show active" id="overview" style={{ maxWidth: '60%', margin: '0 auto' }}>
             {error && <Alert variant="danger">{error}</Alert>}
             {isEditing ? (
                 <div>
-                    <textarea className="form-control" rows={7} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} autoFocus/>
+                    <textarea className="form-control text-center" rows={7} value={newDesc} onChange={(e) => setNewDesc(e.target.value)} autoFocus/>
                     <div className='mt-3'>
                         <button className="btn btn-primary me-2" onClick={updateDescription}> 
                             Update description
@@ -52,7 +52,7 @@ export const RepoOverview: React.FC<{ isActive: boolean; repo: RepoExtDTO, setRe
                     </div>
                 </div>
             ) : (
-                <div className="d-flex align-items-center">
+                <div className="d-flex align-items-start justify-content-center">
                     <div className='repo-page-desc'>{props.repo.desc}</div>
                     {props.repo.can_update && (
                         <button className="btn btn-link p-0 ms-2" onClick={() => setIsEditing(true)}>

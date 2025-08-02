@@ -53,6 +53,7 @@ export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
     can_update: boolean,
+    can_delete_tag: boolean,
     can_star: boolean,
     starred: boolean | null,
 }

@@ -64,6 +64,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
             setTeamPermissions(res.data || []);
         }).catch((err: AxiosError) => {
             console.error(err);
+            setError((err.response?.data as any)["detail"]["message"]);
         });
     };
 
@@ -241,9 +242,7 @@ export const TeamDetails: React.FC<{team: TeamDTOBasic, org: OrganizationDTOBasi
                                             </small>
                                         </div>
                                         )}
-                                    {teamPermissions.length === 0 ? (
-                                        <p>No permissions assigned yet.</p>
-                                            ) : (
+                                    {teamPermissions.length !== 0 && (
                                             <div className="mt-4">
                                                 <Row className="fw-bold mb-2">
                                                 </Row>

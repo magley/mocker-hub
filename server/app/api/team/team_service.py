@@ -140,7 +140,10 @@ class TeamService:
         """ Only team members or organization owners can access the given team. """
         existing_membership = self.team_repo.find_member(team_id, user_id)
         if existing_membership is None:  # If the user is not a member of the team, check if they are an org owner.
-            self._ensure_user_is_owner_of_org(team.organization, user_id)
+            try:
+                self._ensure_user_is_owner_of_org(team.organization, user_id)
+            except AccessDeniedException:
+                raise AccessDeniedException(f"You are not a member of this team.")
         return self.team_repo.get_permissions_by_team(team_id)
 
     def update_team(self, dto: TeamDTOBasic, user_id: int):

@@ -29,7 +29,7 @@ class RegistryService:
         # / ! \ / ! \    N O T E    / ! \ / ! \
         # -------------------------------------
         #
-        # Since we _KNOW_ that Registry service
+        # Since we KNOW that Registry service
         # only talks to distribution and SHOULD
         # NEVER be used by any other service, I
         # can safely inject UserService in here
@@ -51,7 +51,7 @@ class RegistryService:
         is_tag_action = tag_name is not None 
         is_referrers_action = url is not None and "referrers" in url
 
-        # The condition `(url is None)` is a bit hardcoded — it represents
+        # The condition (url is None) is a bit hardcoded — it represents
         # a special case when an image manifest link is being deleted.
         # This operation always follows the deletion of tag links.
         is_manifest_action = (url is not None and "manifests" in url) or (url is None)
@@ -123,52 +123,42 @@ class RegistryService:
         message = self._format_registry_event(username, action, repo_name, tag_name, digest, method, url)
         print(message)
 
-    def handle_registry_request(self, username: str, password: str, scopes: List[str] | None, service: str | None):
-        # User with the provided credentials must exist.
+    def handle_registry_request(self, username: str | None, password: str | None, scopes: List[str] | None, service: str | None):
+        is_authenticated = username is not None and password is not None
 
-        if not self.user_service.exists_with_credentials(username, password):
-            raise HTTPException(status_code=401, detail="Invalid username or password")
-        
-        # Scopes are defined, therefore these are push/pull requests. If scopes
-        # aren't defined, this is a login request, so we can skip to creating the
-        # JWT.
-
+        # If scopes are defined, this is a push/pull request.
         if scopes is not None:
-            actions = parse_scopes(username, scopes)
-            user = self.user_service.find_by_username(username)
+            actions = parse_scopes(username or "anonymous", scopes)
+
+            user_id = None
+            if is_authenticated:
+                if not self.user_service.exists_with_credentials(username, password):
+                    raise HTTPException(status_code=401, detail="Invalid username or password")
+                user = self.user_service.find_by_username(username)
+                user_id = user.id
 
             for action in actions:
                 repo = self.repo_service.find_by_canonical_name(action.repo_canonical_name)
 
                 for operation in action.operations:
-
-                    # Case 1 - User requested push operation on the repo.
-
                     if operation == RegistryActionOperation.push:
-                        # This will cover all the neccessary cases:
-                        #  - repo doesn't exist
-                        #  - user doesn't exist
-                        #  - user doesn't have access
-                        #  - etc.
+                        if not is_authenticated:
+                            raise HTTPException(status_code=401, detail="Authentication required for push operations")
 
-                        can_write = self.access_control_service.has_write_access(user.id, repo.id)
+                        can_write = self.access_control_service.has_write_access(user_id, repo.id)
                         if not can_write:
-                            raise HTTPException(status_code=401, detail=f"User {user.username} cannot push to repo {repo.canonical_name}")      
-                        
-                    # Case 2 - User requested pull operation on the repo.
+                            raise HTTPException(status_code=401, detail=f"User {username} cannot push to repo {repo.canonical_name}")
 
                     elif operation == RegistryActionOperation.pull:
-                        can_read = self.access_control_service.has_read_access(user.id, repo.id)
+                        can_read = self.access_control_service.has_read_access(user_id, repo.id)
                         if not can_read:
-                            raise HTTPException(status_code=401, detail=f"User {user.username} cannot pull from repo {repo.canonical_name}")
-                        
-                    # Case 3 - Unknown operation.
+                            raise HTTPException(status_code=401, detail=f"{'User ' + username if is_authenticated else 'Anonymous user'} cannot pull from repo {repo.canonical_name}")
 
                     else:
                         raise HTTPException(status_code=400, detail=f"Unknown operation {operation}")
-                
-        # Create the JWT.
-        jwt = build_jwt_for_docker_registry(username, service, scopes)
+
+        # Create the JWT (even for anonymous users)
+        jwt = build_jwt_for_docker_registry(username or "anonymous", service, scopes)
         return {"token": jwt}
      
     async def _fetch_manifest_digest(self, client: RegistryClient, repo_name: str, tag_name: str, username: str) -> str | None:
@@ -208,7 +198,7 @@ class RegistryService:
         repo = self.repo_service.find_by_id(repo_id)
         name = repo.canonical_name
 
-        if not self.access_control_service.has_delete_repo_access(user_id, repo):
+        if not self.access_control_service.has_admin_access(user_id, repo.id):
             raise AccessDeniedException(f"User {username} cannot delete a repository with identifier {repo_id}.")
 
         self.repo_service.update_repo_attrs(repo.id, deleting=True)

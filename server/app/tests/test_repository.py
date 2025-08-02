@@ -740,7 +740,8 @@ def test_update_repo_by_id___integration(user_type, update_type):
         # User who is a team member with read permissions against repo
         assert update("user_2", repo_2["id"], attribute).status_code == 400
         # User who is a team member with read write permissions against repo
-        assert update("user_2", repo_3["id"], attribute).status_code == 200
+        assert update("user_2", repo_3["id"], attribute).status_code == 400
+        # note: user with read&write permissions cannot update repositories, only admin permissions allow that
 
 class TestToggleRepoStar:
 

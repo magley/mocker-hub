@@ -44,7 +44,10 @@ export const UserLogin = () => {
             setRole(getJwtRole(), () => {
                 if (getJwtMustChangePassword()) {
                     navigate("/password-change-required");
-                } else {
+                } else if (getJwtRole() === 'superadmin') {
+                    // because superadmin doesn't have "My repositories" page.
+                    navigate("/");
+                }else {
                     const username = getJwtUsername();
                     navigate(`/u/${username}/repos`);
                 }

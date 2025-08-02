@@ -71,6 +71,7 @@ function App() {
 
                     {/* Protected routes. */}
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}
+                    {authRoute("/new/org/:orgId", ['user', 'admin'], RepoCreate)}
                     {authRoute("/org", ['user', 'admin'], OrganizationCreate)}
                     {authRoute("/analytics", ['admin', 'superadmin'], Analytics)}
                     {authRoute("/users/management", ['admin', 'superadmin'], UsersManagement)}
