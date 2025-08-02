@@ -13,6 +13,7 @@ from app.api.user.user_model import User
 from app.api.user.user_repo import UserRepo
 from app.api.events.event_service import EventService
 from app.api.events.event_model import EventLevel
+from app.api.config.logutil import LOGGER
 
 
 class OrganizationService:
@@ -109,10 +110,11 @@ class OrganizationService:
         return org
     
     def update_image_by_name(self, name: str, dto: OrganizationImageUpdateDTO, user_id: int) -> Organization:
+        self.event_service.log(EventLevel.Info, f"User {user_id} wants to change image of organization {name}")
+
         org = self.find_by_name(name)
         if user_id != org.owner.id:
             raise AccessDeniedException(f"User {user_id} cannot update organization image with identifier {name}")
-
 
         if dto.image is None or dto.image == "":
             self.event_service.log(EventLevel.Info, f"User {user_id} is clearing image from org {name}")
@@ -120,7 +122,11 @@ class OrganizationService:
         else:
             self.event_service.log(EventLevel.Info, f"User {user_id} is setting image for org {name}")
             
-        save_image(dto.image, f"org-{name}")[1]
+        fname = save_image(dto.image, f"org-{name}")[1]
+        
+        self.event_service.log(EventLevel.Info, f"Org {name} image changed! New filename: {fname}")
+
+        org = self.update_org_attrs(name, image=fname)
 
         return org
 

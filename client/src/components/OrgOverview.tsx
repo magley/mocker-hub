@@ -63,8 +63,10 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
         }
 
         const base64 = await fileToBase64(file);
+        console.log(base64);
         OrganizationService.UpdateOrgImageByName(props.org.name, { image: base64 })
             .then((res) => {
+                console.log(res.data.image);
                 props.setOrg({ ...props.org, ...res.data });
                 setImagePreview(OrganizationService.GetImageURI(res.data.image));
                 addToast(`Updated image for ${props.org.name}. Your changes will be visible shortly.`, ToastType.success);
