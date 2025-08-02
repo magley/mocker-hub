@@ -69,7 +69,7 @@ async def delete_tag_endpoint(
     repo = repo_service.find_by_id(dto.repo_id)
     tag = tag_service.find_by_name_and_repo_id(dto.tag_name, dto.repo_id)
 
-    if not access_control_service.has_delete_access(user_id, repo.id):
+    if not access_control_service.has_delete_tag_access(user_id, repo.id):
         raise AccessDeniedException(f"User {user_id} cannot delete a tag {tag.name} of repository with identifier {repo.id}")
 
     response = await registry_service.delete_tag(registry_client, username, repo, tag)   

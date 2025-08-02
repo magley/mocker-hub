@@ -205,7 +205,7 @@ class RegistryService:
         repo = self.repo_service.find_by_id(repo_id)
         name = repo.canonical_name
 
-        if not self.access_control_service.has_delete_repo_access(user_id, repo):
+        if not self.access_control_service.has_admin_access(user_id, repo.id):
             raise AccessDeniedException(f"User {username} cannot delete a repository with identifier {repo_id}.")
 
         self.repo_service.update_repo_attrs(repo.id, deleting=True)

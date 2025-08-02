@@ -212,17 +212,11 @@ class AccessControlService:
 
     # A user must satisfy one of the following conditions:
     # - Be the owner of the repository.
+    # - Be the owner of the organization.
     # - Belong to a team that has either 'admin' or 'read_write' permissions.
     # The same conditions apply to the `has_write_access` method.    
-    # This method handles permission checks for both repository and tag deletions.
-    def has_delete_access(self, user_id: int | None, repo_id: int) -> bool:
+    def has_delete_tag_access(self, user_id: int | None, repo_id: int) -> bool:
         return self.has_write_access(user_id, repo_id)    
-    
-    # This method is introduced to handle even the special case where the organization owner  
-    # is eligible to delete a repository as part of the broader organization deletion process.
-    def has_delete_repo_access(self, user_id: int | None, repo: Repository) -> bool:
-        org_owner_delete = repo.organization is not None and repo.organization.deleting and repo.organization.owner.id == user_id
-        return org_owner_delete or self.has_delete_access(user_id, repo.id)
 
 def get_access_control_service(session: Session = Depends(get_database)) -> AccessControlService:
     return AccessControlService(session)
