@@ -4,7 +4,7 @@ import { Row, Spinner, Button } from 'react-bootstrap';
 import { RepoDTO, RepositoryBadge, RepositoryService, ReposOfUserDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import './RepoOfUser.css';
-import { getJwtId } from '../util/localstorage';
+import { getJwtId, getJwtRole } from '../util/localstorage';
 import { RepoPreview } from '../components/RepoPreview';
 import { BadgeUtils } from '../util/badge';
 
@@ -161,6 +161,11 @@ export const RepositoriesOfUser: React.FC = () => {
     if (error) {
         return <div className="alert alert-danger">{error}</div>;
     }
+
+    if (username === 'admin') {
+        return <div className="alert alert-warning">Superadmin does not have organizations.</div>;
+    }
+    
 
     return (
         <Row className="g-4 repo-of-user">
