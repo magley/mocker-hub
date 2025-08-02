@@ -41,9 +41,13 @@ export interface OrgDescUpdateDTO {
     desc: string
 }
 
+export interface OrgImageUpdateDTO {
+    image: string
+}
+
 export class OrganizationService {
 
-    static async RemoveMember(user_id: number, org_id: number) : Promise<AxiosResponse<void>> {
+    static async RemoveMember(user_id: number, org_id: number): Promise<AxiosResponse<void>> {
         return await axiosInstance.delete(`/organizations/member`, { data: { user_id, org_id } })
     }
 
@@ -62,16 +66,16 @@ export class OrganizationService {
     static GetImageURI = (filename: string): string => {
         return `${ENV.IMG}${filename}`;
     }
-        
+
     static async AmIMemberOfOrg(org_id: number): Promise<AxiosResponse<OrganizationHasMemberDTO>> {
         return await axiosInstance.get(`/organizations/me/${org_id}`);
     }
 
-    static async DeleteOrg(orgName: string) : Promise<AxiosResponse<DeleteOrgResponseDTO>> {
+    static async DeleteOrg(orgName: string): Promise<AxiosResponse<DeleteOrgResponseDTO>> {
         return await axiosInstance.delete(`/registry/organization/${orgName}`)
     }
 
-    static async UpdateOrgDescByName(orgName: string, dto: OrgDescUpdateDTO) : Promise<AxiosResponse<OrganizationDTOBasic>> {
+    static async UpdateOrgDescByName(orgName: string, dto: OrgDescUpdateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.put(`/organizations/${orgName}/desc`, dto)
     }
 
@@ -82,12 +86,18 @@ export class OrganizationService {
     static async AddUsersToOrg(org_id: number, user_ids: number[]) {
         return await axiosInstance.post(`/organizations/${org_id}/addMember`, user_ids);
     }
- 
-    static async SearchMembers(query: string, team_id_to_exclude_members: number): Promise<AxiosResponse<UserDTO[]>> {
-        return await axiosInstance.get(`/organizations/search/${query}`, {
-            params: {team_id_to_exclude_members}
-        });
+
+    static async UpdateOrgImageByName(orgName: string, dto: OrgImageUpdateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
+        return await axiosInstance.put(`/organizations/${orgName}/image`, dto)
     }
 
-}
+    static async ClearOrgImageByName(orgName: string): Promise<AxiosResponse<OrganizationDTOBasic>> {
+        return await axiosInstance.put(`/organizations/${orgName}/image/clear`)
+    }
 
+    static async SearchMembers(query: string, team_id_to_exclude_members: number): Promise<AxiosResponse<UserDTO[]>> {
+        return await axiosInstance.get(`/organizations/search/${query}`, {
+            params: { team_id_to_exclude_members }
+        });
+    }
+}

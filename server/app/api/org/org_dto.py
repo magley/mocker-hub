@@ -34,3 +34,6 @@ class OrganizationHasMemberDTO(BaseModel):
 
 class OrganizationDescUpdateDTO(BaseModel):
     desc: str
+
+class OrganizationImageUpdateDTO(BaseModel):
+    image: str

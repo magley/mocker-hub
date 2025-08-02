@@ -13,6 +13,12 @@ from textx import metamodel_from_str
 
 class EventService:
     def __init__(self):
+        self.meta = None
+
+    def build_metamodel(self):
+        if self.meta is not None:
+            return
+        
         query_grammar = r'''
             Model: expr ;
 
@@ -152,6 +158,8 @@ class EventService:
         """
         High-level method for submitting a query.
         """
+
+        self.build_metamodel()
 
         model = self.meta.model_from_str(query_string)
         query = self._to_query(model)

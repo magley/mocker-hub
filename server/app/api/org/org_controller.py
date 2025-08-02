@@ -5,7 +5,7 @@ from app.api.config.auth import get_id_from_jwt, get_id_from_jwt_optional, pre_a
 from app.api.user.user_dto import UserDTO
 from app.api.user.user_model import UserRole
 from app.api.config.auth import JWTDep, JWTDepOptional
-from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDTO, OrganizationDTOBasic, OrganizationDescUpdateDTO, OrganizationHasMemberDTO
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDTO, OrganizationDTOBasic, OrganizationDescUpdateDTO, OrganizationHasMemberDTO, OrganizationImageUpdateDTO
 from app.api.org.org_service import OrganizationService, get_org_service
 from app.api.access_control.access_control_service import AccessControlService
 
@@ -63,6 +63,27 @@ def add_members_to_org(jwt: JWTDep, org_id: int, user_ids: List[int], org_servic
     owner_id = get_id_from_jwt(jwt)
     result = org_service.add_members_to_org(org_id, user_ids, owner_id)
     return result
+
+@router.put("/{org_name}/image", response_model=OrganizationDTO, status_code=200, summary="Update organization description by its name")
+@pre_authorize([UserRole.user, UserRole.admin])
+def update_org_image_by_name(
+    jwt: JWTDep, org_name: str, 
+    dto: OrganizationImageUpdateDTO, 
+    org_service: OrganizationService = Depends(get_org_service)):
+    user_id = get_id_from_jwt(jwt)
+    org = org_service.update_image_by_name(org_name, dto, user_id)
+    return org
+
+@router.put("/{org_name}/image/clear", response_model=OrganizationDTO, status_code=200, summary="Update organization description by its name")
+@pre_authorize([UserRole.user, UserRole.admin])
+def clear_org_image_by_name(
+    jwt: JWTDep, org_name: str, 
+    org_service: OrganizationService = Depends(get_org_service)):
+
+    dto = OrganizationImageUpdateDTO(image="")
+    user_id = get_id_from_jwt(jwt)
+    org = org_service.update_image_by_name(org_name, dto, user_id)
+    return org
 
 @router.get("/search/{query}", status_code=200, response_model=List[UserDTO], summary="Search members by username prefix")
 @pre_authorize([UserRole.user, UserRole.admin])
