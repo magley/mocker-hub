@@ -110,7 +110,7 @@ export const OrganizationPage = () => {
                             <OrgMembers isActive={key === 'members'} org={org} teamId={-1} />
                         </Tab.Pane>
                         <Tab.Pane eventKey="repositories">
-                            <OrgRepositories isActive={key === 'repositories'} />
+                            <OrgRepositories isActive={key === 'repositories'} org={org} amIMemberOfOrg={amMemberOfOrg} />
                         </Tab.Pane>
                         {amMemberOfOrg && <Tab.Pane eventKey="teams">
                             <OrgTeams isActive={key === 'teams'} org={org} />

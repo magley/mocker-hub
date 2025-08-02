@@ -50,7 +50,7 @@ export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string
                     {showCanonical ? (
                         <div style={{color: '#0264c5ff', fontWeight: 'bolder', marginBottom: '0.3em' }}>{constructSubtitle()}</div>
                     ) : (
-                        repo.organization_id && (
+                        repo.organization_id && orgNames &&(
                             <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
                                 Part of organization {orgNames?.get(repo.organization_id)}
                             </Card.Subtitle>
