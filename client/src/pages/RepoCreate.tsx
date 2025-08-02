@@ -8,7 +8,7 @@ import { OrganizationDTOBasic, OrganizationService } from '../api/org.api';
 import { useNavigate } from 'react-router-dom';
 import { ToastType, useToastStore } from '../util/toastStore';
 import { useParams } from 'react-router-dom';
-
+import 'bootstrap/dist/css/bootstrap.min.css';
 
 interface Owner {
     name: string;
@@ -44,7 +44,7 @@ export const RepoCreate = () => {
         }));
 
         const currentUser: Owner = {
-            name: "current user",
+            name: "User",
             user_id: getJwtId(),
             organization_id: null,
             image_path: null,
