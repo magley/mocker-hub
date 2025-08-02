@@ -58,12 +58,13 @@ class AccessControlService:
         if org is None:
             return False
 
-        print(org)
         # Case 7: Repo is in org and user is owner of the organization
+
         if org.owner_id == user_id:
             return True
 
         # Case 8: Repo is in org and org has team permissions for that repo.
+
         team_permissions = self.team_repo.find_permissions_by_repo_and_org(repo.id, org.id)
         for team_permission in team_permissions:
             if self.team_repo.find_member(team_permission.team_id, user_id) is not None:
@@ -99,17 +100,65 @@ class AccessControlService:
         org = repo.organization
         if org is None:
             return False
-        
-        # Case 6: Repo is in org but has no teams, fallback again.
+
+        # Case 6: Repo is in org and user is owner of the organization
+
+        if org.owner_id == user_id:
+            return True
+
+        # Case 7: Repo is in org but has no teams, fallback again.
 
         team_permissions = self.team_repo.find_permissions_by_repo_and_org(repo.id, org.id)
         if not team_permissions:
             return False
 
-        # Case 7: Repo is in org and org has team permissions for that repo.
+        # Case 8: Repo is in org and org has team permissions for that repo.
 
         for team_permission in team_permissions:
             if team_permission.kind in [TeamPermissionKind.read_write, TeamPermissionKind.admin]:
+                if self.team_repo.find_member(team_permission.team_id, user_id) is not None:
+                    return True
+
+        return False
+
+    def has_admin_access(self, user_id: int | None, repo_id: int) -> bool:
+        # Case 1: Repo doesn't exist.
+
+        repo = self.repo_repo.find_by_id(repo_id)
+        if repo is None:
+            return False
+
+        # Case 2: User is not provided.
+        # user_id MUST NOT be None, but we'll leave `int | None` for consistency.
+
+        if user_id is None:
+            return False
+
+        # Case 3: User doesn't exist.
+
+        if self.user_repo.find_by_id(user_id) is None:
+            return False
+
+        # Case 4: Owner of the repo always has admin access.
+
+        if user_id == repo.owner_id:
+            return True
+
+        # Case 5: Repo is not in an org, fallback to 'denied access'.
+
+        org = repo.organization
+        if org is None:
+            return False
+
+        # Case 6: Repo is in org and user is owner of the organization
+        if org.owner_id == user_id:
+            return True
+
+        # Case 7: Repo is in org and org has team permissions for that repo.
+
+        team_permissions = self.team_repo.find_permissions_by_repo_and_org(repo.id, org.id)
+        for team_permission in team_permissions:
+            if team_permission.kind == TeamPermissionKind.admin:
                 if self.team_repo.find_member(team_permission.team_id, user_id) is not None:
                     return True
 

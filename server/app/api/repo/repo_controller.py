@@ -74,7 +74,7 @@ def get_repo_by_canonical_name(
     result = repo.model_dump()
     result["owner_name"] = repo.owner.username
     result["org_name"] = None if (repo.organization is None) else repo.organization.name
-    result["can_update"] = access_control_service.has_write_access(user_id, repo.id)
+    result["can_update"] = access_control_service.has_admin_access(user_id, repo.id)
     result["can_star"] = access_control_service.has_star_access(user_id, repo.id)
     result["starred"] = repo_service.is_repo_starred_by(repo, user) if (result["can_star"]) else False
     result = RepositoryExtDTO.model_validate(result)
@@ -91,7 +91,7 @@ def update_repo_desc_by_id(
     
     user_id = get_id_from_jwt(jwt)
 
-    if not access_control_service.has_write_access(user_id, repo_id):
+    if not access_control_service.has_admin_access(user_id, repo_id):
         raise AccessDeniedException(f"User {user_id} cannot update repository description with identifier {repo_id}")
     
     repo = repo_service.update_repo_by_id(repo_id, dto)
@@ -108,7 +108,7 @@ def update_repo_visibility_by_id(
 
     user_id = get_id_from_jwt(jwt)
     
-    if not access_control_service.has_write_access(user_id, repo_id):
+    if not access_control_service.has_admin_access(user_id, repo_id):
         raise AccessDeniedException(f"User {user_id} cannot update repository visibiliy with identifier {repo_id}")
     
     repo = repo_service.update_repo_by_id(repo_id, dto)
