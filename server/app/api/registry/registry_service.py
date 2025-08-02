@@ -117,6 +117,10 @@ class RegistryService:
 
             self._try_delete_repo_and_org(repo)
 
+        elif action == "pull":
+            repo = self.repo_service.find_by_canonical_name(repo_name)
+            self.repo_service.on_repo_downloaded(repo_id=repo.id)
+
         message = self._format_registry_event(username, action, repo_name, tag_name, digest, method, url)
         print(message)
 
