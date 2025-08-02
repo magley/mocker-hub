@@ -8,3 +8,7 @@
         margin-bottom: 30px;
     }
 }
+
+.owner-select {
+    min-width: 200px;
+}

@@ -8,7 +8,7 @@ import { OrganizationDTOBasic, OrganizationService } from '../api/org.api';
 import { useNavigate } from 'react-router-dom';
 import { ToastType, useToastStore } from '../util/toastStore';
 import { useParams } from 'react-router-dom';
-import 'bootstrap/dist/css/bootstrap.min.css';
+import Select from 'react-select';
 
 interface Owner {
     name: string;
@@ -128,34 +128,44 @@ export const RepoCreate = () => {
         });
     };
 
+    const options = owners.map((owner) => ({
+        value: owner.name,
+        label: (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+            {owner.image_path && (
+                <img
+                src={OrganizationService.GetImageURI(owner.image_path)}
+                alt=""
+                style={{ width: 30, height: 30, borderRadius: '50%', marginRight: 10 }}
+                />
+            )}
+            {userOrOrgToStr(owner)}
+            </div>
+        ),
+        data: owner, // Keep original owner object for later use
+    }));
+
+    const selectedOption = options.find((o) => o.data.name === owner?.name);
+
     return (
         <Form onSubmit={handleSubmit} className="repo-create">
             <h1>Create a new repository</h1>
 
             <Row>
                 <Col xs="auto">
-                    <Form.Group controlId="formOwner">
+                    <Form.Group controlId="formOwner" className='owner-select'>
                         <Form.Label>Owner</Form.Label>
-                        <DropdownButton
-                            id="dropdown-owner"
-                            title={owner ? `${userOrOrgToStr(owner)}` : 'Select Owner'}
-                            onSelect={(eventKey) => {
-                                const selectedOwner = owners.find((o) => o.name === eventKey);
-                                setOwner(selectedOwner || null);
+                        <Select
+                            options={options}
+                            value={selectedOption}
+                            onChange={(selected) => {
+                            if (selected) {
+                                setOwner((selected as any).data);
+                            }
                             }}
-                        >
-                            {owners.map((o) => (
-                                <Dropdown.Item key={o.name} eventKey={o.name}>
-                                    {o.image_path !== null && (
-                                        <img
-                                            src={`${OrganizationService.GetImageURI(o.image_path)}`}
-                                            style={{ width: '50px', height: '50px', objectFit: 'cover', marginRight: '10px' }}
-                                        />
-                                    )}
-                                    {userOrOrgToStr(o)}
-                                </Dropdown.Item>
-                            ))}
-                        </DropdownButton>
+                            isSearchable={false}
+                            className='owner-select'
+                        />
                     </Form.Group>
                 </Col>
                 <Col>
