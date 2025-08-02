@@ -54,7 +54,6 @@ class RegistryService:
         # The condition `(url is None)` is a bit hardcoded — it represents
         # a special case when an image manifest link is being deleted.
         # This operation always follows the deletion of tag links.
-        # TODO: Consider revising this logic in the future when implementing repository deletion
         is_manifest_action = (url is not None and "manifests" in url) or (url is None)
 
         if is_layer_action:
@@ -116,6 +115,10 @@ class RegistryService:
             self.event_service.log(EventLevel.Info, f"Tag '{tag_name}' of repository '{repo.canonical_name}' is deleted.")
 
             self._try_delete_repo_and_org(repo)
+
+        elif action == "pull":
+            repo = self.repo_service.find_by_canonical_name(repo_name)
+            self.repo_service.on_repo_downloaded(repo_id=repo.id)
 
         message = self._format_registry_event(username, action, repo_name, tag_name, digest, method, url)
         print(message)

@@ -16,6 +16,7 @@ from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, 
 from app.api.org.org_repo import OrganizationRepo
 from app.api.team.team_repo import TeamRepo
 from app.api.access_control.access_control_service import AccessControlService
+from app.api.config.logutil import LOGGER
  
 class RepositoryService:
     def __init__(self, session: Session):
@@ -158,6 +159,16 @@ class RepositoryService:
 
         # `False` indicates the repo is no longer starred
         return repo, False
+    
+    def on_repo_downloaded(self, repo_id: int) -> Repository:
+        repo = self.repo_repo.find_by_id(repo_id)
+        if repo is None:
+            raise NotFoundException(Repository, repo_id)
+        
+        LOGGER.info(f"Repo {repo.canonical_name} downloaded")
+        
+        repo = self.repo_repo.set_attribute(repo, "downloads", repo.downloads + 1)
+        return repo
 
     def get_starred_repositories_of_user(self, user_id: int) -> List[Repository]:
         user_repos = self.repo_repo.find_user_starred_repos(user_id)
