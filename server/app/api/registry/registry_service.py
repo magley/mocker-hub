@@ -54,7 +54,6 @@ class RegistryService:
         # The condition `(url is None)` is a bit hardcoded — it represents
         # a special case when an image manifest link is being deleted.
         # This operation always follows the deletion of tag links.
-        # TODO: Consider revising this logic in the future when implementing repository deletion
         is_manifest_action = (url is not None and "manifests" in url) or (url is None)
 
         if is_layer_action:
