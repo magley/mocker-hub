@@ -125,3 +125,6 @@ class RepositoryRepo:
         )
         results = self.session.exec(query_stmt).all()
         return results, total_hits
+
+    def get_repositories_by_org(self, org_id):
+        return self.session.exec(select(Repository).where(Repository.organization_id == org_id)).all()

@@ -75,6 +75,10 @@ export interface DeleteRepoResponseDTO {
 
 export class RepositoryService {
 
+    static async GetAllByOrganizationId(org_id: number): Promise<AxiosResponse<RepoDTO[]>> {
+        return await axiosInstance.get(`/repositories/org/${org_id}`);
+    }
+
     static async CreateRepository(dto: RepoCreateDTO): Promise<AxiosResponse<RepoDTO>> {
         return await axiosInstance.post(`/repositories`, dto);
     }

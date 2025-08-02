@@ -1,3 +1,5 @@
+from unittest import mock
+
 from fastapi import Response
 from fastapi.testclient import TestClient
 import pytest
@@ -8,7 +10,8 @@ from sqlmodel import SQLModel
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, NotInRelationshipException, UserException
 from app.api.org.org_model import Organization
 from app.api.repo.repo_model import Repository
-from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO
+from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO, TeamDTOBasic, \
+    TeamPermissionsDTO
 from app.api.team.team_model import Team, TeamMember, TeamPermission
 from app.api.team.team_service import TeamService
 from app.api.user.user_model import User
@@ -505,3 +508,409 @@ class TestAddPermission:
         team_service.repo_repo.find_by_id.assert_called_once_with(dto.repo_id)
         team_service.team_repo.get.assert_called_once_with(dto.team_id)
         team_service.team_repo.add_permission.assert_called_once_with(dto.team_id, dto.repo_id, dto.kind)
+
+
+class TestFindMembersOfTeam:
+    def test_team_not_found(self, team_service: TeamService):
+        team_service.team_repo.get.return_value = None
+        with pytest.raises(NotFoundException):
+            team_service.find_members_of_team(team_id=1, user_id=2)
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_members_of_team.assert_not_called()
+
+    def test_team_access_denied(self, team_service: TeamService):
+        user_id = 1
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 99
+        team.organization = org
+
+        with pytest.raises(AccessDeniedException):
+            team_service.find_members_of_team(team_id=team.id, user_id=user_id)
+        team_service.team_repo.get.assert_called_once_with(team.id)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.find_members_of_team.assert_not_called()
+
+    def test_success_when_user_is_member(self, team_service: TeamService):
+        user1 = mock.Mock(spec=User)
+        user2 = mock.Mock(spec=User)
+        expected_result = [user1, user2]
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = MagicMock()
+        team_service.team_repo.find_members_of_team.return_value = [user1, user2]
+
+        result = team_service.find_members_of_team(team_id=1, user_id=2)
+        assert result == expected_result
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.find_members_of_team.assert_called_once()
+
+    def test_success_when_user_is_org_owner(self, team_service: TeamService):
+        user_id = 1
+        team = Team(id=1, organization_id=10)
+        org = mock.Mock(spec=Organization)
+        org.id = 10
+        org.owner_id = user_id
+        team.organization = org
+        expected_user = User(id=2, name="Member")
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        team_service.team_repo.find_members_of_team.return_value = [expected_user]
+
+        result = team_service.find_members_of_team(team_id=team.id, user_id=user_id)
+        assert result == [expected_user]
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.find_members_of_team.assert_called_once()
+
+    def test_search_org_members_and_add_them_to_teams_integration(self):
+        with TestClient(app) as client:
+            # --- Step 1: Create users ---
+            def create_user(username: str, email: str) -> dict:
+                data = {"username": username, "email": email, "password": "Password123"}
+                res = client.post("/api/v1/users", json=data)
+                assert res.status_code == 200
+                return res.json()
+
+            def add_members_to_org(user_ids: list) -> dict:
+                add_members_response = client.post(
+                    f"/api/v1/organizations/{org_id}/addMember",
+                    json=user_ids,
+                    headers=headers
+                )
+                assert add_members_response.status_code == 200
+                return add_members_response.json()
+
+            user1 = create_user("john", "john@mail.com")
+            user2 = create_user("josh", "josh@mail.com")
+            user3 = create_user("jane", "jane@mail.com")
+
+            create_user("owner", "owner@mail.com")
+            owner_auth = client.post("/api/v1/users/login", json={"username": "owner", "password": "Password123"})
+            assert owner_auth.status_code == 200
+            headers = {"Authorization": f"Bearer {owner_auth.json()['token']}"}
+
+            # --- Step 2: Create organization ---
+            org_data = {"name": "OrgWithTeam", "desc": "Testing team integration", "image": None}
+            org_res = client.post("/api/v1/organizations", json=org_data, headers=headers)
+            assert org_res.status_code == 200
+            org_id = org_res.json()["id"]
+
+            # --- Step 3: Create team ---
+            team_data = {"name": "DevTeam", "desc": "Core Dev Team", "organization_id": org_id}
+            team_res = client.post("/api/v1/teams", json=team_data, headers=headers)
+            assert team_res.status_code == 200
+            team_id = team_res.json()["id"]
+
+            # --- Step 4: Add users to the organization ---
+            user_ids_to_add = [user1["id"], user2["id"], user3["id"]]
+            added_members = add_members_to_org(user_ids_to_add)
+
+            # --- Step 4: Search for members to add to the team (excluding current members) ---
+            search_res = client.get(f"/api/v1/organizations/search/jo?team_id_to_exclude_members={team_id}", headers=headers)
+            assert search_res.status_code == 200
+            users_to_add = search_res.json()
+            assert len(users_to_add) == 2  # john + josh
+
+            user_ids = [u["id"] for u in users_to_add]
+
+            # --- Step 5: Add them to the team ---
+            add_members_res = client.post(f"/api/v1/teams/{team_id}/addMember", json=user_ids, headers=headers)
+            assert add_members_res.status_code == 200
+            added_members = add_members_res.json()
+            assert len(added_members) == 2
+
+            # --- Step 6: Verify team members ---
+            get_members_res = client.get(f"/api/v1/teams/{team_id}/members", headers=headers)
+            assert get_members_res.status_code == 200
+            members = get_members_res.json()
+            usernames = [m["username"] for m in members]
+
+            assert "john" in usernames
+            assert "josh" in usernames
+            assert "jane" not in usernames
+
+
+class TestGetPermissionsByTeam:
+    def test_get_permissions_team_not_found(self, team_service: TeamService):
+        team_service.team_repo.get.return_value = None
+        with pytest.raises(NotFoundException):
+            team_service.get_permissions_by_team(team_id=1, user_id=2)
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.get_permissions_by_team.assert_not_called()
+
+    def test_get_permissions_team_access_denied(self, team_service: TeamService):
+        user_id = 1
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 99
+        team.organization = org
+
+        with pytest.raises(AccessDeniedException):
+            team_service.get_permissions_by_team(team_id=team.id, user_id=user_id)
+        team_service.team_repo.get.assert_called_once_with(team.id)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.get_permissions_by_team.assert_not_called()
+
+    def test_get_permissions_success_when_user_is_member(self, team_service: TeamService):
+        user1 = mock.Mock(spec=User)
+        user2 = mock.Mock(spec=User)
+        expected_result = [user1, user2]
+        team = mock.Mock(spec=Team)
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = MagicMock()
+        team_service.team_repo.get_permissions_by_team.return_value = [user1, user2]
+
+        result = team_service.get_permissions_by_team(team_id=1, user_id=2)
+        assert result == expected_result
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.get_permissions_by_team.assert_called_once()
+
+    def test_get_permissions_success_when_user_is_org_owner(self, team_service: TeamService):
+        user_id = 1
+        team = Team(id=1, organization_id=10)
+        org = mock.Mock(spec=Organization)
+        org.id = 10
+        org.owner_id = user_id
+        team.organization = org
+        expected_user = User(id=2, name="Member")
+        team_service.team_repo.get.return_value = team
+        team_service.team_repo.find_member.return_value = None
+        team_service.team_repo.get_permissions_by_team.return_value = [expected_user]
+
+        result = team_service.get_permissions_by_team(team_id=team.id, user_id=user_id)
+        assert result == [expected_user]
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.find_member.assert_called_once()
+        team_service.team_repo.get_permissions_by_team.assert_called_once()
+
+    def test_add_get_delete_permission_integration(self):
+        with TestClient(app) as client:
+            # Step 1: Create user and login
+            def create_user(username: str, email: str, password: str = "Password123"):
+                response = client.post("/api/v1/users",
+                                       json={"username": username, "email": email, "password": password})
+                assert response.status_code == 200
+                return response.json()
+
+            def login(username: str, password: str = "Password123") -> dict:
+                response = client.post("/api/v1/users/login", json={"username": username, "password": password})
+                assert response.status_code == 200
+                return {"Authorization": f"Bearer {response.json()['token']}"}
+
+            create_user("teamadmin", "teamadmin@mail.com")
+            headers = login("teamadmin")
+
+            # Step 2: Create org
+            org_data = {"name": "PermOrg", "desc": "Test org for perms", "image": None}
+            org_resp = client.post("/api/v1/organizations", json=org_data, headers=headers)
+            assert org_resp.status_code == 200
+            org_id = org_resp.json()["id"]
+
+            # Step 3: Create repo in org
+            repo_data = {
+                "name": "Repo1",
+                "desc": "Team permission test repo",
+                "public": True,
+                "organization_id": org_id,
+            }
+            repo_resp = client.post(f"/api/v1/repositories/", json=repo_data, headers=headers)
+            assert repo_resp.status_code == 200
+            repo_id = repo_resp.json()["id"]
+
+            # Step 4: Create team
+            team_data = {"name": "DevTeam", "desc": "Core Dev Team", "organization_id": org_id}
+            team_resp = client.post("/api/v1/teams", json=team_data, headers=headers)
+            assert team_resp.status_code == 200
+            team_id = team_resp.json()["id"]
+
+            # Step 5: Add permission
+            perm_dto = {
+                "team_id": team_id,
+                "repo_id": repo_id,
+                "kind": "read_write"
+            }
+            perm_add_resp = client.post("/api/v1/teams/permission", json=perm_dto, headers=headers)
+            assert perm_add_resp.status_code == 200
+
+            # Step 6: Get permissions and verify
+            perm_list_resp = client.get(f"/api/v1/teams/{team_id}/permissions", headers=headers)
+            assert perm_list_resp.status_code == 200
+            permissions = perm_list_resp.json()
+            assert any(p["repo_id"] == repo_id and p["kind"] == "read_write" for p in permissions)
+
+            # Step 7: Delete permission
+            perm_del_resp = client.request("DELETE", "/api/v1/teams/permission", json=perm_dto, headers=headers)
+            assert perm_del_resp.status_code == 202
+
+            # Step 8: Get permissions again to verify deletion
+            perm_list_resp_2 = client.get(f"/api/v1/teams/{team_id}/permissions", headers=headers)
+            assert perm_list_resp_2.status_code == 200
+            permissions_after = perm_list_resp_2.json()
+            assert not any(p["repo_id"] == repo_id for p in permissions_after)
+
+
+class TestUpdateTeam:
+    def test_update_team_not_found(self, team_service: "TeamService"):
+        team_service.team_repo.get.return_value = None
+        dto = mock.Mock(spec=TeamDTOBasic)
+        dto.id = 1
+        with pytest.raises(NotFoundException):
+            team_service.update_team(dto, user_id=2)
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.add.assert_not_called()
+
+    def test_update_team_success(self, team_service: "TeamService"):
+        dto = TeamDTOBasic(id=1, organization_id=1, name="New Team", desc="")
+        old_team = Team(id=1, name="Old Team", desc="", organization_id=1)
+        excpected_team = Team(id=1, name="New Team", desc="", organization_id=1)
+        user_id = 1
+
+        org = Organization(id=1, owner_id=1)
+        team_service.team_repo.get.return_value = old_team
+        team_service.team_repo.find_by_name_in_org.return_value = None
+        team_service.org_repo.find_by_id.return_value = org
+        team_service.team_repo.add.return_value = excpected_team
+
+        result = team_service.update_team(dto, user_id)
+
+        assert result == excpected_team
+        team_service.org_repo.find_by_id.assert_called_once_with(1)
+        team_service.team_repo.add.assert_called_once_with(excpected_team)
+
+        # All other cases have been covered with the create_team tests, so we don't need to repeat them here.
+
+    def test_update_team_integration(self):
+        client = TestClient(app)
+
+        # Step 1: Create user and login
+        def create_user(username, email, password="Password123"):
+            res = client.post("/api/v1/users", json={"username": username, "email": email, "password": password})
+            assert res.status_code == 200
+            return res.json()
+
+        def login(username, password="Password123"):
+            res = client.post("/api/v1/users/login", json={"username": username, "password": password})
+            assert res.status_code == 200
+            token = res.json()["token"]
+            return {"Authorization": f"Bearer {token}"}
+
+        create_user("teamuser", "teamuser@example.com")
+        headers = login("teamuser")
+
+        # Step 2: Create organization
+        org_data = {"name": "TestOrg", "desc": "Org for testing", "image": None}
+        org_res = client.post("/api/v1/organizations", json=org_data, headers=headers)
+        assert org_res.status_code == 200
+        org_id = org_res.json()["id"]
+
+        # Step 3: Create team
+        team_data = {"name": "Initial Team", "desc": "Initial description", "organization_id": org_id}
+        team_res = client.post("/api/v1/teams", json=team_data, headers=headers)
+        assert team_res.status_code == 200
+        team = team_res.json()
+        team_id = team["id"]
+
+        # Step 4: Update team
+        updated_team_data = {"id": team_id, "name": "Updated Team", "desc": "Updated description"}
+        update_res = client.put("/api/v1/teams", json=updated_team_data, headers=headers)
+        assert update_res.status_code == 200
+
+        # Step 5: Confirm update
+        get_res = client.get(f"/api/v1/teams/o/{org_id}", headers=headers)
+        assert get_res.status_code == 200
+        team_after_update = get_res.json()[0]
+        assert team_after_update["name"] == "Updated Team"
+        assert team_after_update["desc"] == "Updated description"
+
+
+class TestDeletePermission:
+    def test_delete_permission_not_found(self, team_service: "TeamService"):
+        team_service.team_repo.find_permission.return_value = None
+        dto = TeamPermissionsDTO(team_id=1, repo_id=1, kind="read_write")
+        with pytest.raises(NotFoundException):
+            team_service.delete_team_permission(dto, user_id=2)
+        team_service.team_repo.find_permission.assert_called_once()
+        team_service.team_repo.add.assert_not_called()
+
+    def test_delete_permission_access_denied(self, team_service: TeamService):
+        dto = TeamPermissionsDTO(team_id=1, repo_id=1, kind="read_write")
+        team = mock.Mock(spec=Team)
+        team.id = dto.team_id
+        permission = TeamPermission(team_id=dto.team_id, repo_id=dto.repo_id, kind=dto.kind)
+        org = mock.Mock(spec=Organization)
+
+        org.owner_id = 99
+        team.organization = org
+        team_service.team_repo.find_permission.return_value = permission
+        team_service.team_repo.get.return_value = team
+
+        with pytest.raises(AccessDeniedException):
+            team_service.delete_team_permission(dto, user_id=1)
+        team_service.team_repo.get.assert_called_once()
+        team_service.team_repo.delete_team_permission.assert_not_called()
+
+    def test_delete_permission_success(self, team_service: "TeamService"):
+        dto = TeamPermissionsDTO(team_id=1, repo_id=1, kind="read_write")
+        team = mock.Mock(spec=Team)
+        team.id = dto.team_id
+        permission = TeamPermission(team_id=dto.team_id, repo_id=dto.repo_id, kind=dto.kind)
+        org = mock.Mock(spec=Organization)
+
+        org.owner_id = 1
+        team.organization = org
+        team_service.team_repo.find_permission.return_value = permission
+        team_service.team_repo.get.return_value = team
+
+        team_service.delete_team_permission(dto, 1)
+
+        team_service.team_repo.get.assert_called_once()
+        team_service.team_repo.delete_permission.assert_called_once()
+
+class TestRemoveTeamMember:
+    def test_remove_team_member_not_found(self, team_service: "TeamService"):
+        team_service.team_repo.find_member.return_value = None
+
+        with pytest.raises(NotFoundException):
+            team_service.remove_team_member(member_id=42, team_id=1, user_id=10)
+
+        team_service.team_repo.find_member.assert_called_once_with(1, 42)
+        team_service.team_repo.get.assert_not_called()
+        team_service.team_repo.delete_team_member.assert_not_called()
+
+    def test_remove_team_member_access_denied(self, team_service: "TeamService"):
+        tm = mock.Mock()
+        team = mock.Mock(spec=Team)
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 999
+        team.organization = org
+
+        team_service.team_repo.find_member.return_value = tm
+        team_service.team_repo.get.return_value = team
+
+        with pytest.raises(AccessDeniedException):
+            team_service.remove_team_member(member_id=42, team_id=1, user_id=123)
+
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.delete_team_member.assert_not_called()
+
+    def test_remove_team_member_success(self, team_service: "TeamService"):
+        tm = mock.Mock()
+        team = mock.Mock(spec=Team)
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 123
+        team.organization = org
+
+        team_service.team_repo.find_member.return_value = tm
+        team_service.team_repo.get.return_value = team
+
+        team_service.remove_team_member(member_id=42, team_id=1, user_id=123)
+
+        team_service.team_repo.get.assert_called_once_with(1)
+        team_service.team_repo.delete_team_member.assert_called_once_with(tm)

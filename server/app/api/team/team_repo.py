@@ -2,6 +2,9 @@ from sqlmodel import Session, select
 from app.api.team.team_model import Team, TeamMember, TeamPermission
 from typing import List, Optional
 
+from app.api.user.user_model import User
+
+
 class TeamRepo:
     def __init__(self, session: Session):
         self.session = session
@@ -48,6 +51,13 @@ class TeamRepo:
         )
         return self.session.exec(statement).first()
 
+    def find_teams_of_member(self, user_id: int) -> List[TeamMember]:
+        statement = select(TeamMember).filter(
+            TeamMember.user_id == user_id
+        )
+        return self.session.exec(statement).all()
+
+
     def find_permission(self, team_id: int, repo_id: int) -> Optional[TeamPermission]:
         statement = select(TeamPermission).filter(
             TeamPermission.team_id == team_id,
@@ -61,3 +71,22 @@ class TeamRepo:
             Team.organization_id == org_id
         )
         return self.session.exec(statement).all()
+
+    def find_members_of_team(self, team_id: int) -> List[User]:
+        return self.session.exec(
+            select(User)
+            .join(TeamMember, User.id == TeamMember.user_id)
+            .where(TeamMember.team_id == team_id)
+        ).all()
+
+    def get_permissions_by_team(self, team_id) -> List[TeamPermission]:
+        statement = select(TeamPermission).where(TeamPermission.team_id == team_id)
+        return self.session.exec(statement).all()
+
+    def delete_permission(self, permission: TeamPermission) -> None:
+        self.session.delete(permission)
+        self.session.commit()
+
+    def delete_team_member(self, tm: TeamMember) -> None:
+        self.session.delete(tm)
+        self.session.commit()

@@ -159,3 +159,12 @@ async def search_public_repositories(page_number: int, page_size: int, show_badg
     org_names = org_service.get_org_names_from_repos(repos)
     repos = [_repo_model_to_dto(repo) for repo in repos]
     return RepositoriesResultDTO(hits=repos, info=result_info, organization_names=org_names)
+
+
+@router.get("/org/{org_id}", response_model=List[RepositoryDTO], status_code=200, summary="Get repositories of user")
+@pre_authorize([UserRole.user, UserRole.admin])
+def get_repositories_by_org(jwt: JWTDep, org_id: int, repo_service: RepositoryService = Depends(get_repo_service)):
+    user_id = get_id_from_jwt(jwt)
+    repos = repo_service.get_repositories_by_org(org_id, user_id)
+    return repos
+

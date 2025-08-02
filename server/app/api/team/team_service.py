@@ -7,7 +7,8 @@ from app.api.team.team_repo import TeamRepo
 from typing import List
 
 from app.api.team.team_model import Team, TeamMember, TeamPermission
-from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO
+from app.api.team.team_dto import TeamAddMemberDTO, TeamAddPermissionDTO, TeamCreateDTO, TeamPermissionsDTO, \
+    TeamDTOBasic
 from app.api.user.user_model import User
 from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException, NotInRelationshipException, UserException
 from app.api.org.org_model import Organization
@@ -60,18 +61,20 @@ class TeamService:
         
     # -=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=-=- #
 
-    def create_team(self, dto: TeamCreateDTO, user_id: int) -> Team:
-        if len(dto.name) == 0:
-            raise UserException("Name is required")  # Validate server-side too.
+    def validate_team(self, team: Team, user_id: int):
+        if len(team.name) == 0:
+            raise UserException("Name is required")
 
-        if dto.name[0].isspace():
+        if team.name[0].isspace():
             raise UserException("Name must not begin with whitespace characters")
-        
-        self._ensure_team_with_that_name_not_in_org(dto.name, dto.organization_id)
-        org = self._get_org_by_id(dto.organization_id)
+
+        self._ensure_team_with_that_name_not_in_org(team.name, team.organization_id)
+        org = self._get_org_by_id(team.organization_id)
         self._ensure_user_is_owner_of_org(org, user_id)
 
+    def create_team(self, dto: TeamCreateDTO, user_id: int) -> Team:
         new_team = Team.model_validate(dto)
+        self.validate_team(new_team, user_id)
         new_team = self.team_repo.add(new_team)
         return new_team
     
@@ -117,7 +120,55 @@ class TeamService:
         self._ensure_user_is_member_of_org(org.id, user_id)
 
         return self.team_repo.find_all_by_organization(org_id)
-    
+
+    def find_members_of_team(self, team_id: int, user_id: int) -> List[User]:
+        team = self.team_repo.get(team_id)   # Ensure team with that id exists
+        if team is None:
+            raise NotFoundException(Team, team_id)
+
+        """ Only team members or organization owners can access the given team. """
+        existing_membership = self.team_repo.find_member(team_id, user_id)
+        if existing_membership is None:  # If the user is not a member of the team, check if they are an org owner.
+            self._ensure_user_is_owner_of_org(team.organization, user_id)
+        return self.team_repo.find_members_of_team(team_id)
+
+    def get_permissions_by_team(self, team_id: int, user_id: int):
+        team = self.team_repo.get(team_id)  # Ensure team with that id exists
+        if team is None:
+            raise NotFoundException(Team, team_id)
+
+        """ Only team members or organization owners can access the given team. """
+        existing_membership = self.team_repo.find_member(team_id, user_id)
+        if existing_membership is None:  # If the user is not a member of the team, check if they are an org owner.
+            self._ensure_user_is_owner_of_org(team.organization, user_id)
+        return self.team_repo.get_permissions_by_team(team_id)
+
+    def update_team(self, dto: TeamDTOBasic, user_id: int):
+        team_db = self.team_repo.get(dto.id)
+        if team_db is None:
+            raise NotFoundException(Team, dto.id)
+        team_db.name = dto.name
+        team_db.desc = dto.desc
+        self.validate_team(team_db, user_id)
+        self.team_repo.add(team_db)
+        return team_db
+
+    def delete_team_permission(self, dto: TeamPermissionsDTO, user_id: int):
+        permission = self.team_repo.find_permission(dto.team_id, dto.repo_id)
+        if permission is None:
+            raise NotFoundException(permission, dto.team_id)
+        team = self.team_repo.get(dto.team_id)
+        self._ensure_user_is_owner_of_org(team.organization, user_id)
+        self.team_repo.delete_permission(permission)
+
+    def remove_team_member(self, member_id: int, team_id: int, user_id: int):
+        tm = self.team_repo.find_member(team_id, member_id)
+        if tm is None:
+            raise NotFoundException(TeamMember, member_id)
+        team = self.team_repo.get(team_id)
+        self._ensure_user_is_owner_of_org(team.organization, user_id)
+        self.team_repo.delete_team_member(tm)
+
 
 def get_team_service(session: Session = Depends(get_database)) -> TeamService:
     return TeamService(session)

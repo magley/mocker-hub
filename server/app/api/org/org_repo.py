@@ -1,4 +1,4 @@
-from typing import Dict, List
+from typing import Dict, List, Optional
 from sqlmodel import Session, select
 from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.repo.repo_model import Repository
@@ -65,3 +65,26 @@ class OrganizationRepo:
         self.session.commit()
         self.session.refresh(org)
         return org
+
+    def find_member(self, org_id: int, user_id: int) -> Optional[OrganizationMembers]:
+        statement = select(OrganizationMembers).filter(
+            OrganizationMembers.organization_id == org_id,
+            OrganizationMembers.user_id == user_id
+        )
+        return self.session.exec(statement).first()
+
+    def search_members_by_username_prefix(self, query: str, org_id: int, limit: int = 7) -> List[User]:
+        stmt = (
+            select(User)
+            .join(OrganizationMembers, OrganizationMembers.user_id == User.id)
+            .where(
+                OrganizationMembers.organization_id == org_id,
+                User.username.ilike(f"{query}%")
+            )
+            .limit(limit)
+        )
+        return self.session.exec(stmt).all()
+
+    def delete_org_member(self, om: OrganizationMembers) -> None:
+        self.session.delete(om)
+        self.session.commit()
