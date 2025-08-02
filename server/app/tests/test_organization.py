@@ -704,6 +704,7 @@ class TestUpdateOrgImgByName:
         org.owner = user
 
         org_service.org_repo.find_by_name.return_value = org
+        org_service.org_repo.set_attribute.return_value = org
 
         result = org_service.update_image_by_name(org.name, dto, user.id)
         assert result.name == org.name
