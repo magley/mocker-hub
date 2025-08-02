@@ -159,7 +159,7 @@ export const OrgRepositories: React.FC<{ isActive: boolean, org: OrganizationDTO
 
                     {/* Add new repo Button */}
                     {amIMemberOfOrg && (
-                        <Link to={`/new`}>
+                        <Link to={`/new/org/${org.id}`}>
                             <Button className="btn btn-primary">
                                     Create Repository
                             </Button>
@@ -233,7 +233,7 @@ export const OrgRepositories: React.FC<{ isActive: boolean, org: OrganizationDTO
                     <div style={{ display: "flex", justifyContent: "flex-end", marginTop: "0.5rem" }}>
 
                         {amIMemberOfOrg && (
-                        <Link to={`/new`}>
+                        <Link to={`/new/org/${org.id}`}>
                             <Button className="btn btn-primary">
                                     Create Repository
                             </Button>
