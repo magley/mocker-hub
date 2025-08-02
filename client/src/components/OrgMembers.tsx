@@ -235,7 +235,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                                     )}
                                     </div>
                                 }
-                                {amOwnerOfOrg && (
+                                {amOwnerOfOrg && !isOwner &&(
                                     <div className="text-end" style={{ width: "10%", paddingRight: "15px" }}>
                                         <Button variant="link" className="text-danger p-0 delete-button" onClick={() => removeMember(member)}>
                                             <i className="bi bi-trash"></i>
