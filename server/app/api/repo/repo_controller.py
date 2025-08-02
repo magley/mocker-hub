@@ -75,6 +75,7 @@ def get_repo_by_canonical_name(
     result["owner_name"] = repo.owner.username
     result["org_name"] = None if (repo.organization is None) else repo.organization.name
     result["can_update"] = access_control_service.has_admin_access(user_id, repo.id)
+    result["can_delete_tag"] = access_control_service.has_write_access(user_id, repo.id)
     result["can_star"] = access_control_service.has_star_access(user_id, repo.id)
     result["starred"] = repo_service.is_repo_starred_by(repo, user) if (result["can_star"]) else False
     result = RepositoryExtDTO.model_validate(result)

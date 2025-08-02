@@ -150,7 +150,7 @@ export const RepoTags: React.FC<{ isActive: boolean, repo: RepoExtDTO }> = (prop
 
                                 {/* Delete tag */}
                                 {/* We can reuse `can_update` as `can_delete_tag` since the access-control logic is identical. */}
-                                {props.repo?.can_update && tag.name &&
+                                {props.repo?.can_delete_tag && tag.name &&
                                     <Button variant="danger" className="me-2" onClick={() => handleDeleteTag(tag)} title="Delete tag" disabled={deletingTag === tag.name}>
                                         {deletingTag === tag.name
                                             ? (<output><span className="spinner-border spinner-border-sm me-2" aria-hidden="true"></span>Deleting...</output>)
