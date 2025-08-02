@@ -96,6 +96,7 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
         <div style={{ width: '80%', margin: 'auto' }}>
             {error && <Alert variant="danger">{error}</Alert>}
 
+            {/* Org Image */}
             <div className="mb-3 text-center">
                 <img
                     src={imagePreview || '/default-org.png'}
@@ -158,3 +159,47 @@ export const OrgOverview: React.FC<{ isActive: boolean; org: OrganizationDTOBasi
         </div>
     );
 };
+
+
+// =======
+//     <div className="d-flex flex-column align-items-center text-center mt-4" style={{ maxWidth: '80%', margin: '0 auto' }}>
+//         {/* Org Image */}
+//         <img src={OrganizationService.GetImageURI(props.org.image)} className="mb-3" />
+
+//         {/* Main Content */}
+//         <div className="tab-pane fade show active" id="overview" style={{ maxWidth: '700px', width: '100%' }}>
+//             {error && <Alert variant="danger">{error}</Alert>}
+
+//             {isEditing ? (
+//                 <div>
+//                     <textarea
+//                         className="form-control text-center"
+//                         rows={7}
+//                         value={newDesc}
+//                         onChange={(e) => setNewDesc(e.target.value)}
+//                         autoFocus
+//                     />
+//                     <div className="mt-3 d-flex justify-content-center">
+//                         <button className="btn btn-primary me-2" onClick={updateDescription}>
+//                             Update description
+//                         </button>
+//                         <button className="btn btn-secondary" onClick={() => { setIsEditing(false); setNewDesc(props.org.desc); }}>
+//                             Cancel
+//                         </button>
+//                     </div>
+//                 </div>
+//             ) : (
+//                 <div className="d-flex align-items-start justify-content-center">
+//                     <div className="repo-page-desc">{props.org.desc}</div>
+//                     {amOwnerOfOrg && (
+//                         <button className="btn btn-link p-0 ms-2" onClick={() => setIsEditing(true)}>
+//                             <i className="bi bi-pencil"></i>
+//                         </button>
+//                     )}
+//                 </div>
+//             )}
+//         </div>
+//     </div>
+// );
+
+// };

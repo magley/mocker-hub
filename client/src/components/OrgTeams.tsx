@@ -5,11 +5,13 @@ import { AxiosError, AxiosResponse } from "axios";
 import { Button, Form, Modal, Spinner } from "react-bootstrap";
 import { getJwtId } from "../util/localstorage";
 import "./OrgTeams.css";
+import { TeamDetails } from "./TeamDetails";
 
 export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }> = ({ isActive, org }) => {
     const [teams, setTeams] = useState<TeamDTOBasic[]>([]);
     const [loading, setLoading] = useState(true);
     const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false);
+    const [selectedTeam, setSelectedTeam] = useState<TeamDTOBasic | null>(null);
 
     // -------------------------------------------
     // Modal window properties.
@@ -38,7 +40,7 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
         setErrorMessage(null);
 
         TeamService.Create(data).then((res) => {
-            setTeams([...teams, res.data]); // This is a good reason not not extract the modal window into a child component.
+            getTeams();
             handleClose();
         }).catch((err: AxiosError) => {
             setErrorMessage((err.response?.data as any)["detail"]["message"]);
@@ -84,29 +86,63 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
 
     return (
         <>
+        {selectedTeam ? (
+            <TeamDetails team={selectedTeam} org={org}onBack={() => { setSelectedTeam(null); getTeams(); // Refresh team list after returning
+    }} />
+        ) : (
+            <>
             {/* No teams */}
-
             {teams.length == 0 && (<>
                 <h1 className="no-teams-text">This organization does not have teams.</h1>
                 {amOwnerOfOrg && (
-                    <div className="d-flex justify-content-center">
-                        <Button variant="primary" onClick={handleShow}>New Team</Button>
+                    <div className="d-flex justify-content-end mb-3 ms-4" style={{maxWidth:"58%"}}>
+                        <Button variant="primary" onClick={handleShow}>Create Team</Button>
                     </div>
                 )}
             </>)}
 
             {/* Yes teams */}
-
             {teams.length > 0 && (<>
                 {amOwnerOfOrg && (
-                    <div className="d-flex justify-content-center">
-                        <Button variant="primary" onClick={handleShow}>New Team</Button>
+                    <div className="d-flex justify-content-end mb-3 ms-4" style={{maxWidth:"58%"}}>
+                        <Button variant="primary" onClick={handleShow}>Create Team</Button>
                     </div>
                 )}
 
-                {teams.length > 0 && (teams.map((team, i) => (
-                    <div key={i}>{team.name} (TODO - View add and remove members)</div>
-                )))}
+                <div className="ms-4 me-5 mt-5" style={{ maxWidth: "85%" }}>
+
+                        {/* Table Header */}
+                        <div
+                            className="d-flex fw-bold border-bottom pb-3"
+                            style={{ fontSize: "1.05rem", letterSpacing: "0.3px", maxWidth: "70%" }}
+                        >
+                            <div style={{ width: "30%", paddingLeft: "8px" }}>Team name</div>
+                            <div style={{ width: "50%" }}>Description</div>
+                            <div style={{ width: "20%" }}>Members</div>
+                        </div>
+
+                        {/* Table Rows */}
+                        {teams.map((team) => {
+                            return (
+                            <div key={team.id} className="d-flex align-items-center border-bottom team-row"
+                                style={{ fontSize: "1rem", padding: "12px 0", maxWidth: "70%", cursor: "pointer" }}
+                                onClick={() => setSelectedTeam(team)}>
+
+                                <div style={{ width: "30%", paddingLeft: "8px" }} className="fw-bold">
+                                    {team.name}
+                                </div>
+
+                                <div style={{ width: "50%", paddingLeft: "4px" }} className="text-muted">
+                                    {(team.desc.length > 99 ? `${team.desc.slice(0, 99)}...` : team.desc)}
+                                </div>
+
+                                <div style={{ width: "20%", paddingLeft: "30px"}} className="text-dark">
+                                    {team.members_count}
+                                </div>
+                            </div>
+                            );
+                        })}
+                 </div>
             </>)}
 
             {/* Modal form - create a team. */}
@@ -164,5 +200,7 @@ export const OrgTeams: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }
                 </Modal.Body>
             </Modal>
         </>
+        )}
+    </>
     );
 }

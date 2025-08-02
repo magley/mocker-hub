@@ -6,13 +6,16 @@ import { Badge, Button, Form, ListGroup, Modal, Spinner } from "react-bootstrap"
 import { getJwtId } from "../util/localstorage";
 import "./OrgMembers.css";
 import { Link } from "react-router-dom";
+import { TeamService } from "../api/team.api";
+import { ToastType, useToastStore } from "../util/toastStore";
 
-export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic }> = ({ isActive, org }) => {
+export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic, teamId : number | null }> = ({ isActive, org, teamId = -1 }) => {
     const [members, setMembers] = useState<UserDTO[]>([]);
     const [loading, setLoading] = useState(true);
-    const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false);
+    const [amOwnerOfOrg, setAmOwnerOfOrg] = useState(false); 
 
     const [showModal, setShowModal] = useState(false);
+    const addToast = useToastStore((state) => state.addToast);
     
     const [searchTerm, setSearchTerm] = useState("");
     const [searchResults, setSearchResults] = useState<UserDTO[]>([]);
@@ -36,13 +39,23 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
         setLoading(true);
         setMembers([]);
 
-        OrganizationService.GetMembersOfOrg(org.id).then((res: AxiosResponse<UserDTO[]>) => {
-            setMembers(res.data);
-        }).catch((err: AxiosError) => {
-            console.error(err);
-        }).finally(() => {
-            setLoading(false);
-        })
+        if (teamId === null || teamId === -1) {
+            OrganizationService.GetMembersOfOrg(org.id).then((res: AxiosResponse<UserDTO[]>) => {
+                setMembers(res.data);
+            }).catch((err: AxiosError) => {
+                console.error(err);
+            }).finally(() => { 
+                setLoading(false);
+            })
+        } else { 
+            TeamService.GetMembersOfTeam(teamId).then((res: AxiosResponse<UserDTO[]>) => {
+                setMembers(res.data);
+            }).catch((err: AxiosError) => {
+                console.error(err);
+            }).finally(() => {
+                setLoading(false);
+            })
+        }
     }
 
     const handleClose = () => {
@@ -61,13 +74,24 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
         }
         setSearchLoading(true);
 
-        try {
-            const res: AxiosResponse<UserDTO[]> = await UserService.SearchUsers(query, org.id);
-            setSearchResults(res.data);
-        } catch (err) {
-            console.error(err);
-        } finally {
-            setSearchLoading(false);
+        if ((teamId === null || teamId === -1)) {
+            try {
+                const res: AxiosResponse<UserDTO[]> = await UserService.SearchUsers(query, org.id);
+                setSearchResults(res.data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setSearchLoading(false);
+            }
+        } else{
+            try {
+                const res: AxiosResponse<UserDTO[]> = await OrganizationService.SearchMembers(query, teamId);
+                setSearchResults(res.data);
+            } catch (err) {
+                console.error(err);
+            } finally {
+                setSearchLoading(false);
+            }
         }
     };
 
@@ -91,12 +115,47 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
     const handleAddMembers = async () => {
         if (selectedUsers.length === 0) return;
 
-        try {
-            await OrganizationService.AddUsersToOrg(org.id, selectedUsers.map((u) => u.id));
-            getMembers(); 
-            handleClose();
-        } catch (err) {
-            console.error("Failed to add members", err);
+        if ((teamId === null || teamId === -1)) {
+            try {
+                await OrganizationService.AddUsersToOrg(org.id, selectedUsers.map((u) => u.id));
+                getMembers(); 
+                handleClose();
+            } catch (err) {
+                console.error("Failed to add members", err);
+            }
+        }  else{
+            try {
+                await TeamService.AddMembersToTeam(teamId, selectedUsers.map((u) => u.id));
+                getMembers(); 
+                handleClose();
+            } catch (err) {
+                console.error("Failed to add members", err);
+            }
+        }
+    }; 
+
+    const removeMember = (user: UserDTO) => {
+        setLoading(true);
+        if ((teamId === null || teamId === -1)) {
+            OrganizationService.RemoveMember(user.id, org.id).then(() => {
+                getMembers();
+                addToast(`Removed member ${user.username} from organization.`, ToastType.success);
+            }).catch((err: AxiosError) => {
+                console.error(err);
+                addToast(`${err.message}`, ToastType.error);
+            }).finally(() => {
+                setLoading(false);
+            });
+        } else{
+            TeamService.RemoveMember(user.id, teamId).then(() => {
+                getMembers();
+                addToast(`Removed member ${user.username} from team.`, ToastType.success);
+            }).catch((err: AxiosError) => {
+                console.error(err);
+                addToast(`${err.message}`, ToastType.error);
+            }).finally(() => {
+                setLoading(false);
+            });
         }
     };
 
@@ -112,7 +171,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
         <>
             {/* No members */}
             {members.length == 0 && (<>
-                <h1 className="no-teams-text">This organization does not have any members.</h1>
+                {(teamId === null || teamId === -1) && <h1 className="no-teams-text">This organization does not have any members.</h1>}
                 {amOwnerOfOrg && (
                     <div className="d-flex justify-content-center">
                         <Button variant="primary" onClick={handleShow}>Add Members</Button>
@@ -131,7 +190,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                         </div>
                     )}
 
-                    <div className="ms-4 me-5" style={{ maxWidth: "85%" }}>
+                    <div className="ms-4 me-5" style={{ maxWidth: "85%", marginBottom: "1.5rem" }}>
 
                         {/* Table Header */}
                         <div
@@ -141,7 +200,7 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                             <div style={{ width: "20%", paddingLeft: "8px" }}>Username</div>
                             <div style={{ width: "25%" }}>Full Name</div>
                             <div style={{ width: "35%" }}>Email</div>
-                            <div style={{ width: "10%" }}>Role</div>
+                            {(teamId === null || teamId === -1) && <div style={{ width: "10%" }}>Role</div>}
                         </div>
 
                         {/* Table Rows */}
@@ -169,11 +228,20 @@ export const OrgMembers: React.FC<{ isActive: boolean, org: OrganizationDTOBasic
                                 <i className="bi bi-envelope me-1 text-secondary"></i> {member.email || "—"}
                                 </div>
 
-                                <div style={{ width: "10%" }}>
-                                {isOwner ? (<Badge className="custom-owner-badge">Owner</Badge>) : (
-                                    <Badge className="custom-member-badge">Member</Badge>
+                                {(teamId === null || teamId === -1) &&
+                                 <div style={{ width: "10%" }}>
+                                    {isOwner ? (<Badge className="custom-owner-badge">Owner</Badge>) : (
+                                        <Badge className="custom-member-badge">Member</Badge>
+                                    )}
+                                    </div>
+                                }
+                                {amOwnerOfOrg && !isOwner &&(
+                                    <div className="text-end" style={{ width: "10%", paddingRight: "15px" }}>
+                                        <Button variant="link" className="text-danger p-0 delete-button" onClick={() => removeMember(member)}>
+                                            <i className="bi bi-trash"></i>
+                                        </Button>
+                                    </div>
                                 )}
-                                </div>
                             </div>
                             );
                         })}

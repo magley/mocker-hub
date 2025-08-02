@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Dict, List
 from pydantic import BaseModel, EmailStr, Field
+
+from app.api.config.pagination import PaginatedResultInfoDTO
 from app.api.user.user_model import UserRole
 from app.api.repo.repo_model import RepositoryBadge
 
@@ -44,3 +46,8 @@ class RepositoryDescUpdateDTO(BaseModel):
 
 class RepositoryVisibilityUpdateDTO(BaseModel):
     public: bool
+
+class RepositoriesResultDTO(BaseModel):
+    hits: List[RepositoryDTO]
+    info: PaginatedResultInfoDTO
+    organization_names: Dict[int, str]

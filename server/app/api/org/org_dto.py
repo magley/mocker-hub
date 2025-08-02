@@ -30,7 +30,7 @@ class OrganizationDTO(BaseModel):
 class OrganizationHasMemberDTO(BaseModel):
     org_id: int
     user_id: int | None
-    is_member: bool
+    is_member: bool = False
 
 class OrganizationDescUpdateDTO(BaseModel):
     desc: str

@@ -47,6 +47,10 @@ export interface OrgImageUpdateDTO {
 
 export class OrganizationService {
 
+    static async RemoveMember(user_id: number, org_id: number): Promise<AxiosResponse<void>> {
+        return await axiosInstance.delete(`/organizations/member`, { data: { user_id, org_id } })
+    }
+
     static async CreateOrganization(dto: OrganizationCreateDTO): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.post(`/organizations`, dto);
     }
@@ -90,5 +94,10 @@ export class OrganizationService {
     static async ClearOrgImageByName(orgName: string): Promise<AxiosResponse<OrganizationDTOBasic>> {
         return await axiosInstance.put(`/organizations/${orgName}/image/clear`)
     }
-}
 
+    static async SearchMembers(query: string, team_id_to_exclude_members: number): Promise<AxiosResponse<UserDTO[]>> {
+        return await axiosInstance.get(`/organizations/search/${query}`, {
+            params: { team_id_to_exclude_members }
+        });
+    }
+}

@@ -1,3 +1,4 @@
+from unittest import mock
 from unittest.mock import MagicMock, call
 from fastapi.testclient import TestClient
 import pytest
@@ -8,7 +9,9 @@ from app.api.config.exception_handler import FieldTakenException
 from app.api.main import app
 from app.api.repo.repo_model import Repository
 from app.api.org.org_model import Organization
+from app.api.team.team_model import Team
 from app.api.user.user_model import User
+from app.tests.test_user import make_user
 
 
 @pytest.fixture
@@ -19,6 +22,7 @@ def org_service():
     service.org_repo = MagicMock()
     service.add_user_to_org = MagicMock()
     service.user_repo = MagicMock()
+    service.team_repo = MagicMock()
     return service
 
 
@@ -626,6 +630,34 @@ class TestAddMembersToOrg:
             assert "jane" not in member_usernames
 
 
+class TestSearchMembersByUsernamePrefix:
+    def test_team_not_found(self, org_service):
+        team_id = 99
+        prefix = "j"
+        org_service.team_repo.get.return_value = None
+
+        with pytest.raises(NotFoundException):
+            org_service.search_members_by_username_prefix(prefix, team_id)
+
+        org_service.team_repo.get.assert_called_once_with(team_id)
+        org_service.org_repo.search_members_by_username_prefix.assert_not_called()
+
+    def test_successfully_search_members(self, org_service):
+        team = mock.MagicMock(spec=Team)
+        query = "jo"
+        user1 = make_user(1, "john")
+        user2 = make_user(2, "josh")
+        user3 = make_user(3, "jonny")
+        team.organization.owner_id = user1.id
+        team.members = [user3]
+        org_service.org_repo.search_members_by_username_prefix.return_value = [user1, user2, user3]
+        org_service.team_repo.get.return_value = team
+        org_service.team_repo.find_members_of_team.return_value = [user3]
+
+        result = org_service.search_members_by_username_prefix(query, team.id)
+        assert result == [user2]
+        org_service.team_repo.get.assert_called_once_with(team.id)
+        org_service.org_repo.search_members_by_username_prefix.assert_called_once()
 
 class TestUpdateOrgImgByName:
     IMG = "data:image/png;base64,R0lGODlhAQABAAAAACw=" # Note: this isn't actually a valid PNG, but it's a valid encoding.
@@ -785,3 +817,44 @@ class TestUpdateOrgImgByName:
             # User who is not an organization owner
             assert clear_img("u2", o1["id"]).status_code == 400
 
+class TestRemoveOrgMember:
+    def test_remove_org_member_not_found(self, org_service):
+        org_service.org_repo.find_member.return_value = None
+
+        with pytest.raises(NotFoundException):
+            org_service.remove_org_member(member_id=42, org_id=1, user_id=123)
+
+        org_service.org_repo.find_member.assert_called_once_with(1, 42)
+        org_service.team_repo.find_teams_of_member.assert_not_called()
+        org_service.org_repo.delete_org_member.assert_not_called()
+
+    def test_remove_org_member_access_denied(self, org_service):
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 99
+
+        org_service.org_repo.find_member.return_value = mock.Mock()
+        org_service.org_repo.find_by_id.return_value = org
+
+        with pytest.raises(AccessDeniedException):
+            org_service.remove_org_member(member_id=42, org_id=1, user_id=123)
+
+        org_service.team_repo.find_teams_of_member.assert_not_called()
+        org_service.org_repo.delete_org_member.assert_not_called()
+
+    def test_remove_org_member_success(self, org_service):
+        org_member = mock.Mock()
+        team_member_1 = mock.Mock()
+        team_member_2 = mock.Mock()
+
+        org = mock.Mock(spec=Organization)
+        org.owner_id = 123
+
+        org_service.org_repo.find_member.return_value = org_member
+        org_service.org_repo.find_by_id.return_value = org
+        org_service.team_repo.find_teams_of_member.return_value = [team_member_1, team_member_2]
+
+        org_service.remove_org_member(member_id=42, org_id=1, user_id=123)
+
+        org_service.team_repo.delete_team_member.assert_any_call(team_member_1)
+        org_service.team_repo.delete_team_member.assert_any_call(team_member_2)
+        org_service.org_repo.delete_org_member.assert_called_once_with(org_member)

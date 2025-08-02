@@ -1,8 +1,9 @@
 from typing import List
 from sqlmodel import Session, or_, select
-from app.api.repo.repo_model import Repository, RepositoryStar
+from app.api.repo.repo_model import Repository, RepositoryStar, RepositoryBadge
 from app.api.user.user_model import User
 from app.api.org.org_model import Organization, OrganizationMembers
+from sqlalchemy import func
 
 class RepositoryRepo:
     def __init__(self, session: Session):
@@ -93,3 +94,37 @@ class RepositoryRepo:
     def remove(self, repo: Repository) -> None:
         self.session.delete(repo)
         self.session.commit()
+
+    def search_public_repositories(self, query, page_number, page_size, show_badge_official, show_badge_sponsored,
+                                   show_badge_verified) -> tuple[list[Repository], int]:
+        filters = [Repository.public == True]
+
+        if query is not None and query.strip():
+            filters.append(Repository.name.ilike(f"{query}%"))
+
+        badge_filters = []
+        if show_badge_official:
+            badge_filters.append(Repository.badge == RepositoryBadge.official)
+        if show_badge_sponsored:
+            badge_filters.append(Repository.badge == RepositoryBadge.sponsored_oss)
+        if show_badge_verified:
+            badge_filters.append(Repository.badge == RepositoryBadge.verified)
+
+        if badge_filters:
+            filters.append(or_(*badge_filters))
+
+        count_query = select(func.count()).where(*filters)
+        total_hits = self.session.exec(count_query).one()
+
+        query_stmt = (
+            select(Repository)
+            .where(*filters)
+            .order_by(Repository.stars.desc())
+            .offset((page_number - 1) * page_size)
+            .limit(page_size)
+        )
+        results = self.session.exec(query_stmt).all()
+        return results, total_hits
+
+    def get_repositories_by_org(self, org_id):
+        return self.session.exec(select(Repository).where(Repository.organization_id == org_id)).all()

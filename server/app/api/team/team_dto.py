@@ -19,6 +19,7 @@ class TeamDTOBasic(BaseModel):
     name: str
     desc: str
     organization_id: int | None = None
+    members_count: int = 0
 
 class TeamDTOFull(TeamDTOBasic):
     members: List[TeamDTOMember]
