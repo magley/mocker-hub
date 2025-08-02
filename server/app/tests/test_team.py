@@ -566,6 +566,73 @@ class TestFindMembersOfTeam:
         team_service.team_repo.find_member.assert_called_once()
         team_service.team_repo.find_members_of_team.assert_called_once()
 
+    def test_search_org_members_and_add_them_to_teams_integration(self):
+        with TestClient(app) as client:
+            # --- Step 1: Create users ---
+            def create_user(username: str, email: str) -> dict:
+                data = {"username": username, "email": email, "password": "Password123"}
+                res = client.post("/api/v1/users", json=data)
+                assert res.status_code == 200
+                return res.json()
+
+            def add_members_to_org(user_ids: list) -> dict:
+                add_members_response = client.post(
+                    f"/api/v1/organizations/{org_id}/addMember",
+                    json=user_ids,
+                    headers=headers
+                )
+                assert add_members_response.status_code == 200
+                return add_members_response.json()
+
+            user1 = create_user("john", "john@mail.com")
+            user2 = create_user("josh", "josh@mail.com")
+            user3 = create_user("jane", "jane@mail.com")
+
+            create_user("owner", "owner@mail.com")
+            owner_auth = client.post("/api/v1/users/login", json={"username": "owner", "password": "Password123"})
+            assert owner_auth.status_code == 200
+            headers = {"Authorization": f"Bearer {owner_auth.json()['token']}"}
+
+            # --- Step 2: Create organization ---
+            org_data = {"name": "OrgWithTeam", "desc": "Testing team integration", "image": None}
+            org_res = client.post("/api/v1/organizations", json=org_data, headers=headers)
+            assert org_res.status_code == 200
+            org_id = org_res.json()["id"]
+
+            # --- Step 3: Create team ---
+            team_data = {"name": "DevTeam", "desc": "Core Dev Team", "organization_id": org_id}
+            team_res = client.post("/api/v1/teams", json=team_data, headers=headers)
+            assert team_res.status_code == 200
+            team_id = team_res.json()["id"]
+
+            # --- Step 4: Add users to the organization ---
+            user_ids_to_add = [user1["id"], user2["id"], user3["id"]]
+            added_members = add_members_to_org(user_ids_to_add)
+
+            # --- Step 4: Search for members to add to the team (excluding current members) ---
+            search_res = client.get(f"/api/v1/organizations/search/jo?team_id_to_exclude_members={team_id}", headers=headers)
+            assert search_res.status_code == 200
+            users_to_add = search_res.json()
+            assert len(users_to_add) == 2  # john + josh
+
+            user_ids = [u["id"] for u in users_to_add]
+
+            # --- Step 5: Add them to the team ---
+            add_members_res = client.post(f"/api/v1/teams/{team_id}/addMember", json=user_ids, headers=headers)
+            assert add_members_res.status_code == 200
+            added_members = add_members_res.json()
+            assert len(added_members) == 2
+
+            # --- Step 6: Verify team members ---
+            get_members_res = client.get(f"/api/v1/teams/{team_id}/members", headers=headers)
+            assert get_members_res.status_code == 200
+            members = get_members_res.json()
+            usernames = [m["username"] for m in members]
+
+            assert "john" in usernames
+            assert "josh" in usernames
+            assert "jane" not in usernames
+
 
 class TestGetPermissionsByTeam:
     def test_get_permissions_team_not_found(self, team_service: TeamService):
@@ -623,6 +690,71 @@ class TestGetPermissionsByTeam:
         team_service.team_repo.find_member.assert_called_once()
         team_service.team_repo.get_permissions_by_team.assert_called_once()
 
+    def test_add_get_delete_permission_integration(self):
+        with TestClient(app) as client:
+            # Step 1: Create user and login
+            def create_user(username: str, email: str, password: str = "Password123"):
+                response = client.post("/api/v1/users",
+                                       json={"username": username, "email": email, "password": password})
+                assert response.status_code == 200
+                return response.json()
+
+            def login(username: str, password: str = "Password123") -> dict:
+                response = client.post("/api/v1/users/login", json={"username": username, "password": password})
+                assert response.status_code == 200
+                return {"Authorization": f"Bearer {response.json()['token']}"}
+
+            create_user("teamadmin", "teamadmin@mail.com")
+            headers = login("teamadmin")
+
+            # Step 2: Create org
+            org_data = {"name": "PermOrg", "desc": "Test org for perms", "image": None}
+            org_resp = client.post("/api/v1/organizations", json=org_data, headers=headers)
+            assert org_resp.status_code == 200
+            org_id = org_resp.json()["id"]
+
+            # Step 3: Create repo in org
+            repo_data = {
+                "name": "Repo1",
+                "desc": "Team permission test repo",
+                "public": True,
+                "organization_id": org_id,
+            }
+            repo_resp = client.post(f"/api/v1/repositories/", json=repo_data, headers=headers)
+            assert repo_resp.status_code == 200
+            repo_id = repo_resp.json()["id"]
+
+            # Step 4: Create team
+            team_data = {"name": "DevTeam", "desc": "Core Dev Team", "organization_id": org_id}
+            team_resp = client.post("/api/v1/teams", json=team_data, headers=headers)
+            assert team_resp.status_code == 200
+            team_id = team_resp.json()["id"]
+
+            # Step 5: Add permission
+            perm_dto = {
+                "team_id": team_id,
+                "repo_id": repo_id,
+                "kind": "read_write"
+            }
+            perm_add_resp = client.post("/api/v1/teams/permission", json=perm_dto, headers=headers)
+            assert perm_add_resp.status_code == 200
+
+            # Step 6: Get permissions and verify
+            perm_list_resp = client.get(f"/api/v1/teams/{team_id}/permissions", headers=headers)
+            assert perm_list_resp.status_code == 200
+            permissions = perm_list_resp.json()
+            assert any(p["repo_id"] == repo_id and p["kind"] == "read_write" for p in permissions)
+
+            # Step 7: Delete permission
+            perm_del_resp = client.request("DELETE", "/api/v1/teams/permission", json=perm_dto, headers=headers)
+            assert perm_del_resp.status_code == 202
+
+            # Step 8: Get permissions again to verify deletion
+            perm_list_resp_2 = client.get(f"/api/v1/teams/{team_id}/permissions", headers=headers)
+            assert perm_list_resp_2.status_code == 200
+            permissions_after = perm_list_resp_2.json()
+            assert not any(p["repo_id"] == repo_id for p in permissions_after)
+
 
 class TestUpdateTeam:
     def test_update_team_not_found(self, team_service: "TeamService"):
@@ -653,6 +785,49 @@ class TestUpdateTeam:
         team_service.team_repo.add.assert_called_once_with(excpected_team)
 
         # All other cases have been covered with the create_team tests, so we don't need to repeat them here.
+
+    def test_update_team_integration(self):
+        client = TestClient(app)
+
+        # Step 1: Create user and login
+        def create_user(username, email, password="Password123"):
+            res = client.post("/api/v1/users", json={"username": username, "email": email, "password": password})
+            assert res.status_code == 200
+            return res.json()
+
+        def login(username, password="Password123"):
+            res = client.post("/api/v1/users/login", json={"username": username, "password": password})
+            assert res.status_code == 200
+            token = res.json()["token"]
+            return {"Authorization": f"Bearer {token}"}
+
+        create_user("teamuser", "teamuser@example.com")
+        headers = login("teamuser")
+
+        # Step 2: Create organization
+        org_data = {"name": "TestOrg", "desc": "Org for testing", "image": None}
+        org_res = client.post("/api/v1/organizations", json=org_data, headers=headers)
+        assert org_res.status_code == 200
+        org_id = org_res.json()["id"]
+
+        # Step 3: Create team
+        team_data = {"name": "Initial Team", "desc": "Initial description", "organization_id": org_id}
+        team_res = client.post("/api/v1/teams", json=team_data, headers=headers)
+        assert team_res.status_code == 200
+        team = team_res.json()
+        team_id = team["id"]
+
+        # Step 4: Update team
+        updated_team_data = {"id": team_id, "name": "Updated Team", "desc": "Updated description"}
+        update_res = client.put("/api/v1/teams", json=updated_team_data, headers=headers)
+        assert update_res.status_code == 200
+
+        # Step 5: Confirm update
+        get_res = client.get(f"/api/v1/teams/o/{org_id}", headers=headers)
+        assert get_res.status_code == 200
+        team_after_update = get_res.json()[0]
+        assert team_after_update["name"] == "Updated Team"
+        assert team_after_update["desc"] == "Updated description"
 
 
 class TestDeletePermission:
