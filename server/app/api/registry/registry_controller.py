@@ -17,7 +17,7 @@ from app.api.jobs.jobs_client import JobsClient, get_jobs_client
 internal_router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
 external_router = APIRouter(prefix="/registry", tags=["dockerhub-registry-external"])
 
-@internal_router.get("", summary="???")
+@internal_router.get("", summary="Docker Registry Authentication Endpoint")
 def registry_endpoint(
     request: Request, 
     registry_service: RegistryService = Depends(get_registry_service),
@@ -25,13 +25,16 @@ def registry_endpoint(
     service: str | None = None):
 
     authorization_header = request.headers.get("Authorization")
-    if not authorization_header:
-        raise HTTPException(status_code=401, detail="Authorization header missing")
-    if not authorization_header.startswith("Basic "):
-        raise HTTPException(status_code=401, detail="Invalid authorization scheme (must be Basic)")
-    
-    auth_token = authorization_header.split(" ")[1]
-    username, password = decode_auth_header(auth_token)
+
+    username = None
+    password = None
+
+    if authorization_header:
+        if not authorization_header.startswith("Basic "):
+            raise HTTPException(status_code=401, detail="Invalid authorization scheme (must be Basic)")
+        
+        auth_token = authorization_header.split(" ")[1]
+        username, password = decode_auth_header(auth_token)
 
     return registry_service.handle_registry_request(username, password, scopes, service)
 
