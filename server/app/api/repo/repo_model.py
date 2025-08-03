@@ -3,7 +3,8 @@ import enum
 from sqlmodel import Field, Relationship, SQLModel
 
 from app.api.org.org_model import Organization
-from typing import TYPE_CHECKING, Optional
+from app.api.tags.tag_model import Tag
+from typing import TYPE_CHECKING, List, Optional
 if TYPE_CHECKING:
     from app.api.user.user_model import User
 
@@ -13,6 +14,14 @@ class RepositoryBadge(str, enum.Enum):
     verified = "verified"
     sponsored_oss = "sponsored_oss"
 
+class RepositoryStar(SQLModel, table=True):
+    __tablename__ = "repository_stars"
+
+    starrer_id: int | None = Field(default=None, foreign_key="user.id", primary_key=True)
+    repository_id: int | None = Field(default=None, foreign_key="repository.id", primary_key=True, ondelete="CASCADE")
+
+    starrer: "User" = Relationship(back_populates="stars")
+    repository: "Repository" = Relationship()
 
 class Repository(SQLModel, table=True):
     id: int | None = Field(default=None, primary_key=True)
@@ -49,7 +58,11 @@ class Repository(SQLModel, table=True):
 
     badge: RepositoryBadge = Field(default=RepositoryBadge.none)
     last_updated: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    stars: int = Field(default=0)
     downloads: int = Field(default=0)
+    deleting: bool = Field(default=False)
+
+    tags: List["Tag"] = Relationship(back_populates="repository")
 
     @staticmethod
     def compute_canonical_name(name: str, user: str, official: bool, org: str | None) -> str:

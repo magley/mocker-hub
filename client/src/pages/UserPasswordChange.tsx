@@ -1,16 +1,21 @@
 import { useState } from 'react';
 import { Form, Button, Alert } from 'react-bootstrap';
 import { UserPasswordChangeDTO, UserService } from '../api/user.api';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { AxiosError } from 'axios';
-import { clearJWT } from '../util/localstorage';
+import { clearJWT, setJWT } from '../util/localstorage';
+import { get_validation_error_readable } from '../util/http';
+import { useAuthStore } from '../util/store';
 
-export const UserPasswordChangeRequired = () => {
+export const UserPasswordChange = () => {
     let navigate = useNavigate();
+    const location = useLocation();
     const [oldPassword, setOldPassword] = useState('');
     const [newPassword, setNewPassword] = useState('');
     const [confirmNewPassword, setConfirmNewPassword] = useState('');
     const [error, setError] = useState('');
+    const isRequired = location.pathname === "/password-change-required";
+    const setRole = useAuthStore((state) => state.setRole);
 
     const handleSubmit = (e: React.FormEvent) => {
         e.preventDefault();
@@ -26,18 +31,20 @@ export const UserPasswordChangeRequired = () => {
 
         UserService.ChangePassword(dto).then(() => {
             clearJWT();
+            setRole("");
             navigate("/login", { replace: true });
         }).catch((err: AxiosError) => {
-            console.error(err);
-            setError((err.response?.data as any)["detail"]["message"]);
+            setError(get_validation_error_readable(err));
         });
     };
 
     return (
         <div className="container mt-5 d-flex justify-content-center">
             <div className="w-100" style={{ maxWidth: '400px' }}>
-                <h2 className="text-center">Password change required</h2>
-                <p className="text-center">Please change your password before continuing.</p>
+                <h2 className="text-center">Password change {isRequired && "required"}</h2>
+                {isRequired && (
+                    <p className="text-center">Please change your password before continuing.</p>
+                )}
                 <Form onSubmit={handleSubmit}>
                     <Form.Group controlId="oldPassword">
                         <Form.Label>Old Password</Form.Label>

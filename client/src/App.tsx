@@ -2,7 +2,7 @@ import { Navbar } from './components/Navbar';
 import { Home } from './pages/Home';
 import { NotFound } from './pages/NotFound';
 import { RepoCreate } from './pages/RepoCreate';
-import { UserPasswordChangeRequired } from './pages/UserPasswordChangeRequired';
+import { UserPasswordChange } from './pages/UserPasswordChange';
 import { UserRegistration } from './pages/UserRegistration';
 import { UserAdminRegistration } from './pages/UserAdminRegistration';
 import { UserLogin } from './pages/UserLogin';
@@ -13,6 +13,13 @@ import { OrganizationCreate } from './pages/OrgCreate';
 import { RepositoriesOfUser } from './pages/RepoOfUser';
 import { RepositoryPage } from './pages/RepoPage';
 import { TheToastContainer } from './components/TheToastContainer';
+import { OrganizationPage } from './pages/OrgPage';
+import { RepoStarred } from './pages/RepoStarred';
+import { OrganisationsOfUser } from './pages/OrgOfUser';
+import { ProfilePage } from './pages/ProfilePage';
+import { Analytics } from './pages/Analytics';
+import { UsersManagement } from './pages/UsersManagement';
+import { Explore } from './pages/Explore';
 
 // This function converts:
 //
@@ -45,21 +52,29 @@ function App() {
                 <Routes>
                     {authRoute("/register", [""], UserRegistration)}
                     {authRoute("/register-admin", ["superadmin"], UserAdminRegistration)}
+                    {authRoute("/password-change-required", ['superadmin'], UserPasswordChange)}
 
                     {/* Anybody. */}
-                    {authRoute("/", [], Home)}
+                    {authRoute("/", [], Explore)}
                     {authRoute("/login", [], UserLogin)}
                     {authRoute("/logout", [], UserLogout)}
 
                     {authRoute("/u/:username/repos", [], RepositoriesOfUser)}
+                    {authRoute("/u/:username/orgs", [], OrganisationsOfUser)}
+                    {authRoute("/u/:username/starred", [], RepoStarred)}
                     {authRoute("/r/*", [], RepositoryPage)}
+                    {authRoute("/o/*", [], OrganizationPage)}
 
                     {/* Any role. */}
-                    {authRoute("/password-change-required", ['user', 'admin', 'superadmin'], UserPasswordChangeRequired)}
+                    {authRoute("/password-change", ['user', 'admin', 'superadmin'], UserPasswordChange)}
+                    {authRoute("/u/:username", ['user', 'admin', 'superadmin'], ProfilePage)}
 
                     {/* Protected routes. */}
                     {authRoute("/new", ['user', 'admin'], RepoCreate)}
+                    {authRoute("/new/org/:orgId", ['user', 'admin'], RepoCreate)}
                     {authRoute("/org", ['user', 'admin'], OrganizationCreate)}
+                    {authRoute("/analytics", ['admin', 'superadmin'], Analytics)}
+                    {authRoute("/users/management", ['admin', 'superadmin'], UsersManagement)}
 
                     {/* "Not found", must be at the end. */}
                     {authRoute("*", [], NotFound)}

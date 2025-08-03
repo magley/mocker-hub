@@ -1,0 +1,138 @@
+import base64
+import datetime
+import os
+import uuid
+import jwt
+
+from typing import List, Literal
+from app.api.registry.registry_dto import RegistryAction, RegistryActionOperation
+
+SECRET_KEY = ""
+if os.getenv('mocker_hub_TEST_ENV') is None:
+    try:
+        with open("/code/certs/private_key.pem", "r") as f:
+            SECRET_KEY = f.read()
+    except FileNotFoundError as e:
+        print(e)
+        print("Did you forget to add the certificates?")
+        print("Go to /distribution/certs and unpack certs.rar")
+    
+CERT_DER_B64 = ""
+if os.getenv('mocker_hub_TEST_ENV') is None:
+    try:
+        with open("/code/certs/cert.der.b64", "r") as f:
+            CERT_DER_B64 = f.read()
+    except FileNotFoundError as e:
+        print(e)
+        print("Did you forget to add the certificates?")
+        print("Go to /distribution/certs and unpack certs.rar")
+
+def decode_auth_header(auth_token):
+    """
+    Decode the username and password fields from an HTTP Basic authorization
+    header.
+
+    ---
+    
+    `auth_token` is the encoded token. In other words, if the authorization
+    header is:
+
+        Authorization: Basic dhkj3h289,
+
+    then `auth_token` must be `dhkj3h289`.
+
+    ---
+
+    Returns a pair of strings `username`, `password`.
+    """
+    decoded_bytes = base64.b64decode(auth_token).decode('utf-8')
+    username, password = decoded_bytes.split(':')
+    return username, password
+
+
+def parse_scopes(username: str, scopes: List[str]) -> List[RegistryAction]:
+    """
+    Parse scopes from Docker Registry request.
+
+    `username` is the username of the user making the request.
+
+    `scopes` are the list of scopes of resource access built into the JWT, or `None` if the
+    Docker Registry request is just a login operation. For example, a single scope:
+    `repository:nginx:push,pull` means that the user wants access to push and
+    pull to the official `nginx` repository.
+    """
+    actions = []
+
+    for scope in scopes:
+        scope_parts = scope.split(':')   
+        if scope_parts[0] != 'repository':
+            raise Exception(f"Unexpected scope type '{scope_parts[0]}'. Expecting 'repository'")
+        repository = scope_parts[1]
+        operations = [RegistryActionOperation(o) for o in scope_parts[2].split(',')]
+        action = RegistryAction(username=username, repo_canonical_name=repository, operations=operations)
+        actions.append(action)
+
+    return actions
+
+
+def build_jwt_for_docker_registry(username: str, service: str, scopes: List[str]) -> str:
+    """
+    Create a JWT as required by Docker Registry.
+
+    ---
+
+    `username` is the name of the user.
+
+    `service` is the name of the service requesting the JWT. In other words,
+    this is the audience for the JWT. This value should be extracted from the
+    HTTP request issued by Docker Registry.
+
+    `scopes` are the list of scopes of resource access built into the JWT, or `None` if the
+    Docker Registry request is just a login operation. For example, a single scope:
+    `repository:nginx:push,pull` means that the user wants access to push and
+    pull to the official `nginx` repository.
+
+    ---
+
+    Returns a string representation of the encoded JWT.
+    """
+    now = datetime.datetime.now()
+
+    token_payload = {
+        'iss': 'localhost:8000', # TODO: ...?
+        'sub': username,
+        'aud': service,
+        'exp': now + datetime.timedelta(hours=1),
+        'nbf': now,
+        'iat': now,
+        'jti': str(uuid.uuid4()),
+        'access': []
+    }
+    token_headers = { 
+        'x5c': [CERT_DER_B64] 
+    }
+
+    if scopes is not None:
+        token_payload['access'] = []
+        for scope in scopes:
+            scope_parts = scope.split(':')   
+            token_payload['access'].append(
+                {
+                    'type': scope_parts[0],
+                    'name': scope_parts[1],
+                    'actions': scope_parts[2].split(',')
+                }
+            )
+
+    return jwt.encode(token_payload, SECRET_KEY, algorithm='RS256', headers=token_headers)    
+
+def build_manifest_jwt(username: str, repo_name: str, method: Literal["GET", "DELETE"]) -> str: 
+
+    scope = f"repository:{repo_name}:"  
+    scope = scope + "pull" if method == "GET" else scope + "delete"
+    host = os.environ["DISTRIBUTION_HOST"]
+    port = os.environ["DISTRIBUTION_PORT"]
+    service = f"{host}:{port}"
+    
+    return build_jwt_for_docker_registry(username, service, [scope])
+

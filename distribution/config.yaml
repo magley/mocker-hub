@@ -1,0 +1,34 @@
+version: 0.1
+log:
+  level: debug
+storage:
+  filesystem:
+    rootdirectory: /var/lib/registry
+  delete:
+    enabled: true
+http:
+  addr: 0.0.0.0:5000
+  tls:
+    # Make sure the paths match the mounted certificate and private key.
+    certificate: /mnt/local/certs/cert.pem
+    key: /mnt/local/certs/private_key.pem
+auth:
+  token:
+    autoredirect: false
+    # Our auth server endpoint.
+    realm: http://localhost:8000/registry
+    # In this case, the issuer is the server host.
+    issuer: localhost:8000
+    # The service is the docker registry host.
+    service: distribution:5000
+    # You must specify the root certificate bundle. For self-signed
+    # certificates, that's just the certificate file itself.
+    rootcertbundle: /mnt/local/certs/cert.pem
+notifications:
+  endpoints:
+    - name: ourserverwebhooklistener
+      # Endpoint URL needs the server hostname defined in compose.yaml.
+      url: http://backend:8000/registry/notifications
+      timeout: 500ms
+      threshold: 5
+      backoff: 1s

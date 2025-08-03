@@ -2,16 +2,27 @@ from typing import Dict, List
 from fastapi import Depends
 from sqlmodel import Session
 from app.api.config.database import get_database
-from app.api.org.org_dto import OrganizationCreateDTO
+from app.api.org.org_dto import OrganizationCreateDTO, OrganizationDescUpdateDTO, OrganizationImageUpdateDTO
 from app.api.org.org_model import Organization, OrganizationMembers
 from app.api.org.org_repo import OrganizationRepo
-from app.api.config.exception_handler import FieldTakenException
+from app.api.config.exception_handler import AccessDeniedException, FieldTakenException, NotFoundException
 from app.api.config.images import generate_inline_image, save_image
- 
+from app.api.repo.repo_model import Repository
+from app.api.team.team_repo import TeamRepo
+from app.api.user.user_model import User
+from app.api.user.user_repo import UserRepo
+from app.api.events.event_service import EventService
+from app.api.events.event_model import EventLevel
+from app.api.config.logutil import LOGGER
+
+
 class OrganizationService:
     def __init__(self, session: Session):
         self.session = session
         self.org_repo = OrganizationRepo(session)
+        self.user_repo = UserRepo(session)
+        self.event_service = EventService()
+        self.team_repo = TeamRepo(session)
 
     def add(self, user_id: int, dto: OrganizationCreateDTO) -> Organization:
         # Check if the name is available.
@@ -75,6 +86,109 @@ class OrganizationService:
     
     def find_org_names_by_ids(self, ids: List[int]) -> Dict[int, str]:
         return self.org_repo.find_orgs_by_ids(ids)
+    
+    def find_by_name(self, name: str) -> Organization:
+        org = self.org_repo.find_by_name(name)
+        if org is None:
+            raise NotFoundException(Organization, name)
+        return org
+    
+    def is_user_member_of_org(self, org_id: int, user_id: int) -> bool:
+        return self.org_repo.user_is_in_org(user_id, org_id)
+
+    def get_org_names_from_repos(self, repos: List[Repository]) -> Dict[int, str]:
+        return self.find_org_names_by_ids([r.organization_id for r in repos if r.organization_id is not None])
+
+    def remove_org(self, org: Organization) -> None:
+        self.org_repo.remove(org)
+
+    def update_desc_by_name(self, name: str, dto: OrganizationDescUpdateDTO, user_id: int) -> Organization:
+        org = self.find_by_name(name)
+        if user_id != org.owner.id:
+            raise AccessDeniedException(f"User {user_id} cannot update organization description with identifier {name}")
+        self.update_org_attrs(name, desc=dto.desc)
+        return org
+    
+    def update_image_by_name(self, name: str, dto: OrganizationImageUpdateDTO, user_id: int) -> Organization:
+        self.event_service.log(EventLevel.Info, f"User {user_id} wants to change image of organization {name}")
+
+        org = self.find_by_name(name)
+        if user_id != org.owner.id:
+            raise AccessDeniedException(f"User {user_id} cannot update organization image with identifier {name}")
+
+        if dto.image is None or dto.image == "":
+            self.event_service.log(EventLevel.Info, f"User {user_id} is clearing image from org {name}")
+            dto.image = generate_inline_image(name)
+        else:
+            self.event_service.log(EventLevel.Info, f"User {user_id} is setting image for org {name}")
+            
+        fname = save_image(dto.image, f"org-{name}")[1]
+        
+        self.event_service.log(EventLevel.Info, f"Org {name} image changed! New filename: {fname}")
+
+        org = self.update_org_attrs(name, image=fname)
+
+        return org
+
+    def update_org_attrs(self, name: str, **kwargs) -> Organization:
+        org = self.find_by_name(name)
+        if org is None:
+            raise NotFoundException(Organization, name)
+        for attr, value in kwargs.items():
+            org = self.org_repo.set_attribute(org, attr, value)
+        return org
+
+    def find_members_of_org(self, org_id: int, user_id: int) -> List[User]:
+        if not self.org_repo.user_is_in_org(user_id, org_id):
+            raise AccessDeniedException(
+                f"User {user_id} cannot see members of organization {org_id}")
+        return self.org_repo.find_members_of_org(org_id)
+
+    def add_members_to_org(self, org_id: int, user_ids: list[int], owner_id: int):
+        org = self.org_repo.find_by_id(org_id)
+        if not org:
+            raise NotFoundException(Organization, org_id)
+        if org.owner_id != owner_id:
+            raise AccessDeniedException(f"User {owner_id} cannot add members to organization with id {org_id}")
+
+        new_members = []
+        for uid in user_ids:
+            user = self.user_repo.find_by_id(uid)
+            if not user:
+                continue
+            if self.org_repo.user_is_in_org(uid, org_id):
+                continue
+            if user.role == "superadmin":
+                continue
+            self.org_repo.add_user_to_org(org_id, uid)
+            new_members.append(user)
+        return new_members
+
+    def search_members_by_username_prefix(self, query: str, team_id_to_exclude_members: int) -> List[User]:
+        team = self.team_repo.get(team_id_to_exclude_members)
+        if not team:
+            raise NotFoundException("Team", team_id_to_exclude_members)
+        org_members = self.org_repo.search_members_by_username_prefix(query, team.organization_id)
+        members_to_exclude = self.team_repo.find_members_of_team(team_id_to_exclude_members)
+        filtered_users = [
+            u for u in org_members
+            if u.id != team.organization.owner_id and u not in members_to_exclude
+        ]
+        return filtered_users
+
+    def remove_org_member(self, member_id: int, org_id: int, user_id: int):
+        om = self.org_repo.find_member(org_id, member_id)
+        if om is None:
+            raise NotFoundException(OrganizationMembers, member_id)
+        org = self.org_repo.find_by_id(org_id)
+        if org.owner_id != user_id:
+            raise AccessDeniedException(f"User {user_id} cannot remove member {member_id} from organization {org_id}")
+        if user_id == member_id:
+            raise AccessDeniedException(f"User {user_id} cannot remove himself from organization {org_id}")
+        team_members = self.team_repo.find_teams_of_member(member_id)
+        for tm in team_members:
+            self.team_repo.delete_team_member(tm)
+        self.org_repo.delete_org_member(om)
 
 
 def get_org_service(session: Session = Depends(get_database)) -> OrganizationService:

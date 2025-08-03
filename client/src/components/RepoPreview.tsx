@@ -1,0 +1,102 @@
+import React from 'react';
+import { RepoDTO, RepositoryBadge } from '../api/repo.api';
+import { Card, Col, OverlayTrigger, Tooltip } from 'react-bootstrap';
+import { Link, NavLink } from 'react-router-dom';
+import { formatDistanceToNow } from 'date-fns';
+import { BadgeUtils } from '../util/badge';
+
+export const RepoPreview: React.FC<{ repo: RepoDTO, orgNames: Map<number, string> | undefined, showCanonical : boolean }> = ( {repo, orgNames, showCanonical} ) => {
+
+    const constructSubtitle = () => {
+        if (repo.organization_id && orgNames && orgNames.has(repo.organization_id)) {
+            {/* If the repository is part of an organization, link to the organization page. */}
+            return <NavLink style={{ textDecoration: 'none'}} to={`/o/${orgNames.get(repo.organization_id)}`}>{orgNames.get(repo.organization_id)}</NavLink>;
+        } else if (repo.badge === RepositoryBadge.official) {
+            {/* If the repository was created by an admin, then it's official*/}
+            return <span>Official repository</span>;
+            {/* If the repository was created by a user, link to user's repositories. */}
+        } else return <NavLink style={{ textDecoration: 'none'}} to={`/u/${repo.canonical_name.split("/")[0]}/repos`}>{repo.canonical_name.split("/")[0]}</NavLink>;
+    }
+
+    return (
+        <Col key={repo.id} xs={12}>
+            <Card>
+                <Card.Body>
+                    {/* Repository Title with React Router Link */}
+                    <Card.Title>
+                        <Link to={`/r/${repo.canonical_name}`} className="text-primary">
+                            {showCanonical ? <span>{repo.canonical_name}</span> : <span>{repo.name}</span>}
+                        </Link>
+                        {/* Private */}
+                        {!repo.public && (
+                            <span className="badge rounded-pill bg-secondary" style={{ fontSize: '0.7rem', marginLeft: '1em' }}>
+                                <i className="bi bi-lock"></i>
+                                Private
+                            </span>
+                        )}
+                        {/* Badge */}   
+                        {repo && repo?.badge !== RepositoryBadge.none &&
+                            <span
+                                className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(repo?.badge)}`}
+                                style={{ fontSize: '0.7rem', marginLeft: '1em' }}
+                            >
+                                <i className={`bi ${BadgeUtils.toBootstrapIcon(repo?.badge)}`}> </i>
+                                {BadgeUtils.toHumanText(repo?.badge)}
+                            </span>
+                        }
+                    </Card.Title>
+
+                    {/* Subtitle */}
+                    {showCanonical ? (
+                        <div style={{color: '#0264c5ff', fontWeight: 'bolder', marginBottom: '0.3em' }}>{constructSubtitle()}</div>
+                    ) : (
+                        repo.organization_id && orgNames &&(
+                            <Card.Subtitle className="mb-2 text-muted" style={{ fontSize: '0.8rem' }}>
+                                Part of organization {orgNames?.get(repo.organization_id)}
+                            </Card.Subtitle>
+                        )
+                    )}
+
+
+                    {/* Last update */}
+                    {repo.last_updated && (
+                        <Card.Text style={{ fontSize: '0.8rem' }}>
+                            Updated <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{new Date(repo.last_updated).toLocaleString()}</Tooltip>}>
+                                <span>{formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}</span>
+                            </OverlayTrigger>
+                        </Card.Text>
+                    )}
+
+                    {/* Description */}
+                    <Card.Text
+                        style={{ fontSize: '0.9rem', minHeight: '3em', overflow: 'hidden' }}>
+                        {repo.desc ? (repo.desc.length > 99 ? `${repo.desc.slice(0, 99)}...` : repo.desc) : '\u00A0'}
+                    </Card.Text>
+
+                    <div className="d-flex">
+                        {/* Download Count */}
+                        {
+                            <span className="align-items-center">
+                                <i className="bi bi-download"></i>
+                                <span> {repo.downloads}</span>
+                            </span>
+                        }
+
+                        {/* Star Count */}
+                        {
+                            <div>
+                                <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
+                                <span className="align-items-center">
+                                    <i className="bi bi-star"></i>
+                                    <span> {repo.stars}</span>
+                                </span>
+                            </div>
+                        }
+                    </div>
+                </Card.Body>
+            </Card>
+        </Col>
+    );
+};

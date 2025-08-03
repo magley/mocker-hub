@@ -4,7 +4,7 @@ import './UserLogin.css';
 import { TokenDTO, UserLoginDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
-import { getJwtId, getJwtMustChangePassword, getJwtRole, getJwtUsername, setJWT } from '../util/localstorage';
+import { getJwtMustChangePassword, getJwtRole, getJwtUsername, setJWT } from '../util/localstorage';
 import { useAuthStore } from '../util/store';
 
 export const UserLogin = () => {
@@ -44,7 +44,10 @@ export const UserLogin = () => {
             setRole(getJwtRole(), () => {
                 if (getJwtMustChangePassword()) {
                     navigate("/password-change-required");
-                } else {
+                } else if (getJwtRole() === 'superadmin') {
+                    // because superadmin doesn't have "My repositories" page.
+                    navigate("/");
+                }else {
                     const username = getJwtUsername();
                     navigate(`/u/${username}/repos`);
                 }

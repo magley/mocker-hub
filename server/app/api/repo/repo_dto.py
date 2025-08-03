@@ -1,6 +1,8 @@
 from datetime import datetime
 from typing import Dict, List
 from pydantic import BaseModel, EmailStr, Field
+
+from app.api.config.pagination import PaginatedResultInfoDTO
 from app.api.user.user_model import UserRole
 from app.api.repo.repo_model import RepositoryBadge
 
@@ -15,7 +17,7 @@ class RepositoryDTO(BaseModel):
     badge: RepositoryBadge
     last_updated: datetime
     downloads: int
-
+    stars: int
 
 class RepositoryCreateDTO(BaseModel):
     name: str
@@ -32,3 +34,21 @@ class ReposOfUserDTO(BaseModel):
 class RepositoryExtDTO(RepositoryDTO):
     owner_name: str
     org_name: str | None
+    can_update: bool
+    can_delete_tag: bool | None
+    can_star: bool
+    starred: bool
+
+class ToggleStarRepoDTO(RepositoryDTO):
+    starred: bool
+    
+class RepositoryDescUpdateDTO(BaseModel):
+    desc: str
+
+class RepositoryVisibilityUpdateDTO(BaseModel):
+    public: bool
+
+class RepositoriesResultDTO(BaseModel):
+    hits: List[RepositoryDTO]
+    info: PaginatedResultInfoDTO
+    organization_names: Dict[int, str]

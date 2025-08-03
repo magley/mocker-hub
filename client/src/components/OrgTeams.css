@@ -1,0 +1,16 @@
+/* org-page is from OrgPage.css */
+.org-page {
+    .no-teams-text {
+        text-align: center;
+    }
+}
+
+.team-row {
+    transition: background-color 0.2s ease, transform 0.2s ease;
+    cursor: pointer;
+}
+
+.team-row:hover {
+    background-color: #f8f9fa; /* light gray hover */
+    transform: scale(1.01);
+}

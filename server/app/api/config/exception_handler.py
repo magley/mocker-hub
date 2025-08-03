@@ -23,7 +23,6 @@ class NotFoundException(UserException):
     def __str__(self):
         return self.message
     
-
 class AccessDeniedException(UserException):
     def __init__(self, msg: str):
         self.message = f"{msg}"
@@ -31,6 +30,37 @@ class AccessDeniedException(UserException):
     def __str__(self):
         return self.message
 
+class NotInRelationshipException(UserException):
+    """
+    Exceptions of the type: `[e1] is not in [e2]`.
+    """
+    def __init__(self, e1_type, e1_id, e2_type, e2_id):
+          self.message = f"{e1_type} with identifier {e1_id} does not have a {e2_type} with identifier {e2_id}"
+
+    def __str__(self):
+        return self.message
+
+class InvalidInputException(UserException):
+    def __init__(self, msg: str):
+        self.message = f"{msg}"
+
+    def __str__(self):
+        return self.message
+    
+class RegistryException(Exception): 
+    def __init__(self, status_code: int, message: str):
+        self.status_code = status_code
+        self.message = f"Registry error with status_code {status_code} and message: \n{message}"
+
+    def __str__(self):
+        return self.message    
+
+class ConflictException(Exception):
+    def __init__(self, msg: str):
+        self.message = f"{msg}"
+
+    def __str__(self):
+        return self.message
 
 def register_exception_handler(app: FastAPI):
     @app.exception_handler(NotFoundException)
@@ -43,8 +73,16 @@ def register_exception_handler(app: FastAPI):
     
     @app.exception_handler(RequestValidationError)
     def _ValidationError(r: Request, e: RequestValidationError):
-        raise HTTPException(400, detail={"message": str(e.errors())})
+        raise HTTPException(400, detail={"message": e.errors()})
     
     @app.exception_handler(sqlalchemy.exc.IntegrityError)
     def _IntegrityError(r: Request, e: sqlalchemy.exc.IntegrityError):
         raise HTTPException(400, detail={"message": e._message()}) 
+    
+    @app.exception_handler(RegistryException)
+    def _RegistryException(r: Request, e: RegistryException):
+        raise HTTPException(status_code=e.status_code, detail={"message": e.message})
+    
+    @app.exception_handler(ConflictException)
+    def _ConflictException(r: Request, e: ConflictException):
+        raise HTTPException(409, detail={"message": str(e)})

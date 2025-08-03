@@ -26,6 +26,7 @@ export interface RepoDTO {
     badge: RepositoryBadge,
     last_updated: string, // Encoded Date() object.
     downloads: number,
+    stars: number
 }
 
 export interface ReposOfUserDTO {
@@ -35,44 +36,48 @@ export interface ReposOfUserDTO {
     organization_names: { [key: number]: string };
 }
 
+export interface RepositoryQueryInfoDTO {
+    page: number,
+    page_size: number,
+    total_pages: number,
+    total_hits: number,
+}
+
+export interface RepositoryQueryDTO {
+    hits: RepoDTO[],
+    info: RepositoryQueryInfoDTO,
+    organization_names: { [key: number]: string };
+}
+
 export interface RepoExtDTO extends RepoDTO {
     owner_name: string,
     org_name: string | null,
+    can_update: boolean,
+    can_delete_tag: boolean,
+    can_star: boolean,
+    starred: boolean | null,
+}
+
+export interface RepositoryVisibilityUpdateDTO {
+    public: boolean,
+}
+
+export interface RepositoryDescUpdateDTO {
+    desc: string,
+}
+
+export interface ToggleStarRepoDTO extends RepoDTO {
+    starred: boolean,
+}
+
+export interface DeleteRepoResponseDTO {
+    message: string
 }
 
 export class RepositoryService {
-    static BadgeToHumanText(badge: RepositoryBadge): string {
-        switch (badge) {
-            case RepositoryBadge.none: return "";
-            case RepositoryBadge.official: return "Official";
-            case RepositoryBadge.verified: return "Verified Publisher";
-            case RepositoryBadge.sponsored_oss: return "Sponsored OSS";
-            default: return `${badge}`;
-        }
-    }
 
-    static BadgeToBootstrapColor(badge: RepositoryBadge): string {
-        switch (badge) {
-            case RepositoryBadge.none: return "bg-light";
-            case RepositoryBadge.official: return "bg-primary";
-            case RepositoryBadge.verified: return "bg-secondary";
-            case RepositoryBadge.sponsored_oss: return "bg-success";
-            default: return `bg-light`;
-        }
-    }
-
-    /**
-     * 
-     * Usage: <i className={`bi ${BadgeToBootstrapIcon(...)}`}></i>
-     */
-    static BadgeToHumanBootstrapIcon(badge: RepositoryBadge): string {
-        switch (badge) {
-            case RepositoryBadge.none: return "";
-            case RepositoryBadge.official: return "bi-award";
-            case RepositoryBadge.verified: return "bi-patch-check-fill";
-            case RepositoryBadge.sponsored_oss: return "bi-git";
-            default: return ``;
-        }
+    static async GetAllByOrganizationId(org_id: number): Promise<AxiosResponse<RepoDTO[]>> {
+        return await axiosInstance.get(`/repositories/org/${org_id}`);
     }
 
     static async CreateRepository(dto: RepoCreateDTO): Promise<AxiosResponse<RepoDTO>> {
@@ -83,8 +88,41 @@ export class RepositoryService {
         return await axiosInstance.get(`/repositories/u/${username}`);
     }
 
+    static async GetStarredRepositories(username: string): Promise<AxiosResponse<ReposOfUserDTO>> {
+        return await axiosInstance.get(`/repositories/starred/u/${username}`);
+    }
 
     static async GetRepoByCanonicalName(name: string): Promise<AxiosResponse<RepoExtDTO>> {
-        return await axiosInstance.get(`/repositories/${name}`);
+        return await axiosInstance.get(`/repositories/name/${name}`);
+    }
+
+    static async UpdateRepoVisibilityById(repoId: number, dto: RepositoryVisibilityUpdateDTO): Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.put(`/repositories/${repoId}/visibility`, dto)
+    }
+
+    static async UpdateRepoDescById(repoId: number, dto: RepositoryDescUpdateDTO) : Promise<AxiosResponse<RepoDTO>> {
+        return await axiosInstance.put(`/repositories/${repoId}/desc`, dto)
+    }
+
+    static async ToggleRepositoryStar(repoId: number) : Promise<AxiosResponse<ToggleStarRepoDTO>> {
+        return await axiosInstance.put(`/repositories/star/${repoId}`)
+    }
+
+    static async DeleteRepo(repoId: number) : Promise<AxiosResponse<DeleteRepoResponseDTO>> {
+        return await axiosInstance.delete(`/registry/repository/${repoId}`)
+    }
+
+    static async GetPublicRepositories(query: string, page: number, page_size: number, show_badge_official: boolean, show_badge_sponsored: boolean,
+         show_badge_verified: boolean): Promise<AxiosResponse<RepositoryQueryDTO>> {
+        return await axiosInstance.get(`/repositories/public/`, {
+            params: {
+                page_number: page,
+                page_size,
+                show_badge_official,
+                show_badge_sponsored,
+                show_badge_verified,
+                query
+            }
+        });
     }
 }

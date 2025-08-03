@@ -1,4 +1,6 @@
 *.db
+*.log
+*.log.*
 
 .env
 .venv

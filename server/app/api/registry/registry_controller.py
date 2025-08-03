@@ -1,0 +1,106 @@
+from typing import List
+from fastapi import APIRouter, Depends, HTTPException, Request, Query
+
+from app.api.registry.registry_utils import decode_auth_header
+from app.api.registry.registry_service import RegistryService, get_registry_service
+from app.api.config.logutil import LOGGER
+from app.api.user.user_model import UserRole
+from app.api.config.auth import JWTDep, get_id_from_jwt, get_username_from_jwt, pre_authorize
+from app.api.tags.tag_service import TagService, get_tag_service
+from app.api.registry.registry_dto import DeleteTagDTO, DeleteResponseDTO
+from app.api.repo.repo_service import RepositoryService, get_repo_service
+from app.api.access_control.access_control_service import AccessControlService, get_access_control_service
+from app.api.config.exception_handler import AccessDeniedException
+from app.api.registry.registry_client import RegistryClient, get_registry_client
+from app.api.jobs.jobs_client import JobsClient, get_jobs_client
+
+internal_router = APIRouter(prefix="/registry", tags=["dockerhub-registry"])
+external_router = APIRouter(prefix="/registry", tags=["dockerhub-registry-external"])
+
+@internal_router.get("", summary="Docker Registry Authentication Endpoint")
+def registry_endpoint(
+    request: Request, 
+    registry_service: RegistryService = Depends(get_registry_service),
+    scopes: List[str] | None = Query(default=None, alias="scope"),
+    service: str | None = None):
+
+    authorization_header = request.headers.get("Authorization")
+
+    username = None
+    password = None
+
+    if authorization_header:
+        if not authorization_header.startswith("Basic "):
+            raise HTTPException(status_code=401, detail="Invalid authorization scheme (must be Basic)")
+        
+        auth_token = authorization_header.split(" ")[1]
+        username, password = decode_auth_header(auth_token)
+
+    return registry_service.handle_registry_request(username, password, scopes, service)
+
+@internal_router.api_route("/notifications", methods=["POST", "PUT"], summary="Webhook for Docker Registry")
+def registry_notification_endpoint(data: dict, registry_service: RegistryService = Depends(get_registry_service)):
+    for event in data["events"]:
+        action = event.get("action", None)
+        username = event.get("actor", {}).get("name", None)
+        repository = event.get("target", {}).get("repository", None)
+        tag = event.get("target", {}).get("tag", None)
+        digest = event.get("target", {}).get("digest", None)
+        method = event.get("request", {}).get("method", None)
+        url = event.get("target", {}).get("url", None)
+
+        try:
+            registry_service.on_notification(username, action, repository, tag, digest, method, url)
+        except Exception as e:
+            LOGGER.error(f"Couldn't handle Distribution webhook: {e}")
+
+    return {}
+
+@external_router.delete("/tag", status_code=200, summary="Delete a tag by its name", response_model=DeleteResponseDTO)
+@pre_authorize([UserRole.user, UserRole.admin])                             
+async def delete_tag_endpoint(
+    jwt: JWTDep,
+    dto: DeleteTagDTO,
+    repo_service: RepositoryService = Depends(get_repo_service), 
+    registry_service: RegistryService = Depends(get_registry_service), 
+    tag_service: TagService = Depends(get_tag_service),
+    registry_client: RegistryClient = Depends(get_registry_client),
+    access_control_service: AccessControlService = Depends(get_access_control_service)
+):
+    user_id = get_id_from_jwt(jwt)
+    username = get_username_from_jwt(jwt)
+    repo = repo_service.find_by_id(dto.repo_id)
+    tag = tag_service.find_by_name_and_repo_id(dto.tag_name, dto.repo_id)
+
+    if not access_control_service.has_delete_tag_access(user_id, repo.id):
+        raise AccessDeniedException(f"User {user_id} cannot delete a tag {tag.name} of repository with identifier {repo.id}")
+
+    response = await registry_service.delete_tag(registry_client, username, repo, tag)   
+
+    return response
+
+@external_router.delete("/repository/{repo_id}", status_code=202, summary="Delete a repository by its id", response_model=DeleteResponseDTO)
+@pre_authorize([UserRole.user, UserRole.admin])                             
+def delete_repo_endpoint(
+    jwt: JWTDep,
+    repo_id: int,
+    jobs_client: JobsClient = Depends(get_jobs_client),
+    registry_service: RegistryService = Depends(get_registry_service), 
+):
+    username = get_username_from_jwt(jwt)
+    user_id = get_id_from_jwt(jwt)
+    response = registry_service.delete_repo(jobs_client, username, user_id, repo_id)   
+    return response
+
+@external_router.delete("/organization/{org_name}", status_code=202, summary="Delete an organization by its name", response_model=DeleteResponseDTO)
+@pre_authorize([UserRole.user, UserRole.admin])                             
+def delete_org_endpoint(
+    jwt: JWTDep,
+    org_name: str,
+    jobs_client: JobsClient = Depends(get_jobs_client),
+    registry_service: RegistryService = Depends(get_registry_service), 
+):
+    username = get_username_from_jwt(jwt)
+    user_id = get_id_from_jwt(jwt)
+    response = registry_service.delete_org(jobs_client, username, user_id, org_name) 
+    return response

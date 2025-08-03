@@ -5,4 +5,19 @@
     .repo-page-header {
         padding: 20px 27%;
     }
+
+    .badge {
+        vertical-align: middle;
+    }
+
+    .repo-page-desc {
+        white-space: pre-wrap;
+    }
+}
+
+.repo-page-desc {
+  max-width: 800px;        
+  word-wrap: break-word;   
+  overflow-wrap: break-word;
+  white-space: normal;    
 }

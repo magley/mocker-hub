@@ -1,0 +1,53 @@
+.sidebar {
+    width: 35%;
+    background-color: #f8f9fa;
+    border-right: 1px solid #dee2e6;
+    padding: 1rem;
+}
+
+.sidebar-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.close-btn {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    line-height: 1;
+    cursor: pointer;
+}
+
+.query-list {
+    margin-top: 1rem;
+    padding-left: 1rem;
+}
+
+.query-list li {
+    margin-bottom: 0.5rem;
+}
+
+.query-description {
+    font-size: 0.9rem;
+    color: #555;
+    margin-top: 0.25rem;
+}
+
+.sidebar h1 {
+    font-size: 1.25rem;
+    margin-bottom: 0.5rem;
+}
+
+.sidebar h2 {
+    font-size: 1rem;
+    margin-bottom: 0.25rem;
+
+}
+
+.sidebar code {
+    background-color: #f1f1f1;
+    padding: 2px 4px;
+    border-radius: 4px;
+    font-family: monospace;
+}

@@ -1,20 +1,27 @@
+from fastapi import Response
 from fastapi.testclient import TestClient
 import pytest
 import unittest.mock as mock
+from typing import Callable
 
 from sqlmodel import SQLModel, Session
 
+from app.api.config.pagination import PaginatedResultDTO, PaginatedResultInfoDTO
 from app.api.config.security import hash_password
 from app.api.user.user_model import User, UserRole
 from app.api.user.user_repo import UserRepo
 from app.api.user.user_service import UserService
-from app.api.config.exception_handler import FieldTakenException, NotFoundException, UserException
+from app.api.config.exception_handler import ConflictException, InvalidInputException, FieldTakenException, NotFoundException
 from app.api.repo.repo_repo import RepositoryRepo
 from app.api.repo.repo_service import RepositoryService
-from app.api.repo.repo_dto import RepositoryCreateDTO
-from app.api.repo.repo_model import Repository, RepositoryBadge
+from app.api.repo.repo_dto import RepositoryCreateDTO, RepositoryDescUpdateDTO, RepositoryVisibilityUpdateDTO
+from app.api.repo.repo_model import Repository, RepositoryBadge, RepositoryStar
 from app.api.main import app
 from app.api.org.org_repo import OrganizationRepo
+from app.api.org.org_model import OrganizationMembers
+from app.api.team.team_model import TeamMember, TeamPermission, TeamPermissionKind
+from app.api.team.team_repo import TeamRepo
+from app.api.access_control.access_control_service import AccessControlService
 
 @pytest.fixture
 def mock_session():
@@ -33,6 +40,10 @@ def mock_org_repo():
     return mock.MagicMock(spec=OrganizationRepo)
 
 @pytest.fixture
+def mock_team_repo():
+    return mock.MagicMock(spec=TeamRepo)
+
+@pytest.fixture
 def user_service(mock_session, mock_user_repo):
     service = UserService(mock_session)
     service.user_repo = mock_user_repo
@@ -44,6 +55,8 @@ def repo_service(mock_session):
     service.repo_repo = mock.MagicMock(spec=RepositoryRepo)
     service.user_repo = mock.MagicMock(spec=UserRepo)
     service.org_repo = mock.MagicMock(spec=OrganizationRepo)
+    service.team_repo = mock.MagicMock(spec=TeamRepo)
+    service.access_control_service = mock.MagicMock(spec=AccessControlService)
     return service
 
 @pytest.fixture
@@ -216,87 +229,23 @@ def test_find_by_canonical_name_not_found(repo_service):
     repo_service.repo_repo.find_by_canonical_name.assert_called_once_with(canonical_name)
 
 
-def test_user_has_read_access_to_repo_public(repo_service, mock_repo):
-    """Test case for when the repository is public."""
-    mock_repo.public = True
-    
-    assert repo_service.user_has_read_access_to_repo(mock_repo, None) == True
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == True
-
-
-def test_user_has_read_access_to_repo_private_signed_out(repo_service, mock_repo):
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = None
-    
-    assert repo_service.user_has_read_access_to_repo(mock_repo, None) == False
-
-
-def test_user_has_read_access_to_repo_private_personal_owner(repo_service, mock_repo):
-    """Test case for when the repository is personal, and the user is the owner."""
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = None
-    
-    # I am the owner of this private repo.
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == True
-    # Someone else is the owner of this private personal repo.
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 2) == False
-
-
-def test_user_has_read_access_to_repo_private_org_member(repo_service, mock_repo):
-    """Test case for when the repository is an organization repository and the user is a member."""
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = 1
-    
-    # Member of the org.
-    repo_service.org_repo.user_is_in_org.return_value = True
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == True
-    
-    # Outsider relative to the org.
-    repo_service.org_repo.user_is_in_org.return_value = False
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == False
-
-
-def test_user_has_read_access_to_repo_private_org_not_member(repo_service, mock_repo):
-    """Test case for when the repository is an organization repository and the user is not a member."""
-    mock_repo.public = False
-    mock_repo.owner_id = 1
-    mock_repo.organization_id = 1
-    
-    # Outsider relative to org.
-    repo_service.org_repo.user_is_in_org.return_value = False
-    assert repo_service.user_has_read_access_to_repo(mock_repo, 1) == False
-
-"""
-NOTE: `user_had_red_access` has way too many possible cases to test them all because
-of the number of variables:
-
-- am i logged in
-    - am i the owner of this repo
-- is the repo public
-- is the repo in an organization
-    - am i a member of this repo
-
-So instead, `user_had_red_access` is done with whitebox testing.
-The integration tests should cover some interesting cases (if any).
-"""
-
-def test_get_repositories_of_user_all_accessible(repo_service, mock_repo):
+def test_get_repositories_of_user_all_accessible(repo_service):
     """Test case for when all repositories are accessible by whos_asking_user_id."""
     user_id = 1
     whos_asking_user_id = 2
 
+    mock_repo = mock.MagicMock(Repository)
+    mock_repo.id = 1
+
     repo_service.repo_repo.get_repositories_for_user.return_value = [mock_repo, mock_repo]
-    repo_service.user_has_read_access_to_repo = mock.MagicMock(return_value=True)
+    repo_service.access_control_service.has_read_access.return_value = True
 
     result = repo_service.get_repositories_of_user(user_id, whos_asking_user_id)
 
     assert len(result) == 2
     assert result == [mock_repo, mock_repo]
     repo_service.repo_repo.get_repositories_for_user.assert_called_once_with(user_id)
-    repo_service.user_has_read_access_to_repo.assert_any_call(mock_repo, whos_asking_user_id)
+    repo_service.access_control_service.has_read_access.assert_any_call(whos_asking_user_id, mock_repo.id)
 
 
 def test_get_repositories_of_user_some_accessible(repo_service):
@@ -311,14 +260,15 @@ def test_get_repositories_of_user_some_accessible(repo_service):
     repo2.id = 2
 
     repo_service.repo_repo.get_repositories_for_user.return_value = [repo1, repo2]
-    repo_service.user_has_read_access_to_repo = mock.MagicMock(side_effect=[True, False])
+    repo_service.access_control_service.has_read_access = mock.MagicMock(side_effect=[True, False])
 
     result = repo_service.get_repositories_of_user(user_id, whos_asking_user_id)
 
     assert len(result) == 1
     assert result == [repo1]
     repo_service.repo_repo.get_repositories_for_user.assert_called_once_with(user_id)
-    repo_service.user_has_read_access_to_repo.assert_any_call(repo1, whos_asking_user_id)
+    repo_service.access_control_service.has_read_access.assert_any_call(whos_asking_user_id, repo1.id)
+    repo_service.access_control_service.has_read_access.assert_any_call(whos_asking_user_id, repo2.id)
 
 
 def test_get_repositories_of_user_no_repositories(repo_service):
@@ -463,13 +413,29 @@ def test_get_repo_by_canonical_name___integration():
                 jwt = log_in(username)
                 header = {"Authorization": f"Bearer {jwt}"}
 
-                response = client.get(f"/api/v1/repositories/{repo_canonical_name}", headers=header)
+                response = client.get(f"/api/v1/repositories/name/{repo_canonical_name}", headers=header)
                 return response
             else:
-                response = client.get(f"/api/v1/repositories/{repo_canonical_name}")
+                response = client.get(f"/api/v1/repositories/name/{repo_canonical_name}")
                 return response
-
         
+        def toggle_repo_star(username: str, repo_id: int) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+            return response
+        
+        def can_star(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["can_star"]
+
+        def can_update(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["can_update"]
+
+        def starred(username: str | None, repo_canonical_name: str) -> bool:
+            return get_repo_by_canonical_name(username, repo_canonical_name).json()["starred"]
+
         add_user("u1")
         add_user("u2")
         add_user("u3")
@@ -478,13 +444,16 @@ def test_get_repo_by_canonical_name___integration():
         org1 = add_org("u1", "o1")
         org2 = add_org("u2", "o2")
 
-        add_repo("u1", "u1_public", True, None)
-        add_repo("u1", "u1_private", False, None)
-        add_repo("u1", "o1_public", True, org1["id"])
-        add_repo("u1", "o1_private", False, org1["id"])
+        r1 = add_repo("u1", "u1_public", True, None)
+        r2 = add_repo("u1", "u1_private", False, None)
+        r3 = add_repo("u1", "o1_public", True, org1["id"])
+        r4 = add_repo("u1", "o1_private", False, org1["id"])
 
         add_repo("u2", "u2_private", False, None)
 
+        toggle_repo_star("u3", r1["id"])
+        toggle_repo_star("u4", r3["id"])
+        
         assert get_repo_by_canonical_name("u1", "u1/u1_public").is_success
         assert get_repo_by_canonical_name("u1", "u1/u1_private").is_success
         assert get_repo_by_canonical_name("u1", "o1/o1_public").is_success
@@ -500,3 +469,991 @@ def test_get_repo_by_canonical_name___integration():
         assert get_repo_by_canonical_name("u2", "u1/o1_public").status_code == 404
         assert get_repo_by_canonical_name("u2", "u1/o1_private").status_code == 404
         assert get_repo_by_canonical_name("u2", "u2/u2_private").is_success
+
+        assert can_update("u1", "u1/u1_public") is True
+        assert can_update("u1", "u1/u1_private") is True
+        assert can_update("u1", "o1/o1_public") is True
+        assert can_update("u1", "o1/o1_private") is True
+        assert can_update("u3", "u1/u1_public") is False
+        assert can_update("u4", "o1/o1_public") is False
+        
+        assert can_star("u1", "u1/u1_public") is False
+        assert can_star("u1", "u1/u1_private") is False
+        assert can_star("u1", "o1/o1_public") is False
+        assert can_star("u1", "o1/o1_private") is False
+        assert can_star("u3", "u1/u1_public") is True
+        assert can_star("u4", "o1/o1_public") is True
+
+        assert starred("u1", "u1/u1_public") is False
+        assert starred("u1", "u1/u1_private") is False
+        assert starred("u1", "o1/o1_public") is False
+        assert starred("u1", "o1/o1_private") is False
+        assert starred("u3", "u1/u1_public") is True
+        assert starred("u4", "o1/o1_public") is True
+
+@pytest.mark.parametrize(
+    "dto_class, a_name, a_value", [
+    (None, None, None), 
+    (RepositoryDescUpdateDTO, "desc", "Some repo desc"), 
+    (RepositoryVisibilityUpdateDTO, "public", True)
+])
+class TestUpdateRepoById:
+
+    def test_update_when_missing_repo(self, repo_service, dto_class, a_name, a_value):
+        """
+            Test case for when the user is requesting an update for a missing repository.
+        """   
+        repo_id = 1
+        repo_service.repo_repo.find_by_id.return_value = None
+        dto = dto_class(**{a_name: a_value}) if dto_class is not None else None
+
+        with pytest.raises(NotFoundException):
+            repo_service.update_repo_by_id(repo_id, dto)
+        
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+
+        if a_name == "desc":
+            repo_service.repo_repo.set_desc.assert_not_called()
+        elif a_name == "public": 
+            repo_service.repo_repo.set_visibility.assert_not_called()
+        else:
+            repo_service.repo_repo.set_desc.assert_not_called()
+            repo_service.repo_repo.set_visibility.assert_not_called()
+
+    def test_update_by_eligible_user(self, mock_repo, repo_service, dto_class, a_name, a_value):
+        """
+            Test case for when the user is eligible to make an update.        
+        """   
+        repo_id = 1
+        dto = dto_class(**{a_name: a_value}) if dto_class is not None else None
+
+        repo_service.repo_repo.find_by_id.return_value = mock_repo
+        if a_name == "desc":
+            repo_service.repo_repo.set_desc.return_value = mock_repo
+        elif a_name == "public": 
+            repo_service.repo_repo.set_visibility.return_value = mock_repo
+
+        if a_name == None:
+            with pytest.raises(InvalidInputException):
+                repo_service.update_repo_by_id(repo_id, dto)
+        else:
+            result = repo_service.update_repo_by_id(repo_id, dto)
+            assert result == mock_repo
+
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+
+        if a_name == "desc":
+            repo_service.repo_repo.set_desc.assert_called_once_with(mock_repo, dto.desc)
+        elif a_name == "public": 
+            repo_service.repo_repo.set_visibility.assert_called_once_with(mock_repo, dto.public)
+        else:
+            repo_service.repo_repo.set_desc.assert_not_called()
+            repo_service.repo_repo.set_visibility.assert_not_called()
+
+@pytest.mark.parametrize(
+    "user_type, update_type", [
+    ("user", "desc"), 
+    ("user", "visibility"), 
+    ("admin", "desc"), 
+    ("admin", "visibility")
+])
+def test_update_repo_by_id___integration(user_type, update_type):
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            return response.json()
+        
+        def log_in(username: str, password: str = "12345678"):
+            data = {
+                "username": username,
+                "password": password
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            if response.status_code == 400:
+                assert response.json() == False
+            jwt = response.json()["token"]
+            return jwt
+        
+        def change_superadmin_password():
+            # [1] Loading the super admin credentials
+            config_file = "./volume-server-cfg/superadmin_password.txt"
+
+            with open(config_file, "r") as f:
+                old_password = f.readline()
+
+            jwt = log_in("admin", old_password)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            # [2] Changing the super admin password
+            data = {
+                "old_password": old_password,
+                "new_password": "12345678"
+            }
+            response = client.post("/api/v1/users/password", json=data, headers=header)
+            assert response.is_success
+        
+        def add_admin(admin_username: str) -> dict:
+            jwt = log_in("admin", "12345678")
+            header = {"Authorization": f"Bearer {jwt}"}
+            data = {
+                "username": admin_username,
+                "email": f"{admin_username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+            created_admin = response.json()
+
+            return created_admin
+
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+            # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+            from app.api.config.database import engine
+            from app.api.org.org_repo import OrganizationRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            org_repo = OrganizationRepo(session)
+            return org_repo.add_user_to_org(org_id, user_id)
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "organization_id": org_id,
+                "name": name,
+                "desc": desc,
+            }
+            return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+        def add_team_member(user_id: int, team_id: int) -> TeamMember:
+            # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_member(team_id, user_id)
+        
+        def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+            # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_permission(team_id, repo_id, kind)
+
+        def update_repo_desc_by_id(username: str, repo_id: int, desc: str):
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+            
+            data = {
+                "desc": desc
+            }
+
+            response = client.put(f"/api/v1/repositories/{repo_id}/desc", json=data, headers=header)
+            return response
+
+        def update_repo_visibility_by_id(username: str, repo_id: int, public: bool):
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+            
+            data = {
+                "public": public
+            }
+
+            response = client.put(f"/api/v1/repositories/{repo_id}/visibility", json=data, headers=header)
+            return response
+
+        def get_fun(update_type: str) -> Callable[[str, int, str | bool], Response]:
+            if update_type == "desc":
+                return update_repo_desc_by_id
+            else:
+                return update_repo_visibility_by_id
+
+        if (user_type == "user"):
+            add_user("user_1")
+            user_2 = add_user("user_2")
+        else:
+            change_superadmin_password()
+            add_admin("user_1")
+            user_2 = add_admin("user_2")
+
+        organization_1 = add_org("user_1", "organization_1")
+        organization_2 = add_org("user_2", "organization_2")
+        repo_1 = add_repo("user_1", "repo_1", True, organization_1["id"])
+        repo_2 = add_repo("user_1", "repo_2", True, organization_1["id"])
+        repo_3 = add_repo("user_1", "repo_3", True, organization_1["id"])
+        repo_4 = add_repo("user_2", "repo_4", True, organization_2["id"])
+
+        # Add a member to a team with admin permissions to the specific repo
+        add_user_to_org(user_2["id"], organization_1["id"])
+        team_1 = add_team("user_1", organization_1["id"], "team_1")
+        add_team_member(user_2["id"], team_1["id"])
+        add_team_permission(team_1["id"], repo_1["id"], TeamPermissionKind.admin)
+        add_team_permission(team_1["id"], repo_2["id"], TeamPermissionKind.read)
+        add_team_permission(team_1["id"], repo_3["id"], TeamPermissionKind.read_write)
+
+        update = get_fun(update_type)
+        attribute = "some desc" if update_type == "desc" else True
+
+        """ NOTE: 'User' is a regular user or an admin. """
+        # User who is the owner of the repo
+        assert update("user_1", repo_1["id"], attribute).is_success
+        # User who is trying to update a non existing repo
+        assert update("user_1", -1, attribute).status_code == 400
+        # User without any special relations to the repo
+        assert update("user_1", repo_4["id"], attribute).status_code == 400
+        # User who is a team member with admin permissions against repo
+        assert update("user_2", repo_1["id"], attribute).is_success
+        # User who is a team member with read permissions against repo
+        assert update("user_2", repo_2["id"], attribute).status_code == 400
+        # User who is a team member with read write permissions against repo
+        assert update("user_2", repo_3["id"], attribute).status_code == 400
+        # note: user with read&write permissions cannot update repositories, only admin permissions allow that
+
+class TestToggleRepoStar:
+
+    def test_missing_repo(self, repo_service):
+        """ Test case for when the user requests an update for a missing repository. """   
+        user_id = 1
+        repo_id = 1
+
+        repo_service.repo_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+    def test_missing_user(self, repo_service):
+        """ Test case for when the request is made by a guest or a missing user. """   
+        user_id = None
+        repo_id = 1
+        repo = mock.MagicMock(spec=Repository)
+
+        repo_service.repo_repo.find_by_id.return_value = repo
+        repo_service.user_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+        user_id = 1
+        with pytest.raises(NotFoundException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+    def test_when_repo_becomes_starred(self, repo_service):
+        """ Test case for when the repo is unstarred and then becomes starred. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 0
+        start_repo.id = repo_id
+
+        end_repo = mock.MagicMock(spec=Repository)
+        end_repo.stars = 1
+        end_repo.id = repo_id
+
+        user = mock.MagicMock(spec=User)
+        user.stars = []
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.star_repo.return_value = end_repo
+
+        res_repo, starred = repo_service.toggle_repo_star(user_id, repo_id)
+
+        assert res_repo.id == repo_id
+        assert res_repo.stars == end_repo.stars
+        assert starred is True
+
+    def test_when_repo_becomes_unstarred(self, repo_service):
+        """ Test case for when the repo is starred and then becomes unstarred. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 1
+        start_repo.id = repo_id
+
+        end_repo = mock.MagicMock(spec=Repository)
+        end_repo.stars = 0
+        end_repo.id = repo_id
+
+        repo_star = mock.MagicMock(spec=RepositoryStar)
+        repo_star.repository = start_repo
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [repo_star]
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.unstar_repo.return_value = end_repo
+
+        res_repo, starred = repo_service.toggle_repo_star(user_id, repo_id)
+
+        assert res_repo.id == repo_id
+        assert res_repo.stars == end_repo.stars
+        assert starred is False
+
+    def test_when_repo_star_suddenly_missing(self, repo_service):
+        """ Test case for when the repo star becomes missing during runtime. """   
+        user_id = 1
+        repo_id = 1
+
+        start_repo = mock.MagicMock(spec=Repository)
+        start_repo.stars = 1
+        start_repo.id = repo_id
+
+        repo_star = mock.MagicMock(spec=RepositoryStar)
+        repo_star.repository = start_repo
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [repo_star]
+
+        repo_service.user_repo.find_by_id.return_value = user 
+        repo_service.repo_repo.find_by_id.return_value = start_repo
+        repo_service.repo_repo.unstar_repo.return_value = None
+
+        with pytest.raises(ConflictException):
+            repo_service.toggle_repo_star(user_id, repo_id)
+
+def test_toggle_repo_star___integration():
+    with TestClient(app) as client:
+        def add_user(username):
+            data = {
+                "username": username,
+                "email": f"{username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/", json=data)
+            return response.json()
+        
+        def log_in(username: str, password: str = "12345678"):
+            data = {
+                "username": username,
+                "password": password
+            }
+            response = client.post("/api/v1/users/login", json=data)
+            if response.status_code == 400:
+                assert response.json() == False
+            jwt = response.json()["token"]
+            return jwt
+        
+        def change_superadmin_password():
+            # [1] Loading the super admin credentials
+            config_file = "./volume-server-cfg/superadmin_password.txt"
+
+            with open(config_file, "r") as f:
+                old_password = f.readline()
+
+            jwt = log_in("admin", old_password)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            # [2] Changing the super admin password
+            data = {
+                "old_password": old_password,
+                "new_password": "12345678"
+            }
+            response = client.post("/api/v1/users/password", json=data, headers=header)
+            assert response.is_success
+
+        def toggle_repo_star(username: str, repo_id: int) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+            return response
+
+        def add_admin(admin_username: str) -> dict:
+            jwt = log_in("admin", "12345678")
+            header = {"Authorization": f"Bearer {jwt}"}
+            data = {
+                "username": admin_username,
+                "email": f"{admin_username}@gmail.com",
+                "password": "12345678"
+            }
+            response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+            created_admin = response.json()
+
+            return created_admin
+
+        def add_org(username, name: str) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "name": name,
+                "desc": "",
+                "image": None
+            }
+            return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+        def add_user_to_org(user_id: int, org_id: int) -> OrganizationMembers:
+            # TODO: Once we implement "add user to org" in the controller, use the proper endpoint for that here.
+            from app.api.config.database import engine
+            from app.api.org.org_repo import OrganizationRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            org_repo = OrganizationRepo(session)
+            return org_repo.add_user_to_org(org_id, user_id)
+
+        def add_repo(username, name: str, public: bool, org_id: int | None) -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": org_id,
+            }
+
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+        
+        def add_team(username: str, org_id: int, name: str, desc: str = "") -> dict:
+            jwt = log_in(username)
+            header = {"Authorization": f"Bearer {jwt}"}
+
+            dto1 = {
+                "organization_id": org_id,
+                "name": name,
+                "desc": desc,
+            }
+            return client.post("/api/v1/teams", json=dto1, headers=header).json()
+
+        def add_team_member(user_id: int, team_id: int) -> TeamMember:
+            # TODO: Once we implement "add team_member" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_member(team_id, user_id)
+        
+        def add_team_permission(team_id: int, repo_id: int, kind: TeamPermissionKind) -> TeamPermission:
+            # TODO: Once we implement "add_team_permission" in the controller, use the proper endpoint for that here.
+            from app.api.team.team_repo import TeamRepo
+            from app.api.config.database import get_database
+
+            session = next(get_database())
+            team_repo = TeamRepo(session)
+            return team_repo.add_permission(team_id, repo_id, kind)
+
+        change_superadmin_password()
+
+        user_1 = add_user("user_1")
+        user_2 = add_user("user_2")
+        user_3 = add_user("user_3")
+        user_4 = add_admin("user_4")
+        
+        org_1 = add_org("user_2", "org_1")
+
+        repo_1 = add_repo("user_1", "repo_1", True, None)
+        repo_2 = add_repo("user_1", "repo_2", False, None)
+        repo_3 = add_repo("user_2", "repo_3", True, org_1["id"])
+        repo_4 = add_repo("user_2", "repo_4", True, org_1["id"])
+        repo_5 = add_repo("user_2", "repo_5", True, org_1["id"])
+
+        add_user_to_org(user_3["id"], org_1["id"])
+        
+        team_1 = add_team("user_2", org_1["id"], "team_1")
+        add_team_member(user_3["id"], team_1["id"])
+        
+        add_team_permission(team_1["id"], repo_3["id"], TeamPermissionKind.admin)
+        add_team_permission(team_1["id"], repo_4["id"], TeamPermissionKind.read)
+        add_team_permission(team_1["id"], repo_5["id"], TeamPermissionKind.read_write)
+
+        # A regular user who is the owner of the repo
+        assert toggle_repo_star("user_1", repo_1["id"]).status_code == 400
+        # A regular user who is attempting to update a non-existent repo
+        assert toggle_repo_star("user_1", -1).status_code == 400
+        # A regular user without any special relations to the repo
+        assert toggle_repo_star("user_2", repo_1["id"]).is_success
+        # A regular user who is attempting to star a private repo
+        assert toggle_repo_star("user_2", repo_2["id"]).status_code == 400
+        # A regular user who is a member of the repo's organization
+        assert toggle_repo_star("user_2", repo_3["id"]).status_code == 400
+        # A regular user who is a team member with admin permissions on the repo
+        assert toggle_repo_star("user_3", repo_3["id"]).status_code == 400
+        # A regular user who is a team member with read permissions on the repo
+        assert toggle_repo_star("user_3", repo_4["id"]).status_code == 400
+        # A regular user who is a team member with read write permissions on the repo
+        assert toggle_repo_star("user_3", repo_5["id"]).status_code == 400
+        # An admin who is attempting to star a repo
+        assert toggle_repo_star("user_4", repo_1["id"]).status_code == 403
+        # A super admin who is attempting to star a repo
+        assert toggle_repo_star("admin", repo_1["id"]).status_code == 403
+
+class TestGetStarredRepositoriesOfUser:
+    '''
+    The following unit tests are trivial, since the logic of the method 
+    is only about obtaining repositories from database.
+    '''
+
+    def test_have_no_starred_repos(self, repo_service):
+        """ Test case for when there is no starred repos of user. """   
+        user_id = 1
+        repo_service.repo_repo.find_user_starred_repos.return_value = None
+        result = repo_service.get_starred_repositories_of_user(user_id)
+        assert result is None
+        repo_service.repo_repo.find_user_starred_repos.assert_called_once_with(user_id)
+
+    def test_have_starred_repos(self, repo_service):
+        """ Test case for when there is starred repos of user. """   
+        user_id = 1
+        r = mock.MagicMock(spec=Repository)
+        repo_service.repo_repo.find_user_starred_repos.return_value = r
+        result = repo_service.get_starred_repositories_of_user(user_id)
+        assert result is r
+        repo_service.repo_repo.find_user_starred_repos.assert_called_once_with(user_id)
+
+    def test_integration(self):
+        with TestClient(app) as client:
+            def add_user(username):
+                data = {
+                    "username": username,
+                    "email": f"{username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/", json=data)
+                return response.json()
+            
+            def log_in(username: str, password: str = "12345678"):
+                data = {
+                    "username": username,
+                    "password": password
+                }
+                response = client.post("/api/v1/users/login", json=data)
+                if response.status_code == 400:
+                    assert response.json() == False
+                jwt = response.json()["token"]
+                return jwt
+            
+            def change_superadmin_password():
+                # [1] Loading the super admin credentials
+                config_file = "./volume-server-cfg/superadmin_password.txt"
+
+                with open(config_file, "r") as f:
+                    old_password = f.readline()
+
+                jwt = log_in("admin", old_password)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                # [2] Changing the super admin password
+                data = {
+                    "old_password": old_password,
+                    "new_password": "12345678"
+                }
+                response = client.post("/api/v1/users/password", json=data, headers=header)
+                assert response.is_success
+
+            def add_admin(admin_username: str) -> dict:
+                jwt = log_in("admin", "12345678")
+                header = {"Authorization": f"Bearer {jwt}"}
+                data = {
+                    "username": admin_username,
+                    "email": f"{admin_username}@gmail.com",
+                    "password": "12345678"
+                }
+                response = client.post("/api/v1/users/register-admin", json=data, headers=header)
+                created_admin = response.json()
+
+                return created_admin
+
+            def add_org(username, name: str) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                dto1 = {
+                    "name": name,
+                    "desc": "",
+                    "image": None
+                }
+                return client.post("/api/v1/organizations", json=dto1, headers=header).json()
+
+            def toggle_repo_star(username: str, repo_id: int) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                response = client.put(f"/api/v1/repositories/star/{repo_id}", headers=header)
+
+                return response
+
+            def add_repo(username, name: str, org_id: int | None) -> dict:
+                jwt = log_in(username)
+                header = {"Authorization": f"Bearer {jwt}"}
+
+                data = {
+                    "name": name,
+                    "desc": "",
+                    "public": True,
+                    "organization_id": org_id,
+                }
+
+                response = client.post("/api/v1/repositories/", json=data, headers=header)
+                return response.json()
+            
+            def get_starred_repos(requester: str | None, target_user: str) -> dict:
+                if requester is not None:
+                    jwt = log_in(requester)
+                    header = {"Authorization": f"Bearer {jwt}"}
+                    response = client.get(f"/api/v1/repositories/starred/u/{target_user}", headers=header)
+                else:
+                    response = client.get(f"/api/v1/repositories/starred/u/{target_user}")
+
+                return response
+
+            change_superadmin_password()
+
+            add_user("u1")
+            add_user("u2")
+            add_user("u3")
+            add_admin("a1")
+
+            org1 = add_org("u1", "o1")
+
+            r1 = add_repo("u1", "r1", org1["id"])
+            r2 = add_repo("u1", "r2", None)
+            r3 = add_repo("u1", "r3", None)
+
+            toggle_repo_star("u2", r2["id"])
+            toggle_repo_star("u2", r3["id"])
+            toggle_repo_star("u3", r1["id"])
+            toggle_repo_star("u3", r2["id"])
+
+            # Target user is missing
+            assert get_starred_repos(None, "invalid").status_code == 404
+            # Target user has zero starred repos
+            assert len(get_starred_repos(None, "u1").json()["repos"]) == 0
+            # Target user has some starred repos while none belongs to org
+            assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+            assert len(get_starred_repos(None, "u2").json()["organization_names"]) == 0
+            # Target user has some starred repos while some belongs to org
+            assert len(get_starred_repos(None, "u3").json()["repos"]) == 2
+            assert len(get_starred_repos(None, "u3").json()["organization_names"]) == 1
+            # Requester doesn't need to be logged in
+            assert len(get_starred_repos(None, "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("u1", "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("a1", "u2").json()["repos"]) == 2
+            assert len(get_starred_repos("admin", "u2").json()["repos"]) == 2
+            # Admin doesn't have starred repos        
+            assert get_starred_repos(None, "a1").status_code == 400
+            # Super admin doesn't have starred repos        
+            assert get_starred_repos(None, "admin").status_code == 400
+
+class TestIsRepoStarredBy:
+
+    def test_user_has_no_stars(self, repo_service):
+        """ Test case for when user has no stars. """   
+        repo = mock.MagicMock(spec=Repository)
+        user = mock.MagicMock(spec=User)
+        user.stars = []
+
+        result = repo_service.is_repo_starred_by(repo, user)
+        assert result is False
+
+    def test_user_has_stars_and_didnt_star_repo(self, repo_service):
+        """ Test case for when user has stars, but didn't star repo. """   
+        r1 = mock.MagicMock(spec=Repository)
+        r2 = mock.MagicMock(spec=Repository)
+        r3 = mock.MagicMock(spec=Repository)
+        r1.id = 1
+        r2.id = 2
+        r3.id = 99
+        s1 = mock.MagicMock(spec=RepositoryStar)
+        s2 = mock.MagicMock(spec=RepositoryStar)
+        s1.repository_id = r1.id
+        s2.repository_id = r2.id
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [s1, s2]
+
+        result = repo_service.is_repo_starred_by(r3, user)
+        assert result is False
+
+    def test_user_has_stars_and_did_star_repo(self, repo_service):
+        """ Test case for when user has stars and did star repo. """   
+        r1 = mock.MagicMock(spec=Repository)
+        r2 = mock.MagicMock(spec=Repository)
+        r1.id = 1
+        r2.id = 2
+        s1 = mock.MagicMock(spec=RepositoryStar)
+        s2 = mock.MagicMock(spec=RepositoryStar)
+        s1.repository = r1
+        s2.repository = r2
+
+        user = mock.MagicMock(spec=User)
+        user.stars = [s1, s2]
+
+        result = repo_service.is_repo_starred_by(r1, user)
+        assert result is True
+
+class TestUpdateRepoAttrs():
+        
+    def test_repo_not_exist(self, repo_service):
+        """ Test case for when the repository does not exist. """
+        repo_id = 1
+        repo_service.repo_repo.find_by_id.return_value = None
+
+        with pytest.raises(NotFoundException):
+            repo_service.update_repo_attrs(repo_id, desc="desc123")
+        
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo_id)
+
+    def test_attributes_not_passed(self, repo_service):
+        """ Test case for when no attributes are passed. """ 
+        repo = mock.MagicMock(spec=Repository)
+        repo.id = 1
+        repo.name = "repo"
+        repo.desc = "desc"
+        repo.public = True
+        repo_service.repo_repo.find_by_id.return_value = repo
+
+        result = repo_service.update_repo_attrs(repo.id)
+
+        assert result == repo 
+        assert result.id == repo.id
+        assert result.name == repo.name
+        assert result.desc == repo.desc
+        assert result.public == repo.public
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo.id)
+
+    def test_attribute_not_exist(self, repo_service):
+        """ Test case for when a specified attribute does not exist. """  
+        repo = mock.MagicMock(spec=Repository)
+        repo.id = 1
+        repo.name = "repo"
+        repo.desc = "desc"
+        repo.public = True
+        repo_service.repo_repo.find_by_id.return_value = repo
+        repo_service.repo_repo.set_attribute.side_effect = ValueError("unknown attribute")
+
+        with pytest.raises(ValueError) as e: 
+            repo_service.update_repo_attrs(repo.id, unknown_attr="fail")
+        
+        assert "unknown attribute" in str(e.value)
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo.id)
+        repo_service.repo_repo.set_attribute.assert_called_once_with(repo, "unknown_attr", "fail")
+    
+    def test_successfully_update_attributes(self, repo_service):
+        """ Test case for when the attributes exist. """
+        repo = mock.MagicMock(spec=Repository)
+        repo.id = 1
+        repo.name = "repo"
+        repo.desc = "desc"
+        repo.public = True
+        repo_service.repo_repo.find_by_id.return_value = repo
+
+        def mock_set_attribute(repo, attr, value):
+            setattr(repo, attr, value)
+            return repo
+        repo_service.repo_repo.set_attribute.side_effect = mock_set_attribute
+
+        result = repo_service.update_repo_attrs(repo.id, name="new_name", desc="new_desc", public=False)
+
+        assert result.id == 1
+        assert result.public is False
+        assert result.name == "new_name"
+        assert result.desc == "new_desc"
+        repo_service.repo_repo.find_by_id.assert_called_once_with(repo.id)
+        expected_calls = [
+            mock.call(repo, "name", "new_name"), 
+            mock.call(repo, "desc", "new_desc"), 
+            mock.call(repo, "public", False),
+        ]
+        assert repo_service.repo_repo.set_attribute.call_args_list == expected_calls
+
+
+def test_search_public_repositories_success(repo_service):
+    query = "re"
+    page_number = 1
+    page_size = 2
+
+    repo1 = mock.MagicMock(spec=Repository)
+    repo1.id = 1
+    repo1.name = "repo"
+    repo1.public = True
+    repo1.badge = None
+    repo2 = mock.MagicMock(spec=Repository)
+    repo2.id = 2
+    repo2.name = "repo2"
+    repo2.public = True
+    repo2.badge = RepositoryBadge.verified
+    repo_list = [repo1, repo2]
+    total_hits = 5
+
+    repo_service.repo_repo.search_public_repositories.return_value = (repo_list, total_hits)
+    repos, info = repo_service.search_public_repositories(query, page_number, page_size, False, False, False)
+
+    assert isinstance(info, PaginatedResultInfoDTO)
+    assert info.page == page_number
+    assert info.page_size == page_size
+    assert info.total_hits == total_hits
+    assert info.total_pages == 3  # ceil(5 / 2)
+    repo_service.repo_repo.search_public_repositories.assert_called_once_with(
+        query, page_number, page_size, False, False, False)
+
+def test_search_public_repositories_min_page_and_size(repo_service):
+    repo1 = mock.MagicMock(spec=Repository)
+    repo1.id = 1
+    repo1.name = "repo"
+    repo1.public = True
+    repo1.badge = None
+    repo_service.repo_repo.search_public_repositories.return_value = ([repo1], 1)
+
+    repos, info = repo_service.search_public_repositories("r", 0, 0, False, False, False)
+
+    assert info.page == 1
+    assert info.page_size == 1
+    assert info.total_pages == 1
+    assert info.total_hits == 1
+    repo_service.repo_repo.search_public_repositories.assert_called_once_with(
+        "r", 1, 1, False, False, False)
+
+def test_search_public_respositories_integration():
+    with TestClient(app) as client:
+        def create_user(username: str, email: str, password: str = "Password123") -> dict:
+            data = {"username": username, "email": email, "password": password}
+            response = client.post("/api/v1/users", json=data)
+            assert response.status_code == 200
+            return response.json()
+        def login(data: dict) -> dict:
+            response = client.post("/api/v1/users/login", json=data)
+            assert response.status_code == 200
+            jwt = response.json()["token"]
+            return {"Authorization": f"Bearer {jwt}"}
+        def add_repo(user, name: str, public: bool) -> dict:
+            header = login({"username": user["username"], "password": "Password123"})
+            data = {
+                "name": name,
+                "desc": "",
+                "public": public,
+                "organization_id": None,
+            }
+            response = client.post("/api/v1/repositories/", json=data, headers=header)
+            return response.json()
+
+        # Login as superadmin using password from file
+        superadmin_creds = {
+            "username": "admin",
+            "password": ""
+        }
+        with open("./volume-server-cfg/superadmin_password.txt", "r") as f:
+            superadmin_creds["password"] = old_password = f.readline()
+
+        superadmin_header = login(superadmin_creds)
+
+        # Change superadmin password
+        change_pw_payload = {
+            "old_password": old_password,
+            "new_password": "Password1"
+        }
+        response = client.post("/api/v1/users/password", json=change_pw_payload, headers=superadmin_header)
+        assert response.status_code == 204
+
+        superadmin_creds["password"] = "Password1"
+        superadmin_header = login(superadmin_creds)
+
+        # Register an admin
+        new_admin_data = {
+            "username": "TestAdmin",
+            "email": "admin@example.com",
+            "password": "AdminPass123"
+        }
+        response = client.post("/api/v1/users/register-admin", json=new_admin_data, headers=superadmin_header)
+        assert response.status_code == 200
+
+        # Register regular users (to later update badge)
+        user1 = create_user("user1", "user1@mail.com")
+        user2 = create_user("user2", "user2@mail.com")
+
+        # login as admin
+        admin_auth = login({"username": new_admin_data["username"], "password": new_admin_data["password"]})
+
+        # Update user badge
+        badge_update_dto = {
+            "user_id": user2["id"],
+            "badge": "verified"
+        }
+        response = client.put("/api/v1/users/badge", json=badge_update_dto, headers=admin_auth)
+        assert response.status_code == 200
+        updated_user = response.json()
+        assert updated_user["badge"] == "verified"
+        # Add repositories for users
+        add_repo(user1, "Repo1", True)
+        add_repo(user1, "Repo2", False)
+        add_repo(user2, "Repo3", True)
+        add_repo(user2, "Repo4", False)
+        # Search repositories with filtered badges (this won't get repositories which badge is none)
+        params = {
+            "query": "re",
+            "page_number": 1,
+            "page_size": 10,
+            "show_badge_official": True,
+            "show_badge_verified": True,
+            "show_badge_sponsored": True,
+        }
+        response = client.get("/api/v1/repositories/public/", headers=admin_auth, params=params)
+        assert response.status_code == 200
+        paginated = response.json()
+        assert len(paginated["hits"]) == 1
+        repo = paginated["hits"][0]
+        assert repo["owner_id"] == user2["id"]
+        assert repo["badge"] == "verified"
+
+        # Search repositories without filtering badges
+        params = {
+            "query": "re",
+            "page_number": 1,
+            "page_size": 10,
+            "show_badge_official": False,
+            "show_badge_verified": False,
+            "show_badge_sponsored": False,
+        }
+        response = client.get("/api/v1/repositories/public/", headers=admin_auth, params=params)
+        assert response.status_code == 200
+        paginated = response.json()
+        for repo in paginated["hits"]:
+            if repo["owner_id"] == user2["id"]:
+                assert repo["badge"] == "verified"
+            else:
+                assert repo["badge"] == 'none'
+            assert repo["public"] is True
+        assert len(paginated["hits"]) == 2
+
+
+

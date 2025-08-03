@@ -1,12 +1,15 @@
 import React, { useEffect, useState } from 'react';
-import { Nav, Spinner, Tab } from 'react-bootstrap';
+import { Nav, Spinner, Tab, Tooltip, OverlayTrigger } from 'react-bootstrap';
 import { RepoOverview } from '../components/RepoOverview';
 import { RepoTags } from '../components/RepoTags';
+import { RepoSettings } from '../components/RepoSettings';
 import { NavLink, useNavigate, useParams } from 'react-router-dom';
-import { RepoExtDTO, RepositoryBadge, RepositoryService } from '../api/repo.api';
+import { RepoExtDTO, RepositoryBadge, RepositoryService, ToggleStarRepoDTO } from '../api/repo.api';
 import { AxiosError, AxiosResponse } from 'axios';
 import "./RepoPage.css";
 import { formatDistanceToNow } from 'date-fns';
+import { ToastType, useToastStore } from '../util/toastStore';
+import { BadgeUtils } from '../util/badge';
 
 interface RepoOwner {
     name: string,
@@ -21,6 +24,7 @@ export const RepositoryPage: React.FC = () => {
     const [repo, setRepo] = useState<RepoExtDTO>();
     const [key, setKey] = useState<string>('overview');
     const [loading, setLoading] = useState<boolean>(true);
+    const addToast = useToastStore((state) => state.addToast);
     let navigate = useNavigate();
     const [repoOwner, setRepoOwner] = useState<RepoOwner>({
         name: '...',
@@ -29,6 +33,24 @@ export const RepositoryPage: React.FC = () => {
         badge: RepositoryBadge.none,
         linkURL: "."
     });
+
+    const toggleRepoStar = (repo: RepoExtDTO) => {
+        RepositoryService.ToggleRepositoryStar(repo.id).then((res: AxiosResponse<ToggleStarRepoDTO>) => {
+            setRepo({
+                ...repo,
+                ...res.data,
+            });
+            addToast(`${repo.name} is ${res.data.starred ? "starred" : "unstarred"}.`, ToastType.success)
+        }).catch((err: AxiosError) => {
+            addToast((err.response?.data as any)["detail"]["message"], ToastType.error);
+        });
+    }
+
+    const renderTooltip  = (props: any, msg: string) => {
+        return <Tooltip {...props}>
+            {msg}
+        </Tooltip>
+    }
 
     useEffect(() => {
         RepositoryService.GetRepoByCanonicalName(repoName!).then((res: AxiosResponse<RepoExtDTO>) => {
@@ -68,11 +90,11 @@ export const RepositoryPage: React.FC = () => {
                     {/* Badge */}
                     {repo && repo?.badge !== RepositoryBadge.none &&
                         <span
-                            className={`badge rounded-pill ${RepositoryService.BadgeToBootstrapColor(repo?.badge)}`}
+                            className={`badge rounded-pill ${BadgeUtils.toBootstrapColor(repo?.badge)}`}
                             style={{ fontSize: '0.5em', marginLeft: '0.5em' }}
                         >
-                            <i className={`bi ${RepositoryService.BadgeToHumanBootstrapIcon(repo?.badge)}`}> </i>
-                            {RepositoryService.BadgeToHumanText(repo?.badge)}
+                            <i className={`bi ${BadgeUtils.toBootstrapIcon(repo?.badge)}`}> </i>
+                            {BadgeUtils.toHumanText(repo?.badge)}
                         </span>
                     }
                     {/* Private badge */}
@@ -92,12 +114,16 @@ export const RepositoryPage: React.FC = () => {
                     {/* Last update */}
                     {repo && repo.last_updated && (
                         <>
-                            Updated {formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}
+                            <OverlayTrigger
+                                placement="top"
+                                overlay={<Tooltip>{new Date(repo.last_updated).toLocaleString()}</Tooltip>}>
+                                <span>{formatDistanceToNow(new Date(repo.last_updated), { addSuffix: true })}</span>
+                            </OverlayTrigger>
                         </>
                     )}
                 </h5>
 
-                <p className="d-flex">
+                <p className="d-flex align-items-center">
                     {/* Download Count */}
                     {
                         <span className="align-items-center">
@@ -108,13 +134,34 @@ export const RepositoryPage: React.FC = () => {
 
                     <i className="bi bi-dot" style={{ marginLeft: '0.2em', marginRight: '0.2em' }}></i>
 
-                    {/* Star Count [TODO] */}
-                    {/*repo.stars > 0*/ true && (
-                        <span className="align-items-center">
-                            <i className="bi bi-moon moon"></i>
-                            <span>{17}</span>
-                        </span>
+                    {/* Star Count */}
+                    { repo && (
+                        <div>
+                            <span className="align-items-center">
+                                    <OverlayTrigger
+                                        overlay={ (props) => 
+                                            renderTooltip(
+                                                props, 
+                                                repo.can_star
+                                                    ? (repo.starred
+                                                        ? "Unstar this repository"
+                                                        : "Star this repository")
+                                                    : "Cannot star this repository"
+                                            )
+                                        }
+                                        placement="bottom"
+                                    >
+                                        <button 
+                                            className={`bi ${!repo.can_star || !repo.starred ? "bi-star" : "bi-star-fill"}`} 
+                                            onClick={repo.can_star ? () => toggleRepoStar(repo) : undefined}
+                                            style={{ cursor: repo.can_star ? 'pointer' : "default", background: 'none', border: 'none'}}
+                                        ></button>
+                                    </OverlayTrigger>
+                                    <span>{repo.stars}</span>
+                            </span>
+                        </div>
                     )}
+                    
                 </p>
             </div>
 
@@ -123,22 +170,33 @@ export const RepositoryPage: React.FC = () => {
                 <Nav variant="tabs" className="mb-3">
                     <Nav.Item>
                         <Nav.Link eventKey="overview" className={key === 'overview' ? 'active' : ''}>
+                            <i className="bi bi-list"> </i>
                             Overview
                         </Nav.Link>
                     </Nav.Item>
                     <Nav.Item>
                         <Nav.Link eventKey="tags" className={key === 'tags' ? 'active' : ''}>
+                            <i className="bi bi-tag"> </i>
                             Tags
                         </Nav.Link>
                     </Nav.Item>
+                    {repo?.can_update && <Nav.Item>
+                        <Nav.Link eventKey="settings" className={key === 'settings' ? 'active' : ''}>
+                            <i className="bi bi-gear"> </i>
+                            Settings
+                        </Nav.Link>
+                    </Nav.Item>}
                 </Nav>
 
                 <Tab.Content>
                     <Tab.Pane eventKey="overview">
-                        {repo && <RepoOverview isActive={key === 'overview'} repo={repo} />}
+                        {repo && <RepoOverview isActive={key === 'overview'} repo={repo} setRepo={setRepo} />}
                     </Tab.Pane>
                     <Tab.Pane eventKey="tags">
-                        <RepoTags isActive={key === 'tags'} />
+                        {repo && <RepoTags isActive={key === 'tags'} repo={repo} />}
+                    </Tab.Pane>
+                    <Tab.Pane eventKey="settings">
+                        {repo && <RepoSettings isActive={key === 'settings'} repo={repo} setRepo={setRepo} />}
                     </Tab.Pane>
                 </Tab.Content>
             </Tab.Container>

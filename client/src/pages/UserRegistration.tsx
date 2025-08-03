@@ -4,6 +4,7 @@ import './UserRegistration.css';
 import { UserRegisterDTO, UserService } from '../api/user.api';
 import { AxiosError } from 'axios';
 import { useNavigate } from 'react-router-dom';
+import { get_validation_error_readable } from '../util/http';
 
 export const UserRegistration = () => {
     let navigate = useNavigate();
@@ -43,7 +44,7 @@ export const UserRegistration = () => {
         UserService.RegisterRegularUser(dto).then(() => {
             navigate("/login");
         }).catch((err: AxiosError) => {
-            setError((err.response?.data as any)["detail"]["message"]);
+            setError(get_validation_error_readable(err));
         });
     };
 

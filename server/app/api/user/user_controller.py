@@ -1,9 +1,11 @@
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import APIRouter, Depends
 
-from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO
+from app.api.config.pagination import PaginatedResultDTO
+from app.api.user.user_dto import UserDTO, UserPasswordChangeDTO, UserRegisterDTO, UserLoginDTO, UserTokenDTO, \
+     UserBadgeDTO
 from app.api.user.user_service import UserService, get_user_service
-from app.api.user.user_model import UserRole
+from app.api.user.user_model import UserRole, User, UserBadge
 from fastapi_cache.decorator import cache
 from app.api.config.auth import JWTBearer, JWTDep, get_id_from_jwt
 from app.api.config.auth import pre_authorize
@@ -25,7 +27,7 @@ def change_user_password(jwt: JWTDep, dto: UserPasswordChangeDTO, user_service: 
     user_id = get_id_from_jwt(jwt)
     user_service.change_password(user_id, dto)
 
-@router.post("/register-admin", response_model=UserDTO, summary="Register a new admin")
+@router.post("/register-admin", status_code=200, response_model=UserDTO, summary="Register a new admin")
 @pre_authorize([UserRole.superadmin])
 def register_admin(jwt: JWTDep, dto: UserRegisterDTO, user_service: UserService = Depends(get_user_service)):
     return user_service.add_admin(dto)
@@ -40,3 +42,35 @@ def test(jwt: JWTDep):
         { "id": 2, "name": "Coc" },
         { "id": 3, "name": "Did" },
     ]
+
+@router.get("/search/{query}", status_code=200, response_model=List[UserDTO], summary="Search users by username prefix")
+@pre_authorize([UserRole.user, UserRole.admin])
+def search_by_username_prefix(jwt: JWTDep, query: str, org_id_to_exclude_members: int = 0, user_service: UserService = Depends(get_user_service)):
+    users = user_service.search_by_username_prefix(query, org_id_to_exclude_members)
+    return users
+
+@router.get("/{username}", status_code=200, response_model=UserDTO, summary="Get user's profile info")
+@pre_authorize([UserRole.user, UserRole.admin, UserRole.superadmin])
+def get_user_profile(jwt: JWTDep, username: str, user_service: UserService = Depends(get_user_service)):
+    user = user_service.find_by_username(username)
+    return user
+
+@router.put("/", status_code=200, response_model=UserDTO, summary="Update user's profile info")
+@pre_authorize([UserRole.user, UserRole.admin, UserRole.superadmin])
+def update_user_profile(jwt: JWTDep, dto: UserDTO, user_service: UserService = Depends(get_user_service)):
+    user_id = get_id_from_jwt(jwt)
+    updated_user = user_service.update_profile(user_id, dto)
+    return updated_user
+
+@router.get("/paginated/", response_model=PaginatedResultDTO, status_code=200, summary="Search users with paginated results")
+@pre_authorize([UserRole.admin, UserRole.superadmin])
+async def search_paginated(jwt: JWTDep,  page_number: int, page_size: int, sort_by: str, sort_ascending: bool, query: str = "",
+                           user_service: UserService = Depends(get_user_service)):
+    result = user_service.search_paginated(query, page_number, page_size, sort_by, sort_ascending)
+    return result
+
+@router.put("/badge", status_code=200, response_model=UserDTO, summary="Update user's badge")
+@pre_authorize([UserRole.admin, UserRole.superadmin])
+def update_user_badge(jwt: JWTDep, dto: UserBadgeDTO, user_service: UserService = Depends(get_user_service)):
+    updated_user = user_service.update_badge(dto.user_id, dto.badge)
+    return updated_user

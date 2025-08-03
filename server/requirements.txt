@@ -9,8 +9,13 @@ pyjwt
 cryptography
 
 fastapi-cache2[redis]
+rq
 
 pytest
+pytest-asyncio
 httpx
 
 pillow
+elasticsearch-dsl
+
+textX==4.2.2

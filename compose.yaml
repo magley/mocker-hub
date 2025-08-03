@@ -1,7 +1,23 @@
+x-common-variables: &common-variables
+  PYTHONUNBUFFERED: 1
+  POSTGRES_USER: postgres
+  POSTGRES_DATABASE: postgres
+  POSTGRES_PASSWORD: admin
+  REDIS_HOST: cache
+  REDIS_PORT: 6379
+  SUPERADMIN_PASSWORD: admin123
+  JWT_SECRET: secret
+  JWT_ALGORITHM: HS256
+  ELASTICSEARCH_HOST: elasticsearch
+  ELASTICSEARCH_PORT: 9200
+  DISTRIBUTION_HOST: distribution
+  DISTRIBUTION_PORT: 5000
+  PEM_CERT_PATH: /code/certs/cert.pem
+
 services:
   backend:
     build: ./server
-    image: magley/mocker-hub-backend:latest
+    image: magley/mocker-hub-backend
     ports:
       - "8000:8000"
     expose:
@@ -9,17 +25,20 @@ services:
     depends_on:
       - db
       - cache
+      # - nginx
+      - elasticsearch
+      # - distribution
+      - log_collector
+      - worker
     environment:
-      PYTHONUNBUFFERED: 1
-      POSTGRES_USER: postgres
-      POSTGRES_DATABASE: postgres
-      POSTGRES_PASSWORD: admin
-      REDIS_HOST: cache
-      REDIS_PORT: 6379
-      SUPERADMIN_PASSWORD: admin123
-      JWT_SECRET: secret
-      JWT_ALGORITHM: HS256
-    restart: always
+      <<: *common-variables
+
+      # To run tests, do `RUN_TESTS=true docker compose up`.
+      # However, I've been having issues with this on WSL,
+      # so instead I've created an `.env` in project root
+      # with RUN_TESTS=true.
+      RUN_TESTS: ${RUN_TESTS:-false}
+    restart: on-failure
     
     develop:
       watch:
@@ -30,6 +49,8 @@ services:
     volumes:
       - backend_cfg:/code/volume-server-cfg/
       - ./images:/code/images
+      - ./distribution/certs:/code/certs
+      - ./logs:/code/logs
 
   db:
     image: postgres:15.9-alpine3.20
@@ -56,24 +77,101 @@ services:
     ports:
       - "8002:8080"
 
-  nginx:
-    build: ./nginx/
+  nginx:  # And frontend.
+    image: magley/mocker-hub-reverse-proxy
+    build:
+      context: .
+      dockerfile: ./Dockerfile
     ports:
       - "80:80"
     depends_on:
       - backend
     volumes:
-      - ./images:/usr/share/nginx/html/images
-
-
+      - ./images:/usr/share/nginx/html/images/
+  
   cache:
     image: redis:alpine3.20
     restart: always
     ports:
       - '6888:6379'
+    healthcheck:
+      test: ["CMD-SHELL", "redis-cli ping | grep PONG"]
+      interval: 5s
+      timeout: 3s
+      retries: 5
     # volumes: 
-      # - cache:/data
+    #   - cache:/data
+    
+  worker:
+    image: magley/mocker-hub-backend
+    restart: always
+    environment:
+      REDIS_SCHEME: redis 
+      PYTHONPATH: /code
+      <<: *common-variables
+    entrypoint: []
+    command: ["python", "-m", "app.api.config.worker"]
+    depends_on:
+      - cache
+    volumes:
+      - backend_cfg:/code/volume-server-cfg/
+      - ./images:/code/images
+      - ./distribution/certs:/code/certs
+      - ./logs:/code/logs
 
+  rq_dashboard:
+    image: cjlapao/rq-dashboard:0.8.3
+    ports:
+      - "9181:9181"
+    environment:
+      RQ_DASHBOARD_REDIS_URL: redis://cache:6379
+    depends_on:
+      - cache
+
+  distribution:
+    image: "registry:2" 
+    ports:
+      - "5000:5000"
+    depends_on:
+      - backend  # Certs must be unzipped first.
+    volumes:
+      - "./distribution/config.yaml:/etc/docker/registry/config.yml"
+      - "./distribution/certs:/mnt/local/certs"
+      - "./distribution/entrypoint.sh:/entrypoint.sh"
+    entrypoint: ["/bin/sh", "/entrypoint.sh"]
+    environment:
+      RUN_REGISTRY_GC: "true"
+
+  elasticsearch:
+    image: docker.elastic.co/elasticsearch/elasticsearch:8.6.2
+    container_name: elasticsearch
+    environment:
+      - discovery.type=single-node
+      - ES_JAVA_OPTS=-Xms256m -Xmx256m  # In case we run out of memory, change 256m to 512m or 1g
+      - ELASTIC_PASSWORD=1234
+      - xpack.security.enabled=false
+      - xpack.ml.enabled=false
+    ports:
+      - 9200:9200
+      - 9300:9300
+    # I've added these lines below to speed up the booting of ES. In case something goes wrong, comment them out.
+    volumes:
+    - /tmp/elasticsearch/data
+    ulimits:
+      memlock:
+        soft: -1
+        hard: -1
+
+  log_collector:
+    image: magley/mocker-hub-log-collector
+    build: ./log_collector
+    restart: on-failure
+    volumes:
+      - ./logs:/logs
+    environment:
+      - ES_HOST=elasticsearch:9200
+    depends_on:
+      - elasticsearch
 
 volumes:
   backend_cfg:

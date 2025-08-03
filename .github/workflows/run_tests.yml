@@ -5,9 +5,17 @@ on:
     branches:
       - develop
       - master
+    paths-ignore:
+      - '**/*.md'
+      - '**/*.jpg'
+      - '**/*.png'
+      - '**/*.txt'
+      - 'docs/**'
 
+      # We don't test the client app, so we can ignore changes made to it when running the workflow.
+      - 'client/**'
 jobs:
-  test:
+  test: # This should be the same as in test_and_deploy.yml!
     runs-on: ubuntu-latest
 
     steps:
@@ -23,9 +31,15 @@ jobs:
       run: |
         python -m pip install --upgrade pip
         pip install -r server/requirements.txt
+    
+    - name: Create .env file
+      run: |
+        echo "RUN_TESTS=true" > .env
 
     - name: Run the tests
-      env:
-        mocker_hub_TEST_ENV: 1
+      # Specify that we're bulding `backend` => `--abort-on-container-exit` will only work for `backend`
+      # But we must be careful about `depends-on` in `compose.yaml`.
+      # https://stackoverflow.com/a/76049965
       run: |
-        pytest server/app/tests/
+        sudo docker compose build
+        sudo docker compose up --build backend --abort-on-container-exit --exit-code-from backend

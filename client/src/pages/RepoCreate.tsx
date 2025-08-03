@@ -7,6 +7,8 @@ import { getJwtId } from '../util/localstorage';
 import { OrganizationDTOBasic, OrganizationService } from '../api/org.api';
 import { useNavigate } from 'react-router-dom';
 import { ToastType, useToastStore } from '../util/toastStore';
+import { useParams } from 'react-router-dom';
+import Select from 'react-select';
 
 interface Owner {
     name: string;
@@ -27,44 +29,45 @@ export const RepoCreate = () => {
     const navigate = useNavigate();
     const addToast = useToastStore((state) => state.addToast);
 
+    const { orgId } = useParams<{ orgId?: string }>();
+
+
     useEffect(() => {
-        // Fetch all organizations this user can create repositories in.
+    OrganizationService.GetMyOrganizations().then((res: AxiosResponse<OrganizationDTOBasic[]>) => {
+        const orgs = res.data;
 
-        OrganizationService.GetMyOrganizations().then((res: AxiosResponse<OrganizationDTOBasic[]>) => {
-            const orgs = res.data;
+        const organizations_i_can_make_repos_in: Owner[] = orgs.map(o => ({
+            name: o.name,
+            user_id: null,
+            organization_id: o.id,
+            image_path: o.image,
+        }));
 
-            // TODO: Improve access control. Right now, any member of the organization
-            // can add repositories to that organization. We may want to restrict that.
-            const organizations_i_can_make_repos_in: Owner[] = orgs.map(o => {
-                return {
-                    name: o.name,
-                    user_id: null,
-                    organization_id: o.id,
-                    image_path: o.image,
-                };
-            });
+        const currentUser: Owner = {
+            name: "User",
+            user_id: getJwtId(),
+            organization_id: null,
+            image_path: null,
+        };
 
-            // Create list of "owners" (the user himself + all the organizations above).
+        const all_possible_owners: Owner[] = [currentUser, ...organizations_i_can_make_repos_in];
+        setOwners(all_possible_owners);
 
-            const all_possible_owners: Owner[] = [
-                { name: "user 1", user_id: getJwtId(), organization_id: null, image_path: null },
-                ...organizations_i_can_make_repos_in
-            ]
-            setOwners(all_possible_owners);
+        // Auto-select the org if `orgId` is provided and matches an org
+        let selected: Owner | undefined;
+        if (orgId) {
+            const parsedOrgId = parseInt(orgId);
+            selected = all_possible_owners.find(o => o.organization_id === parsedOrgId);
+        }
 
-            // The inital value of the dropdown list is the user.
-            //
-            // NOTE: I use `all_possible_owners[0]` instead of `owners[0]`
-            // because `owners` may have not been updated by the setOwners
-            // above. This is because state is async, so at this point `owners`
-            // may still not be updated (i.e. it's still empty).
-            setOwner(all_possible_owners[0]);
-        }).catch((err: AxiosError) => {
-            setError("Failed to fetch organizations that I am a member of. Check your console.");
-            console.error(err);
-        });
+        setOwner(selected || currentUser);
 
-    }, []);
+    }).catch((err: AxiosError) => {
+        setError("Failed to fetch organizations that I am a member of. Check your console.");
+        console.error(err);
+    });
+}, [orgId]);
+
 
     const userOrOrgToStr = (owner: Owner) => {
         if (owner.user_id != null) {
@@ -125,34 +128,44 @@ export const RepoCreate = () => {
         });
     };
 
+    const options = owners.map((owner) => ({
+        value: owner.name,
+        label: (
+            <div style={{ display: 'flex', alignItems: 'center' }}>
+            {owner.image_path && (
+                <img
+                src={OrganizationService.GetImageURI(owner.image_path)}
+                alt=""
+                style={{ width: 30, height: 30, borderRadius: '50%', marginRight: 10 }}
+                />
+            )}
+            {userOrOrgToStr(owner)}
+            </div>
+        ),
+        data: owner, // Keep original owner object for later use
+    }));
+
+    const selectedOption = options.find((o) => o.data.name === owner?.name);
+
     return (
         <Form onSubmit={handleSubmit} className="repo-create">
             <h1>Create a new repository</h1>
 
             <Row>
                 <Col xs="auto">
-                    <Form.Group controlId="formOwner">
+                    <Form.Group controlId="formOwner" className='owner-select'>
                         <Form.Label>Owner</Form.Label>
-                        <DropdownButton
-                            id="dropdown-owner"
-                            title={owner ? `${userOrOrgToStr(owner)}` : 'Select Owner'}
-                            onSelect={(eventKey) => {
-                                const selectedOwner = owners.find((o) => o.name === eventKey);
-                                setOwner(selectedOwner || null);
+                        <Select
+                            options={options}
+                            value={selectedOption}
+                            onChange={(selected) => {
+                            if (selected) {
+                                setOwner((selected as any).data);
+                            }
                             }}
-                        >
-                            {owners.map((o) => (
-                                <Dropdown.Item key={o.name} eventKey={o.name}>
-                                    {o.image_path !== null && (
-                                        <img
-                                            src={`${OrganizationService.GetImageURI(o.image_path)}`}
-                                            style={{ width: '50px', height: '50px', objectFit: 'cover', marginRight: '10px' }}
-                                        />
-                                    )}
-                                    {userOrOrgToStr(o)}
-                                </Dropdown.Item>
-                            ))}
-                        </DropdownButton>
+                            isSearchable={false}
+                            className='owner-select'
+                        />
                     </Form.Group>
                 </Col>
                 <Col>

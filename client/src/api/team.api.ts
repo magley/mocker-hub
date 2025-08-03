@@ -1,0 +1,85 @@
+import { AxiosResponse } from "axios";
+import { axiosInstance } from "../util/http";
+import { UserDTO } from "./user.api";
+
+export enum TeamPermissionKind {
+    read = "read",
+    read_write = "read_write",
+    admin = "admin"
+}
+
+export interface TeamDTOMember {
+    id: number;
+    username: string;
+}
+
+export interface TeamPermissionsDTO {
+    team_id: number;
+    repo_id: number;
+    kind: TeamPermissionKind;
+}
+
+export interface TeamDTOBasic {
+    id: number;
+    name: string;
+    desc: string;
+    organization_id?: number | null;
+    members_count: number;
+}
+
+export interface TeamDTOFull extends TeamDTOBasic {
+    members: TeamDTOMember[];
+    permissions: TeamPermissionsDTO[];
+}
+
+export interface TeamCreateDTO {
+    name: string;
+    desc: string;
+    organization_id: number;
+}
+
+export interface TeamAddMemberDTO {
+    team_id: number;
+    user_id: number;
+}
+
+export interface TeamAddPermissionDTO extends TeamPermissionsDTO {}
+
+export class TeamService {
+
+    static async RemoveMember(user_id: number, team_id: number) : Promise<AxiosResponse<void>> {
+        return await axiosInstance.delete(`/teams/member`, { data: { user_id, team_id } })
+    }
+   
+    static async RemovePermission(dto: TeamPermissionsDTO) : Promise<AxiosResponse<void>> {
+        return await axiosInstance.delete(`/teams/permission`, { data: dto })
+    }
+
+    static async UpdateTeam(dto: TeamDTOBasic) : Promise<AxiosResponse<TeamDTOBasic>> {
+        return await axiosInstance.put(`/teams`, dto)
+    }
+
+    static async AddPermission(team_id: number, repo_id: number, kind: TeamPermissionKind): Promise<AxiosResponse<TeamPermissionsDTO>> {
+        return await axiosInstance.post(`/teams/permission`, { team_id, repo_id, kind });
+    }
+
+    static async GetPermissionsByTeamId(team_id: number): Promise<AxiosResponse<TeamPermissionsDTO[]>> {
+        return await axiosInstance.get(`/teams/${team_id}/permissions`);
+    }
+
+    static async FindByOrganizationId(org_id: number): Promise<AxiosResponse<TeamDTOBasic[]>> {
+        return await axiosInstance.get(`/teams/o/${org_id}`);
+    }
+
+    static async Create(dto: TeamCreateDTO): Promise<AxiosResponse<TeamDTOBasic>> {
+        return await axiosInstance.post(`/teams`, dto);
+    }
+
+    static async GetMembersOfTeam(team_id: number): Promise<AxiosResponse<UserDTO[]>> {
+        return await axiosInstance.get(`/teams/${team_id}/members`);
+    }
+
+    static async AddMembersToTeam(team_id: number, user_ids: number[]) {
+        return await axiosInstance.post(`/teams/${team_id}/addMember`, user_ids);
+    }
+}
