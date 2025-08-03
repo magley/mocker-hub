@@ -78,6 +78,7 @@ services:
       - "8002:8080"
 
   nginx:  # And frontend.
+    image: magley/mocker-hub-reverse-proxy
     build:
       context: .
       dockerfile: ./Dockerfile
