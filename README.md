@@ -89,3 +89,69 @@ Log out:
 ```shs
 docker logout localhost:5000
 ```
+
+## Screenshots
+
+1) The **Explore section** lets you search and filter all repositories:
+![](./docs/screenshots/Sprite-0001.png)
+
+2) Clicking on any repository opens its home page. The overview shows the description:
+![](./docs/screenshots/Sprite-0002.png)
+
+3) You can also preview and search through repository tags (if any):
+![](./docs/screenshots/Sprite-0003.png)
+
+4) User's repositories can be searched and filtered:
+![](./docs/screenshots/Sprite-0004.png)
+
+5) Creating a new repository:
+![](./docs/screenshots/Sprite-0005.png)
+
+6) List of user's organizations:
+![](./docs/screenshots/Sprite-0006.png)
+
+7) Creating a new organization. If an image is not specified, one will be automatically created
+![](./docs/screenshots/Sprite-0007.png)
+
+8) View members of the organization. If you are an owner of the org, you can add and remove users.
+![](./docs/screenshots/Sprite-0008.png)
+
+9) List repositories belonging to an organization
+![](./docs/screenshots/Sprite-0009.png)
+
+10) Organization teams
+![](./docs/screenshots/Sprite-0010.png)
+
+11) Clicking on a team opens its details. The owner can modify the name and description of a team, as well as add and remove members from the team.
+![](./docs/screenshots/Sprite-0011.png)
+
+12) Team permissions are defined for each repository belonging to an organization.
+![](./docs/screenshots/Sprite-0012.png)
+
+13) Repositories can be starred by clicking on the star icon.
+![](./docs/screenshots/Sprite-0020.png)
+
+14) Users can see their starred repositories.
+![](./docs/screenshots/Sprite-0013.png)
+
+15) Users can modify their details. The username cannot be changed.
+![](./docs/screenshots/Sprite-0014.png)
+
+16) The login page
+![](./docs/screenshots/Sprite-0015.png)
+
+17) The registration page
+![](./docs/screenshots/Sprite-0019.png)
+
+18) Admins can search for users in the database and assign them special badges.
+![](./docs/screenshots/Sprite-0016.png)
+
+19) Admins can search through logs created by the various services. Advanced search is supported.
+![](./docs/screenshots/Sprite-0017.png)
+
+20) Clicking on the help button opens a side panel that explains how to search for logs, with provided examples.
+![](./docs/screenshots/Sprite-0018.png)
+
+## License
+
+This project is licensed with the BSD 2-Clause License. See LICENSE for more info.
